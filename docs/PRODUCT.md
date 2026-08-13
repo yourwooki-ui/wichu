@@ -1,30 +1,68 @@
-# WICHU Product
+# WICHU 1.0 Product Definition
 
-## Product concept
+## 목표
 
-WICHU means **Which U? / With You**. It is a global social discovery app for people aged 18–29, with an absolute minimum age of 18. The product borrows only the broad one-person discovery pattern familiar from global friend and dating apps; its brand, design, code, and interaction model are original.
+WICHU 1.0은 데모나 단순 MVP가 아니라 실제 사용자를 제한적으로 수용할 수 있는 **1차 운영 출시 버전**이다. 가입부터 발견, 상호 선택, 대화, 신고·차단, 탈퇴와 운영 대응까지 하나의 안전한 흐름으로 완결한다.
 
-The core loop is:
+핵심 경험:
 
-`Discover a profile → swipe one card → mutual like → match → 1:1 chat → optional translation`
+`18+ 가입 → 프로필 완성 → 1카드 발견 → Like/Pass → 상호 Like → Match → 1:1 Chat → 선택적 번역`
 
-The visual direction is youthful, polished, light, global, and comfortable for women to use. It avoids excessive hearts and familiar dating-app clichés, favoring a modern native consumer-app feel.
+제품은 MEEFF 등 글로벌 사람 탐색 서비스의 범용 구조만 참고하며 브랜드, 디자인, 코드, UX는 독립적으로 구현한다.
 
-## MVP scope
+## 대상과 원칙
 
-- Extensible email/social authentication and an enforced 18+ profile
-- Up to six profile photos
-- Name, birth year, gender, interested genders, country, languages, bio, and interests
-- Country, age, and gender discovery filters
-- One-person swipe deck with Like and Pass
-- Automatic mutual-like matching
-- 1:1 realtime chat after a match
-- Message fields prepared for translation
-- Report, block, deactivate, and account-deletion paths
-- Free core experience with ads; one Ad-Free in-app purchase later
-- Push notification boundary prepared for a future provider
+- 글로벌 만 18~29세, 가입 가능 연령은 만 18세 이상
+- 여성 사용자가 부담 없이 사용할 수 있는 안전하고 세련된 소비자 앱
+- 기본 기능은 무료이며 광고가 노출된다.
+- Ad-Free는 월 ₩9,900에 광고 제거만 제공한다. Gold Pass는 골드 프로필 표시, 방문자 확인, 설명 가능한 우선 노출과 광고 제거를 묶는다.
+- AI 추천, 코인, 선물, 아이템 경제 없이 이해 가능한 규칙을 사용한다.
 
-## Initial screens
+## 1.0 필수 범위
+
+### 계정과 프로필
+
+- 이메일 인증과 소셜 로그인 확장 경계
+- 생년월일 기반 18+ 검증 및 약관 동의 이력
+- 사진 최대 6장, 이름, 생년, 성별, 관심 성별, 국가, 언어, 소개, 관심사
+- 프로필 수정, 비활성화, 데이터 삭제를 포함한 탈퇴
+
+### Discover와 Match
+
+- 국가, 연령, 성별 필터
+- 도시명과 현재 좌표는 프로필에 공개하지 않으며, 국가와 private 좌표에서 계산한 거리만 표시
+- 화면에 한 명의 후보를 크게 보여주는 1카드 Swipe
+- 오른쪽 Swipe/CTA는 `like`, 왼쪽 Swipe/CTA는 `pass`로 중복 없이 기록
+- 차단/기선택/본인 제외와 단순 우선순위 정렬
+- 상호 Pick 시 중복 없는 Match 생성 및 확인 화면
+
+### Chat와 번역
+
+- 활성 Match 참여자만 가능한 1:1 Realtime Chat
+- optimistic send, 전송 상태, 재시도, 읽지 않은 수
+- 원문 언어와 번역 결과를 분리한 번역 provider 경계
+- 차단·매치 종료 시 작성 권한 즉시 중지
+
+### 안전과 운영
+
+- 프로필/대화에서 신고와 차단
+- 운영자가 신고를 검토하고 계정 상태를 조치할 수 있는 최소 운영 절차
+- Push 알림 등록, Match/메시지 deep link 확장 구조
+- 크래시·API 실패·지연·가입 전환을 확인할 관측성 이벤트
+- 개인정보처리방침, 이용약관, 커뮤니티 기준, 스토어 신고/삭제 요구사항
+
+### 수익화
+
+- Free: 모든 핵심 기능 + 광고
+- Ad-Free: 월 ₩9,900, 광고 제거
+- 광고와 IAP은 provider/service 계층 뒤에 두며 실제 상품 ID는 환경별로 분리
+- 앱 내 ₩9,900 표시는 한국 스토어 기준 가격이며, IAP 연결 후 결제 및 갱신 화면은 사용자 스토어 국가의 현지화 가격을 최종 기준으로 사용
+- Gold Pass: 골드 배지·프로필 테두리, 방문자 확인, 조건 일치 후보 내 노출 우선순위, 광고 제거
+- Gold 우선 노출은 안전·필터·최근 활동 조건을 우회하지 않으며 AI 추천이나 유료 단독 후보군을 만들지 않음
+
+## 화면 제한
+
+사용자-facing 주요 화면은 다음 10개 안에서 유지한다.
 
 1. Splash / Login
 2. Profile Setup
@@ -37,12 +75,19 @@ The visual direction is youthful, polished, light, global, and comfortable for w
 9. Settings
 10. Ad-Free
 
-The bottom tabs are Discover, Matches, Chat, and Me.
+하단 탭은 **Matches / Chat / Discover / Shop / Me**이다. Discover를 중앙 기본 탭으로 강조한다. Shop은 Ad-Free 한 상품만 안내하는 얇은 랜딩이며 별도 상품 경제를 만들지 않는다. 설정 내 sheet·modal·단계형 폼은 별도 주요 화면으로 세지 않는다.
 
-## Explicitly out of scope
+페이지별 구조, 상태, 행동 계약은 [`APP_STRUCTURE.md`](./APP_STRUCTURE.md)를 단일 기준으로 사용한다.
 
-Feeds, stories, communities, video calls, AI recommendations, coins, gifts, and item economies are not part of the MVP.
+## 명시적 제외
 
-## Performance promise
+Feed, Story, Community, Video Call, AI 추천, 공개 랭킹, 코인, 선물, 아이템 판매는 1.0에 포함하지 않는다.
 
-Swiping never waits for a network round trip. The client keeps the current and upcoming candidates in memory, prefetches upcoming photos, updates optimistically, and refills in the background. Chat follows the same immediate-send model with server reconciliation.
+## 출시 완료 기준
+
+- 핵심 여정이 실제 Supabase 데이터로 iOS/Android 실기기에서 완주된다.
+- RLS/매칭/차단/삭제에 대한 자동화 테스트가 통과한다.
+- Swipe/Pick 후 다음 후보가 네트워크를 기다리지 않고 표시된다.
+- 주요 오류와 크래시를 운영자가 감지하고 대응할 수 있다.
+- 스토어 심사에 필요한 연령, 신고, 차단, 탈퇴, 개인정보 고지가 준비된다.
+- 소규모 단계 배포와 롤백 절차가 문서화되고 리허설된다.

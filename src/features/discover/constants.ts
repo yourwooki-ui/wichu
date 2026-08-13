@@ -1,0 +1,1 @@
+export const DISCOVER_PREPARE_COUNT = 5;

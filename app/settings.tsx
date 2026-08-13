@@ -1,11 +1,5 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { SettingsScreen } from '@/features/settings/screens/SettingsScreen';
 
 export default function SettingsRoute() {
-  return (
-    <PlaceholderScreen
-      icon="settings-outline"
-      title="Settings"
-      description="Privacy, discovery, notifications, blocking, and account controls will live here."
-    />
-  );
+  return <SettingsScreen />;
 }

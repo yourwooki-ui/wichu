@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   PanResponder,
   Pressable,
@@ -12,52 +13,78 @@ import {
 } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { radius, spacing } from '@/constants/theme';
+import { palette, radius, spacing } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
-import { useDiscoverStore } from '@/features/discover/stores/discover-store';
-import { SwipeAction } from '@/types/profile';
+import { Profile, SwipeAction } from '@/types/profile';
 
-const SWIPE_THRESHOLD = 105;
+const SWIPE_THRESHOLD = 96;
+const SWIPE_VELOCITY_THRESHOLD = 0.65;
+const SWIPE_MIN_DISTANCE = 28;
+const DOUBLE_TAP_DELAY = 260;
 
-export function SwipeDeck() {
+type SwipeDeckProps = {
+  profiles: Profile[];
+  isLoading: boolean;
+  error: string | null;
+  onSwipe: (profile: Profile, action: SwipeAction) => void;
+  onRetry: () => void;
+};
+
+export function SwipeDeck({ profiles, isLoading, error, onSwipe, onRetry }: SwipeDeckProps) {
   const router = useRouter();
   const theme = useAppTheme();
-  const { width } = useWindowDimensions();
-  const profiles = useDiscoverStore((state) => state.profiles);
-  const recordSwipe = useDiscoverStore((state) => state.recordSwipe);
-  const resetMockDeck = useDiscoverStore((state) => state.resetMockDeck);
+  const { height, width } = useWindowDimensions();
   const [position] = useState(() => new Animated.ValueXY());
+  const [pickPulse] = useState(() => new Animated.Value(0));
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
+  const lastTapAtRef = useRef(0);
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
+  const deckHeight = Math.min(620, Math.max(330, height - 242));
 
   useProfilePrefetch(profiles);
 
+  useEffect(() => {
+    const interval = setInterval(() => setPresenceNow(Date.now()), 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const completeSwipe = useCallback(
     (action: SwipeAction) => {
-      if (!currentProfile) return;
+      if (!currentProfile || isAnimating) return;
+      setIsAnimating(true);
       Animated.timing(position, {
         toValue: { x: action === 'like' ? width * 1.35 : -width * 1.35, y: 12 },
-        duration: 190,
+        duration: 210,
         useNativeDriver: true,
       }).start(() => {
-        recordSwipe(currentProfile.id, action);
         position.setValue({ x: 0, y: 0 });
+        onSwipe(currentProfile, action);
+        setIsAnimating(false);
       });
     },
-    [currentProfile, position, recordSwipe, width],
+    [currentProfile, isAnimating, onSwipe, position, width],
   );
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 6,
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          !isAnimating && Math.abs(gesture.dx) > 6 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
         onPanResponderMove: Animated.event([null, { dx: position.x, dy: position.y }], {
           useNativeDriver: false,
         }),
         onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx > SWIPE_THRESHOLD) completeSwipe('like');
-          else if (gesture.dx < -SWIPE_THRESHOLD) completeSwipe('pass');
+          const isFastRight =
+            gesture.vx > SWIPE_VELOCITY_THRESHOLD && gesture.dx > SWIPE_MIN_DISTANCE;
+          const isFastLeft =
+            gesture.vx < -SWIPE_VELOCITY_THRESHOLD && gesture.dx < -SWIPE_MIN_DISTANCE;
+
+          if (gesture.dx > SWIPE_THRESHOLD || isFastRight) completeSwipe('like');
+          else if (gesture.dx < -SWIPE_THRESHOLD || isFastLeft) completeSwipe('pass');
           else {
             Animated.spring(position, {
               toValue: { x: 0, y: 0 },
@@ -74,8 +101,42 @@ export function SwipeDeck() {
           }).start();
         },
       }),
-    [completeSwipe, position],
+    [completeSwipe, isAnimating, position],
   );
+
+  const handleCardPress = useCallback(() => {
+    if (!currentProfile || isAnimating) return;
+    const now = Date.now();
+    const isDoubleTap = now - lastTapAtRef.current <= DOUBLE_TAP_DELAY;
+
+    if (isDoubleTap) {
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
+      lastTapAtRef.current = 0;
+      pickPulse.setValue(0);
+      Animated.sequence([
+        Animated.timing(pickPulse, { toValue: 1, duration: 110, useNativeDriver: true }),
+        Animated.timing(pickPulse, { toValue: 0, duration: 150, useNativeDriver: true }),
+      ]).start();
+      completeSwipe('like');
+      return;
+    }
+
+    lastTapAtRef.current = now;
+    singleTapTimerRef.current = setTimeout(() => {
+      lastTapAtRef.current = 0;
+      singleTapTimerRef.current = null;
+      router.push(`/profile/${currentProfile.id}`);
+    }, DOUBLE_TAP_DELAY);
+  }, [completeSwipe, currentProfile, isAnimating, pickPulse, router]);
+
+  useEffect(() => {
+    return () => {
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
+      lastTapAtRef.current = 0;
+    };
+  }, [currentProfile?.id]);
 
   const rotate = position.x.interpolate({
     inputRange: [-width, 0, width],
@@ -92,6 +153,24 @@ export function SwipeDeck() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
+  const nextTranslateX = position.x.interpolate({
+    inputRange: [-width, 0, width],
+    outputRange: [0, width * 1.05, 0],
+    extrapolate: 'clamp',
+  });
+  const pickPulseScale = pickPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1],
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.finished}>
+        <ActivityIndicator color={theme.colors.primary} size="large" />
+        <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>후보를 찾는 중…</Text>
+      </View>
+    );
+  }
 
   if (!currentProfile) {
     return (
@@ -100,16 +179,16 @@ export function SwipeDeck() {
           <Ionicons name="sparkles-outline" size={32} color={theme.colors.primary} />
         </View>
         <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
-          You&apos;re all caught up
+          새로운 프로필 준비 중
         </Text>
         <Text style={[styles.finishedText, { color: theme.colors.textMuted }]}>
-          More people will appear as the candidate pool refills.
+          {error ?? '조건에 맞는 새로운 프로필이 생기면 여기에 표시돼요.'}
         </Text>
         <Pressable
           style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
-          onPress={resetMockDeck}
+          onPress={onRetry}
         >
-          <Text style={styles.resetButtonText}>Replay mock profiles</Text>
+          <Text style={styles.resetButtonText}>다시 확인</Text>
         </Pressable>
       </View>
     );
@@ -117,84 +196,85 @@ export function SwipeDeck() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.deck}>
-        {nextProfile && (
-          <View style={styles.nextCard} pointerEvents="none">
-            <ProfileCard profile={nextProfile} />
-          </View>
-        )}
+      {error ? (
+        <Pressable onPress={onRetry} style={styles.errorBanner}>
+          <Ionicons color={palette.pink} name="alert-circle-outline" size={17} />
+          <Text numberOfLines={2} style={styles.errorText}>
+            {error}
+          </Text>
+        </Pressable>
+      ) : null}
+      <View style={[styles.deck, { height: deckHeight }]}>
+        {nextProfile ? (
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.nextCard, { transform: [{ translateX: nextTranslateX }] }]}
+          >
+            <ProfileCard now={presenceNow} profile={nextProfile} />
+          </Animated.View>
+        ) : null}
         <Animated.View
           style={[styles.topCard, { transform: [...position.getTranslateTransform(), { rotate }] }]}
           {...panResponder.panHandlers}
         >
-          <ProfileCard
-            profile={currentProfile}
-            onPress={() => router.push(`/profile/${currentProfile.id}`)}
-          />
+          <ProfileCard now={presenceNow} profile={currentProfile} onPress={handleCardPress} />
           <Animated.View
-            style={[styles.decision, styles.likeDecision, { opacity: likeOpacity }]}
-            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              styles.pickPulse,
+              { opacity: pickPulse, transform: [{ scale: pickPulseScale }] },
+            ]}
           >
-            <Text style={styles.likeText}>LIKE</Text>
+            <Ionicons color={palette.white} name="heart" size={44} />
           </Animated.View>
           <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.decision, styles.likeDecision, { opacity: likeOpacity }]}
+          >
+            <Text style={styles.likeText}>PICK</Text>
+          </Animated.View>
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
             style={[styles.decision, styles.passDecision, { opacity: passOpacity }]}
-            pointerEvents="none"
           >
             <Text style={styles.passText}>PASS</Text>
           </Animated.View>
         </Animated.View>
       </View>
-      <View style={styles.actions}>
-        <ActionButton
-          label="Pass"
-          icon="close"
-          color={theme.colors.textMuted}
-          onPress={() => completeSwipe('pass')}
-        />
-        <ActionButton
-          label="Like"
-          icon="arrow-up"
-          color={theme.colors.primary}
-          featured
-          onPress={() => completeSwipe('like')}
-        />
-      </View>
     </View>
   );
 }
 
-type ActionButtonProps = {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  featured?: boolean;
-  onPress: () => void;
-};
-
-function ActionButton({ label, icon, color, featured, onPress }: ActionButtonProps) {
-  const theme = useAppTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={8}
-      style={({ pressed }) => [
-        styles.actionButton,
-        featured && styles.featuredAction,
-        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-        pressed && styles.pressed,
-      ]}
-      onPress={onPress}
-    >
-      <Ionicons name={icon} size={featured ? 29 : 27} color={color} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  deck: { flex: 1, marginTop: 4 },
+  container: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 0,
+  },
+  errorBanner: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  errorText: { color: palette.ink, flex: 1, fontSize: 11, fontWeight: '700' },
+  deck: {
+    alignSelf: 'center',
+    flexShrink: 1,
+    marginBottom: 16,
+    maxWidth: 520,
+    minHeight: 0,
+    width: '100%',
+  },
   topCard: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   nextCard: {
     position: 'absolute',
@@ -202,44 +282,34 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    transform: [{ scale: 0.96 }, { translateY: 9 }],
-    opacity: 0.78,
+    pointerEvents: 'none',
+  },
+  pickPulse: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: palette.pink,
+    borderRadius: 44,
+    height: 88,
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    position: 'absolute',
+    top: '42%',
+    width: 88,
   },
   decision: {
     position: 'absolute',
-    top: 52,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: radius.sm,
-    borderWidth: 3,
-    backgroundColor: 'rgba(10,10,14,0.2)',
+    top: 68,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    borderWidth: 2.5,
+    backgroundColor: 'rgba(8,8,12,0.28)',
+    pointerEvents: 'none',
   },
-  likeDecision: { left: 22, borderColor: '#70E1BE', transform: [{ rotate: '-8deg' }] },
-  passDecision: { right: 22, borderColor: '#FF8A78', transform: [{ rotate: '8deg' }] },
-  likeText: { color: '#70E1BE', fontSize: 24, fontWeight: '900', letterSpacing: 1.5 },
-  passText: { color: '#FF8A78', fontSize: 24, fontWeight: '900', letterSpacing: 1.5 },
-  actions: {
-    height: 82,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  actionButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 21,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#111117',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  featuredAction: { width: 64, height: 64, borderRadius: 24 },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
+  likeDecision: { left: 22, borderColor: palette.pink, transform: [{ rotate: '-8deg' }] },
+  passDecision: { right: 22, borderColor: palette.white, transform: [{ rotate: '8deg' }] },
+  likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
+  passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   finishedIcon: {
     width: 68,
@@ -251,6 +321,7 @@ const styles = StyleSheet.create({
   },
   finishedTitle: { fontSize: 23, fontWeight: '800' },
   finishedText: { marginTop: 8, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  loadingText: { fontSize: 13, marginTop: 12 },
   resetButton: {
     marginTop: 24,
     paddingHorizontal: 20,

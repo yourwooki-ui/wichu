@@ -9,15 +9,20 @@ create type public.subscription_status as enum ('inactive', 'active', 'expired',
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name varchar(50) not null,
-  birth_year smallint not null check (birth_year between 1900 and 2200),
+  birth_date date not null check (birth_date between date '1900-01-01' and current_date),
   gender text not null check (gender in ('woman', 'man', 'nonbinary', 'other')),
-  interested_in text[] not null check (cardinality(interested_in) > 0),
-  country_code varchar(2) not null check (country_code = upper(country_code)),
-  languages text[] not null default '{}',
+  interested_in text[] not null check (
+    cardinality(interested_in) > 0
+    and interested_in <@ array['woman', 'man', 'nonbinary', 'other']::text[]
+  ),
+  country_code varchar(2) not null check (country_code ~ '^[A-Z]{2}$'),
+  languages text[] not null default '{}' check (cardinality(languages) > 0),
   bio varchar(500) not null default '',
   profile_completeness smallint not null default 0 check (profile_completeness between 0 and 100),
   profile_completed boolean not null default false,
   is_active boolean not null default true,
+  terms_accepted_at timestamptz not null,
+  privacy_accepted_at timestamptz not null,
   last_active_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -130,6 +135,7 @@ create index swipes_target_idx on public.swipes (target_id, action);
 create index matches_user_a_idx on public.matches (user_a, matched_at desc);
 create index matches_user_b_idx on public.matches (user_b, matched_at desc);
 create index messages_match_created_idx on public.messages (match_id, created_at desc);
+create index messages_sender_idx on public.messages (sender_id);
 create index blocks_blocked_idx on public.blocks (blocked_id, blocker_id);
 create index reports_reported_idx on public.reports (reported_id, created_at desc);
 create index subscriptions_user_idx on public.subscriptions (user_id, status);
@@ -143,9 +149,21 @@ security invoker
 set search_path = ''
 as $$
 begin
-  if new.birth_year > extract(year from current_date)::int - 18 then
+  if new.birth_date > current_date - interval '18 years' then
     raise exception 'WICHU is only available to users aged 18 or older';
   end if;
+
+  new.profile_completeness := (
+    case when length(trim(new.display_name)) >= 2 then 20 else 0 end
+    + case when new.birth_date is not null then 15 else 0 end
+    + case when new.gender is not null then 15 else 0 end
+    + case when cardinality(new.interested_in) > 0 then 15 else 0 end
+    + case when new.country_code is not null then 10 else 0 end
+    + case when cardinality(new.languages) > 0 then 10 else 0 end
+    + case when length(trim(new.bio)) >= 20 then 15 else 0 end
+  );
+  new.profile_completed := new.profile_completeness >= 85;
+
   return new;
 end;
 $$;
@@ -163,7 +181,7 @@ end;
 $$;
 
 create trigger profiles_enforce_adult
-before insert or update of birth_year on public.profiles
+before insert or update on public.profiles
 for each row execute function private.enforce_adult_profile();
 
 create trigger profiles_set_updated_at
@@ -408,9 +426,8 @@ as $$
   where candidate.id <> (select auth.uid())
     and candidate.is_active
     and candidate.profile_completed
-    and candidate.birth_year between
-      extract(year from current_date)::int - greatest(p_max_age, 18)
-      and extract(year from current_date)::int - greatest(p_min_age, 18)
+    and candidate.birth_date <= current_date - make_interval(years => greatest(p_min_age, 18))
+    and candidate.birth_date > current_date - make_interval(years => greatest(p_max_age, 18) + 1)
     and (p_genders is null or candidate.gender = any(p_genders))
     and (p_country_codes is null or candidate.country_code = any(p_country_codes))
     and viewer.gender = any(candidate.interested_in)
@@ -431,6 +448,18 @@ $$;
 
 revoke execute on function public.get_discovery_candidates(integer, integer, text[], text[], integer, integer) from public, anon;
 grant execute on function public.get_discovery_candidates(integer, integer, text[], text[], integer, integer) to authenticated;
+
+revoke all on public.profiles from anon;
+revoke all on public.profile_photos from anon;
+revoke all on public.interests from anon;
+revoke all on public.profile_interests from anon;
+revoke all on public.swipes from anon;
+revoke all on public.matches from anon;
+revoke all on public.messages from anon;
+revoke all on public.blocks from anon;
+revoke all on public.reports from anon;
+revoke all on public.user_settings from anon;
+revoke all on public.subscriptions from anon;
 
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.profile_photos to authenticated;

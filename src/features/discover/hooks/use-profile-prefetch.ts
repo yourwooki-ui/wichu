@@ -1,14 +1,13 @@
 import { Image } from 'expo-image';
 import { useEffect } from 'react';
 
+import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { Profile } from '@/types/profile';
-
-const PREFETCH_PROFILE_COUNT = 3;
 
 export function useProfilePrefetch(profiles: Profile[]) {
   useEffect(() => {
     const urls = profiles
-      .slice(0, PREFETCH_PROFILE_COUNT)
+      .slice(0, DISCOVER_PREPARE_COUNT)
       .flatMap((profile) => profile.photos.slice(0, 2));
 
     if (urls.length > 0) {

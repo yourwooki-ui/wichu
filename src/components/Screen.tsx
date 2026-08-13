@@ -1,19 +1,23 @@
 import { PropsWithChildren } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/components/ThemeProvider';
 
 type ScreenProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   padded?: boolean;
+  edges?: Edge[];
 }>;
 
-export function Screen({ children, style, padded = true }: ScreenProps) {
+export function Screen({ children, style, padded = true, edges }: ScreenProps) {
   const theme = useAppTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      edges={edges}
+      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+    >
       <View style={[styles.content, padded && styles.padded, style]}>{children}</View>
     </SafeAreaView>
   );

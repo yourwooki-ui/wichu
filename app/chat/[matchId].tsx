@@ -1,11 +1,9 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { useLocalSearchParams } from 'expo-router';
+
+import { ChatRoomScreen } from '@/features/chat/screens/ChatRoomScreen';
 
 export default function ChatRoomRoute() {
-  return (
-    <PlaceholderScreen
-      icon="chatbubbles-outline"
-      title="Chat"
-      description="Realtime messages and translation controls will be connected here."
-    />
-  );
+  const { matchId } = useLocalSearchParams<{ matchId: string }>();
+
+  return <ChatRoomScreen matchId={matchId} />;
 }
