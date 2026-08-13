@@ -62,7 +62,7 @@ export function AppPermissionOnboarding() {
         setMessage(null);
         setStep('notifications');
       } else {
-        const result = await notificationPermissionService.request();
+        const result = await notificationPermissionService.request(userId);
         if (result !== 'granted') setMessage('알림은 나중에 기기 설정에서 허용할 수 있어요.');
         await finish();
       }

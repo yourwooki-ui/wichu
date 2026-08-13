@@ -76,6 +76,11 @@ export function ProfileReviewState({
             label={t(isPending ? 'profileReview.browse' : 'profileReview.edit')}
             onPress={isPending ? onBrowse : () => onEdit?.()}
           />
+          {isPending && onEdit ? (
+            <Pressable accessibilityRole="button" onPress={onEdit} style={styles.editPendingButton}>
+              <Text style={styles.editPendingText}>프로필 수정</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             disabled={refreshing}
@@ -192,6 +197,8 @@ const styles = StyleSheet.create({
   stepLabelDone: { color: palette.ink },
   stepLine: { width: 34, height: 2, marginTop: 11, backgroundColor: palette.line },
   footer: { gap: 10 },
+  editPendingButton: { alignItems: 'center', minHeight: 42, justifyContent: 'center' },
+  editPendingText: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   secondaryButton: {
     minHeight: 48,
     flexDirection: 'row',

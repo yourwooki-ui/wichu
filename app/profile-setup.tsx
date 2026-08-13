@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -73,7 +73,9 @@ export default function ProfileSetupRoute() {
   const [consented, setConsented] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingRejected, setEditingRejected] = useState(false);
+  const [editingPending, setEditingPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [profileHydrated, setProfileHydrated] = useState(false);
 
   const {
     data: interestOptions = [],
@@ -89,6 +91,61 @@ export default function ProfileSetupRoute() {
       return data;
     },
   });
+  const existingProfileQuery = useQuery({
+    queryKey: ['profile-setup', 'existing', session?.user.id],
+    enabled: Boolean(session),
+    staleTime: 15_000,
+    queryFn: () => profileService.getMyOperationalProfile(session!.user.id),
+  });
+
+  useEffect(() => {
+    const existing = existingProfileQuery.data;
+    if (!existing || profileHydrated) return;
+    queueMicrotask(() => {
+      const { profile, interests, languages, settings, tags } = existing;
+      setDisplayName(profile.display_name);
+      setBirthDate(profile.birth_date);
+      setGender(profile.gender as Gender);
+      setInterestedIn(profile.interested_in as Gender[]);
+      setCountryCode(profile.country_code);
+      setNativeLanguage(profile.native_language ?? '');
+      setSpokenLanguages(
+        languages.map((language) => ({
+          code: language.language_code,
+          level: language.proficiency as SpokenLanguage['level'],
+        })),
+      );
+      setMinAge(settings?.min_age ?? 18);
+      setMaxAge(settings?.max_age ?? 29);
+      setSelectedInterestIds(interests.map((interest) => interest.id));
+      setProfileTags(
+        tags.reduce<ProfileTagSelections>(
+          (selection, tag) => ({
+            ...selection,
+            [tag.category]: [...selection[tag.category as keyof ProfileTagSelections], tag.value],
+          }),
+          { connection_goal: [], vibe: [], daily_rhythm: [], communication_style: [] },
+        ),
+      );
+      setBio(profile.bio);
+      setPhotos(
+        profile.profile_photos.map((photo) => ({
+          assetId: photo.id,
+          draftId: `stored:${photo.id}`,
+          fileName: photo.storage_path.split('/').pop() ?? photo.id,
+          fileSize: 0,
+          height: 1200,
+          mimeType: 'image/jpeg',
+          storagePath: photo.storage_path,
+          type: 'image',
+          uri: photo.signed_url,
+          width: 960,
+        })),
+      );
+      setConsented(true);
+      setProfileHydrated(true);
+    });
+  }, [existingProfileQuery.data, profileHydrated]);
 
   const languageList = [nativeLanguage, ...spokenLanguages.map((language) => language.code)].filter(
     Boolean,
@@ -169,76 +226,50 @@ export default function ProfileSetupRoute() {
     setMessage(null);
     let saveStage: 'profile' | 'details' | 'photos' | 'review' = 'profile';
     let uploadedPaths: string[] = [];
-    let hadExistingProfile = false;
     try {
-      const { data, error: existingProfileError } = await profileService.getMyProfileCompletion(
-        session.user.id,
-      );
-      if (existingProfileError) throw existingProfileError;
-      hadExistingProfile = Boolean(data);
-
-      const acceptedAt = new Date().toISOString();
-      const profileValues = {
-        id: session.user.id,
-        display_name: displayName.trim(),
-        birth_date: birthDate,
-        gender: gender!,
-        interested_in: interestedIn,
-        country_code: countryCode.toUpperCase(),
-        native_language: nativeLanguage,
-        languages: languageList,
-        bio: bio.trim(),
-        terms_accepted_at: acceptedAt,
-        privacy_accepted_at: acceptedAt,
-        last_active_at: acceptedAt,
-      };
-      const { id: profileId, ...profileUpdates } = profileValues;
-      const { error } = hadExistingProfile
-        ? await profileService.updateMyProfile(profileId, profileUpdates)
-        : await profileService.createMyProfile(profileValues);
-      if (error) throw error;
-
-      saveStage = 'details';
-      await Promise.all([
-        profileService.replaceMyInterests(session.user.id, selectedInterestIds),
-        profileService.replaceMyTags(
-          session.user.id,
-          Object.entries(profileTags).flatMap(([category, values]) =>
-            values.map((value) => ({
-              category: category as keyof ProfileTagSelections,
-              value,
-            })),
-          ),
-        ),
-        profileService.replaceMyLanguages(session.user.id, spokenLanguages),
-        profileService.upsertMySettings({
-          user_id: session.user.id,
-          min_age: minAge,
-          max_age: maxAge,
-          locale: i18n.resolvedLanguage ?? i18n.language ?? 'en',
-        }),
-      ]);
-
       saveStage = 'photos';
-      uploadedPaths = await profilePhotoService.uploadPhotos(
+      const stagedPhotos = await profilePhotoService.stageNewPhotos(
         session.user.id,
         photos,
         (completed, total) => {
           setUploadProgress({ completed, total });
         },
       );
+      uploadedPaths = stagedPhotos.uploadedPaths;
 
       saveStage = 'review';
-      const { error: reviewError } = await profileService.submitForReview();
-      if (reviewError) throw reviewError;
+      const tags = Object.entries(profileTags).flatMap(([category, values]) =>
+        values.map((value) => ({ category: category as keyof ProfileTagSelections, value })),
+      );
+      const { data: obsoletePaths, error } = await profileService.saveForReview({
+        displayName: displayName.trim(),
+        birthDate,
+        gender: gender!,
+        interestedIn,
+        countryCode: countryCode.toUpperCase(),
+        nativeLanguage,
+        languages: languageList,
+        bio: bio.trim(),
+        minAge,
+        maxAge,
+        locale: i18n.resolvedLanguage ?? i18n.language ?? 'ko',
+        interestIds: selectedInterestIds,
+        spokenLanguages,
+        tags,
+        photoPaths: stagedPhotos.orderedPaths,
+      });
+      if (error) throw error;
+      if (obsoletePaths?.length) {
+        await profilePhotoService.removeStorageFiles(obsoletePaths);
+      }
 
       uploadedPaths = [];
       await refreshProfile().catch(() => undefined);
+      router.replace('/(tabs)/me');
     } catch (error) {
       if (uploadedPaths.length > 0) {
-        await profilePhotoService.removeUploadedPhotos(session.user.id, uploadedPaths);
+        await profilePhotoService.removeStorageFiles(uploadedPaths);
       }
-      if (!hadExistingProfile) await profileService.deleteMyProfile(session.user.id);
       setMessage(getProfileSaveError(error, saveStage));
     } finally {
       setUploadProgress(null);
@@ -259,12 +290,13 @@ export default function ProfileSetupRoute() {
     return t(`profileSetup.errors.saveStages.${stage}`);
   }
 
-  if (profileReviewStatus === 'pending') {
+  if (profileReviewStatus === 'pending' && !editingPending) {
     return (
       <ProfileReviewState
         status="pending"
         onBrowse={() => router.replace('/(tabs)/discover')}
         onRefresh={refreshProfile}
+        onEdit={() => setEditingPending(true)}
       />
     );
   }

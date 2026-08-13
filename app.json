@@ -69,7 +69,8 @@
         {
           "experimentalLauncherActivity": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

@@ -9,7 +9,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 
 export default function AuthCallbackRoute() {
   const theme = useAppTheme();
-  const { session, profileApproved } = useAuthSession();
+  const { session, profileCompleted } = useAuthSession();
   const url = Linking.useURL();
   const [finished, setFinished] = useState(false);
 
@@ -22,7 +22,7 @@ export default function AuthCallbackRoute() {
   }, [url]);
 
   if (session) {
-    return <Redirect href={profileApproved ? '/(tabs)/discover' : '/profile-setup'} />;
+    return <Redirect href={profileCompleted ? '/(tabs)/discover' : '/profile-setup'} />;
   }
   if (finished) return <Redirect href="/login" />;
 

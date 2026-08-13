@@ -5,7 +5,7 @@
 - [x] Expo Router, TypeScript, Query, Zustand, i18n 기본 구조
 - [x] WICHU 테마, 아이콘, 스플래시, 브랜드 문서
 - [x] Supabase client/service 경계와 초기 migration 초안
-- [ ] development Supabase에 전체 migration 적용 후 RLS/advisor 재검증 — 프로필 언어/키워드/심사/Discover/접속 상태 migration은 2026-08-12 원격 적용, 전체 이력 repair 필요
+- [x] development Supabase에 앱 스키마와 P0 migration 적용 및 RLS/advisor 재검증 — 2026-08-13 Security Advisor 오류 0건, 의도된 사용자 범위 `SECURITY DEFINER` RPC 경고와 유출 비밀번호 보호 경고만 잔존
 - [ ] 프로젝트 Data API 노출 설정과 migration의 명시적 grants 대조
 - [x] 적용 스키마와 일치하는 typed Supabase client 정의
 - [ ] CLI 계정 연결 후 타입 자동 생성과 migration CI 추가
@@ -33,9 +33,9 @@
 ## P0 — 안전과 운영
 
 - [ ] 프로필/대화 신고, 차단, match 종료 — 신고 사유·차단 확인 UI와 저장 연결 완료, 차단 RLS 원격 적용 및 match 종료 대기
-- [ ] 비활성화·탈퇴·데이터 삭제 완주
+- [ ] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제와 삭제 요청 queue까지 연결, Auth·Storage 실제 삭제 worker 및 보존 정책 대기
 - [ ] 신고 triage용 최소 운영 도구 또는 검증된 Dashboard 절차 — 프로필 심사 queue/approve/reject RPC 완료, 운영 UI 대기
-- [ ] Push 등록과 Match/메시지 deep link
+- [ ] Push 등록과 Match/메시지 deep link — 실기기 권한 요청·Expo token 등록/로그아웃 정리 완료, 서버 발송과 알림 응답 deep link 대기
 - [ ] 개인정보 최소화, 민감 로그 redaction, rate limit
 - [ ] 크래시·API 실패·핵심 funnel 관측성 연결
 
@@ -49,8 +49,8 @@
 - [x] Chat List UI: 온라인 목록 + 검색 + unread/마지막 메시지/번역 상태
 - [x] Chat Room UI: 실제 메시지 조회·낙관적 전송 + 번역 표시 + 신고/차단 안전 메뉴
 - [ ] Matches/Chat 원격 데이터 연결: 매치·메시지·Realtime 연결 완료; 번역 API, unread, 실패 재전송 대기
-- [ ] Me: 실제 프로필/심사 상태/완성도/수정 진입
-- [ ] Settings: Discovery / Notifications / Privacy & Safety / Account — 노출 여부·매치/메시지 알림 저장, 로그아웃, 프로필 수정 진입 완료; 차단 목록·정책 문서·비활성화 실행 연결 대기
+- [x] Me: 실제 프로필/심사 상태/완성도/수정 진입
+- [ ] Settings: Discovery / Notifications / Privacy & Safety / Account — 노출 여부·알림 저장, 로그아웃, 프로필 수정, 비활성화·삭제 요청 연결 완료; 차단 목록·정책 문서 대기
 - [x] Profile Detail: 하단 Pick/Pass와 Discover queue 연계
 
 ## P1 — 수익화와 품질
@@ -58,7 +58,7 @@
 - [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free 광고 차단 entitlement 경계 완료
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900 확정, Gold DB 권한·방문자·우선 노출 원격 적용 완료, 실제 Store product 대기
 - [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA
-- [ ] 단위·통합·RLS·핵심 E2E 테스트
+- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 18+·생년월일 포맷 단위 테스트 6건 추가, 원격 RLS/Swipe/Match/Chat E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 
 ## 출시 게이트

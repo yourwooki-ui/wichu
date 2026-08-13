@@ -19,7 +19,9 @@
 | `reports`           | 안전 신고                | 신고자 소유, 운영 검토 상태               |
 | `user_settings`     | 필터/환경설정            | owner-only, 선호 연령 18~90세             |
 | `subscriptions`     | Ad-Free 상태             | client read-only, server write            |
-| `profile_visits`    | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read           |
+| `profile_visits`    | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read          |
+| `push_devices`      | Expo Push 기기 토큰      | owner-only, token unique                  |
+| `account_deletion_requests` | 삭제 작업 queue  | client 직접 접근 차단, user unique        |
 
 ## Swipe와 Match
 
@@ -63,6 +65,9 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 
 ## 운영 데이터
 
+- 프로필 편집은 새 사진을 먼저 private Storage에 임시 업로드한 뒤 `save_my_profile_for_review` RPC 한 트랜잭션으로 프로필·설정·언어·키워드·관심사·사진 순서·심사 재제출을 저장한다. 실패하면 새 업로드만 정리하고 기존 공개 데이터는 보존한다.
+- `push_devices`는 본인 토큰만 등록·조회·삭제할 수 있고 로그아웃 시 기기 토큰 행을 제거한다.
+- 비활성화 RPC는 즉시 프로필을 비공개로 전환하고 활성 Match와 Push를 중지한다.
 - 계정 삭제 요청은 Auth, 프로필, 사진, 관계 데이터와 provider 데이터를 추적 가능한 작업으로 처리
 - 사용자 삭제 전 활성 session을 revoke/sign-out하고 삭제 완료를 별도로 검증
 - 신고 보존 기간과 사용자 삭제 예외는 정책 문서와 일치시킴

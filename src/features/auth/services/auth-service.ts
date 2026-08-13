@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { getSupabaseClient } from '@/lib/supabase';
+import { notificationsService } from '@/services/notifications-service';
 
 const PENDING_GOOGLE_BIRTH_DATE_KEY = 'wichu.auth.pending-google-birth-date';
 
@@ -93,7 +94,10 @@ export const authService = {
     return 'completed' as const;
   },
   createSessionFromUrl,
-  signOut() {
-    return getSupabaseClient().auth.signOut();
+  async signOut() {
+    const supabase = getSupabaseClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user) await notificationsService.unregister(data.user.id).catch(() => undefined);
+    return supabase.auth.signOut();
   },
 };

@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { notificationsService } from '@/services/notifications-service';
 
 export type AppPermissionState = 'granted' | 'denied' | 'undetermined' | 'unavailable';
 
@@ -9,7 +10,7 @@ export const notificationPermissionService = {
     return normalizeStatus(permission.status);
   },
 
-  async request(): Promise<AppPermissionState> {
+  async request(userId?: string): Promise<AppPermissionState> {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('wichu-default', {
         name: 'WICHU 알림',
@@ -19,7 +20,9 @@ export const notificationPermissionService = {
       });
     }
     const permission = await Notifications.requestPermissionsAsync();
-    return normalizeStatus(permission.status);
+    const status = normalizeStatus(permission.status);
+    if (status === 'granted' && userId) await notificationsService.register(userId);
+    return status;
   },
 };
 

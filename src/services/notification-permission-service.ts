@@ -6,7 +6,7 @@ export const notificationPermissionService = {
     return normalizeStatus(globalThis.Notification.permission);
   },
 
-  async request(): Promise<AppPermissionState> {
+  async request(_userId?: string): Promise<AppPermissionState> {
     if (!('Notification' in globalThis)) return 'unavailable';
     return normalizeStatus(await globalThis.Notification.requestPermission());
   },

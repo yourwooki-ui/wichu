@@ -11,6 +11,7 @@ import { NativePreviewFrame } from '@/components/NativePreviewFrame';
 import { AppPermissionOnboarding } from '@/components/AppPermissionOnboarding';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
 import { queryClient } from '@/lib/query-client';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
@@ -18,6 +19,7 @@ SplashScreen.setOptions({ duration: 450, fade: true });
 function RootNavigator() {
   const theme = useAppTheme();
   const { session, profileCompleted, isLoading } = useAuthSession();
+  useProfileLocationSync();
 
   if (isLoading) return null;
 

@@ -27,6 +27,7 @@ export function SettingsScreen() {
   const { session } = useAuthSession();
   const userId = session?.user.id;
   const [signingOut, setSigningOut] = useState(false);
+  const [accountBusy, setAccountBusy] = useState(false);
   const queryKey = ['settings', userId];
   const settingsQuery = useQuery({
     enabled: Boolean(userId),
@@ -73,8 +74,49 @@ export function SettingsScreen() {
   const confirmDeactivation = () =>
     Alert.alert(
       '계정을 비활성화할까요?',
-      '현재 버전에서는 안전한 복구 절차가 준비될 때까지 비활성화 요청을 바로 실행하지 않아요.',
-      [{ text: '확인' }],
+      '내 프로필 노출과 새로운 연결이 즉시 중지되며 현재 매치도 종료됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '비활성화',
+          style: 'destructive',
+          onPress: async () => {
+            setAccountBusy(true);
+            try {
+              await settingsService.deactivateMyAccount();
+              await authService.signOut();
+            } catch {
+              Alert.alert('비활성화하지 못했어요', '잠시 후 다시 시도해주세요.');
+            } finally {
+              setAccountBusy(false);
+            }
+          },
+        },
+      ],
+    );
+
+  const confirmDeletion = () =>
+    Alert.alert(
+      '계정 삭제를 요청할까요?',
+      '프로필은 즉시 비공개 처리되고 운영 삭제 작업이 시작됩니다. 이 작업은 되돌릴 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제 요청',
+          style: 'destructive',
+          onPress: async () => {
+            setAccountBusy(true);
+            try {
+              await settingsService.requestAccountDeletion();
+              await authService.signOut();
+            } catch {
+              Alert.alert('삭제를 요청하지 못했어요', '잠시 후 다시 시도해주세요.');
+            } finally {
+              setAccountBusy(false);
+            }
+          },
+        },
+      ],
     );
 
   return (
@@ -188,9 +230,14 @@ export function SettingsScreen() {
               label="계정 비활성화"
               onPress={confirmDeactivation}
             />
+            <SettingLink danger icon="trash-outline" label="계정 삭제" onPress={confirmDeletion} />
           </SettingSection>
 
-          <Pressable disabled={signingOut} onPress={signOut} style={styles.signOutButton}>
+          <Pressable
+            disabled={signingOut || accountBusy}
+            onPress={signOut}
+            style={styles.signOutButton}
+          >
             {signingOut ? (
               <ActivityIndicator color={palette.danger} />
             ) : (

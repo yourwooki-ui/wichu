@@ -22,4 +22,12 @@ export const settingsService = {
     if (error) throw error;
     return data;
   },
+  async deactivateMyAccount() {
+    const { error } = await getSupabaseClient().rpc('deactivate_my_account');
+    if (error) throw error;
+  },
+  async requestAccountDeletion() {
+    const { error } = await getSupabaseClient().rpc('request_my_account_deletion');
+    if (error) throw error;
+  },
 };

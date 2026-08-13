@@ -122,6 +122,75 @@ export const profilePhotoService = {
       throw error;
     }
   },
+  async stageNewPhotos(
+    profileId: string,
+    photos: ProfilePhotoDraft[],
+    onProgress?: (completed: number, total: number) => void,
+  ) {
+    const newPhotos = photos.filter((photo) => !photo.storagePath);
+    const uploadedPaths = await this.uploadPhotoFiles(profileId, newPhotos, onProgress);
+    let uploadedIndex = 0;
+    return {
+      orderedPaths: photos.map((photo) => photo.storagePath ?? uploadedPaths[uploadedIndex++]!),
+      uploadedPaths,
+    };
+  },
+  async uploadPhotoFiles(
+    profileId: string,
+    photos: ProfilePhotoDraft[],
+    onProgress?: (completed: number, total: number) => void,
+  ) {
+    const supabase = getSupabaseClient();
+    const uploadedPaths: string[] = [];
+    const preparedPhotos = photos.map((photo, index) => {
+      const mimeType = resolveMimeType(photo);
+      return {
+        index,
+        photo,
+        mimeType,
+        storagePath: createStoragePath(profileId, index + 1, MIME_EXTENSIONS[mimeType]),
+      };
+    });
+    const uploadErrors: unknown[] = [];
+    let nextIndex = 0;
+    let completed = 0;
+    onProgress?.(0, photos.length);
+
+    async function uploadWorker() {
+      while (nextIndex < preparedPhotos.length) {
+        const preparedPhoto = preparedPhotos[nextIndex++];
+        if (!preparedPhoto) return;
+        try {
+          const fileData = await readPhoto(preparedPhoto.photo);
+          const { error } = await supabase.storage
+            .from(PHOTO_BUCKET)
+            .upload(preparedPhoto.storagePath, fileData, {
+              cacheControl: '31536000',
+              contentType: preparedPhoto.mimeType,
+              upsert: false,
+            });
+          if (error) throw error;
+          uploadedPaths[preparedPhoto.index] = preparedPhoto.storagePath;
+          completed += 1;
+          onProgress?.(completed, photos.length);
+        } catch (error) {
+          uploadErrors.push(error);
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(UPLOAD_CONCURRENCY, preparedPhotos.length) }, uploadWorker),
+    );
+    if (uploadErrors.length > 0) {
+      const uploadedStoragePaths = uploadedPaths.filter(Boolean);
+      if (uploadedStoragePaths.length) {
+        await supabase.storage.from(PHOTO_BUCKET).remove(uploadedStoragePaths);
+      }
+      throw uploadErrors[0];
+    }
+    return uploadedPaths;
+  },
   async removeUploadedPhotos(profileId: string, storagePaths: string[]) {
     if (storagePaths.length === 0) return;
     const supabase = getSupabaseClient();
@@ -131,5 +200,10 @@ export const profilePhotoService = {
       .eq('profile_id', profileId)
       .in('storage_path', storagePaths);
     await supabase.storage.from(PHOTO_BUCKET).remove(storagePaths);
+  },
+  async removeStorageFiles(storagePaths: string[]) {
+    if (storagePaths.length === 0) return;
+    const { error } = await getSupabaseClient().storage.from(PHOTO_BUCKET).remove(storagePaths);
+    if (error) throw error;
   },
 };

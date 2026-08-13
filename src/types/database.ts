@@ -379,6 +379,38 @@ export type Database = {
           visit_count?: number;
         }
       >;
+      push_devices: Table<
+        {
+          id: string;
+          user_id: string;
+          expo_push_token: string;
+          platform: string;
+          device_name: string | null;
+          enabled: boolean;
+          last_registered_at: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          user_id: string;
+          expo_push_token: string;
+          platform: string;
+          device_name?: string | null;
+          enabled?: boolean;
+          last_registered_at?: string;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          user_id?: string;
+          expo_push_token?: string;
+          platform?: string;
+          device_name?: string | null;
+          enabled?: boolean;
+          last_registered_at?: string;
+          created_at?: string;
+        }
+      >;
     };
     Views: Record<never, never>;
     Functions: {
@@ -439,6 +471,28 @@ export type Database = {
       submit_profile_for_review: {
         Args: Record<never, never>;
         Returns: Database['public']['Enums']['profile_review_status'];
+      };
+      deactivate_my_account: { Args: Record<never, never>; Returns: undefined };
+      request_my_account_deletion: { Args: Record<never, never>; Returns: undefined };
+      save_my_profile_for_review: {
+        Args: {
+          p_display_name: string;
+          p_birth_date: string;
+          p_gender: string;
+          p_interested_in: string[];
+          p_country_code: string;
+          p_native_language: string;
+          p_languages: string[];
+          p_bio: string;
+          p_min_age: number;
+          p_max_age: number;
+          p_locale: string;
+          p_interest_ids: string[];
+          p_spoken_languages: Json;
+          p_tags: Json;
+          p_photo_paths: string[];
+        };
+        Returns: string[];
       };
       review_profile_submission: {
         Args: {

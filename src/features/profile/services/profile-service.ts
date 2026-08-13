@@ -1,7 +1,7 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTag } from '@/features/profile/types/profile-tag';
-import { TablesInsert, TablesUpdate } from '@/types/database';
+import { Json, TablesInsert, TablesUpdate } from '@/types/database';
 
 export const profileService = {
   getInterests() {
@@ -43,8 +43,19 @@ export const profileService = {
       : { data: [], error: null };
     if (interestResult.error) throw interestResult.error;
 
+    const signedPhotos = await Promise.all(
+      [...(profileResult.data.profile_photos ?? [])]
+        .sort((a, b) => a.position - b.position)
+        .map(async (photo) => {
+          const { data } = await supabase.storage
+            .from('profile-photos')
+            .createSignedUrl(photo.storage_path, 3600);
+          return { ...photo, signed_url: data?.signedUrl ?? '' };
+        }),
+    );
+
     return {
-      profile: profileResult.data,
+      profile: { ...profileResult.data, profile_photos: signedPhotos },
       interests: interestResult.data,
       languages: languageResult.data ?? [],
       tags: tagResult.data ?? [],
@@ -60,6 +71,41 @@ export const profileService = {
   },
   submitForReview() {
     return getSupabaseClient().rpc('submit_profile_for_review');
+  },
+  saveForReview(values: {
+    displayName: string;
+    birthDate: string;
+    gender: string;
+    interestedIn: string[];
+    countryCode: string;
+    nativeLanguage: string;
+    languages: string[];
+    bio: string;
+    minAge: number;
+    maxAge: number;
+    locale: string;
+    interestIds: string[];
+    spokenLanguages: SpokenLanguage[];
+    tags: ProfileTag[];
+    photoPaths: string[];
+  }) {
+    return getSupabaseClient().rpc('save_my_profile_for_review', {
+      p_display_name: values.displayName,
+      p_birth_date: values.birthDate,
+      p_gender: values.gender,
+      p_interested_in: values.interestedIn,
+      p_country_code: values.countryCode,
+      p_native_language: values.nativeLanguage,
+      p_languages: values.languages,
+      p_bio: values.bio,
+      p_min_age: values.minAge,
+      p_max_age: values.maxAge,
+      p_locale: values.locale,
+      p_interest_ids: values.interestIds,
+      p_spoken_languages: values.spokenLanguages as unknown as Json,
+      p_tags: values.tags as unknown as Json,
+      p_photo_paths: values.photoPaths,
+    });
   },
   deleteMyProfile(userId: string) {
     return getSupabaseClient().from('profiles').delete().eq('id', userId);

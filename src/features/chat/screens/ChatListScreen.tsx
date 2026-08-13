@@ -63,7 +63,8 @@ export function ChatListScreen() {
       })),
     [matchesQuery.data, now],
   );
-  const sourceConversations = realConversations.length ? realConversations : mockConversations;
+  const sourceConversations =
+    realConversations.length || !__DEV__ ? realConversations : mockConversations;
   const normalizedQuery = query.trim().toLowerCase();
   const conversations = useMemo(
     () =>

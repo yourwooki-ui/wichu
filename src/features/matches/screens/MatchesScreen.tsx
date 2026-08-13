@@ -23,10 +23,9 @@ type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 const categories: {
   key: MatchCategory;
   label: string;
-  count?: number;
 }[] = [
-  { key: 'picked-me', label: '나를 픽함', count: 3 },
-  { key: 'matched', label: '매칭됨', count: 5 },
+  { key: 'picked-me', label: '나를 픽함' },
+  { key: 'matched', label: '매칭됨' },
   { key: 'visitors', label: '방문자' },
 ];
 
@@ -104,13 +103,15 @@ export function MatchesScreen() {
       now - new Date(connection.profile.last_active_at!).getTime() <= 5 * 60 * 1000,
     isNew: now - new Date(connection.matchedAt).getTime() <= 24 * 60 * 60 * 1000,
   }));
-  const matchedProfiles = realMatches.length ? realMatches : profilesByCategory.matched;
+  const matchedProfiles = realMatches.length || !__DEV__ ? realMatches : profilesByCategory.matched;
   const profiles =
     category === 'visitors'
       ? visitors
       : category === 'matched'
         ? matchedProfiles
-        : profilesByCategory[category];
+        : __DEV__
+          ? profilesByCategory[category]
+          : [];
   const copy = categoryCopy[category];
   const visitorsLocked = category === 'visitors' && entitlement.data?.tier !== 'gold';
 
@@ -136,7 +137,14 @@ export function MatchesScreen() {
       <View accessibilityRole="tablist" style={styles.categories}>
         {categories.map((item) => {
           const selected = item.key === category;
-          const count = item.key === 'visitors' ? visitors.length : (item.count ?? 0);
+          const count =
+            item.key === 'visitors'
+              ? visitors.length
+              : item.key === 'matched'
+                ? matchedProfiles.length
+                : __DEV__
+                  ? profilesByCategory['picked-me'].length
+                  : 0;
           return (
             <Pressable
               accessibilityRole="tab"
