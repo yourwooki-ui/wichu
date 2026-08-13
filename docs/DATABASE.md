@@ -55,6 +55,8 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 - 사진 bucket은 private, path 첫 segment는 소유자 ID
 - privileged function은 비노출 schema, 고정 search path, 최소 권한 사용
 - `raw_user_meta_data`는 권한 판단에 사용하지 않고 운영 권한은 server-managed app metadata 또는 DB role table에서 판단
+- 운영 권한은 `private.admin_users`와 좁은 범위 RPC로만 확인한다. 프로필 심사와 신고 triage는 원본 테이블에 대한 관리자 직접 권한 없이 각각 전용 queue/action RPC를 사용한다.
+- `supabase/tests/p0_rls_contract.sql`은 일반 사용자·운영자 경계, 중복 Swipe, 상호 Match, Chat 참여자 제한을 롤백 트랜잭션으로 회귀 검증한다.
 
 ## 최초 프로필 심사
 

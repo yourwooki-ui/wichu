@@ -562,10 +562,40 @@ export type Database = {
           profile_tags: Json;
         }[];
       };
+      get_my_admin_access: {
+        Args: Record<never, never>;
+        Returns: { role: 'master' | 'operator'; active: boolean }[];
+      };
+      get_pending_reports: {
+        Args: { p_limit?: number; p_before?: string | null };
+        Returns: {
+          id: string;
+          reporter_id: string;
+          reported_id: string;
+          reported_display_name: string;
+          reported_photo_path: string | null;
+          reason: string;
+          details: string | null;
+          status: string;
+          created_at: string;
+        }[];
+      };
+      resolve_report: {
+        Args: {
+          p_report_id: string;
+          p_resolution: Database['public']['Enums']['report_resolution'];
+        };
+        Returns: string;
+      };
+      end_my_match: {
+        Args: { p_match_id: string };
+        Returns: Database['public']['Enums']['match_status'];
+      };
     };
     Enums: {
       language_proficiency: 'beginner' | 'intermediate' | 'advanced' | 'fluent';
       profile_review_status: 'draft' | 'pending' | 'approved' | 'rejected';
+      report_resolution: 'reviewed' | 'closed';
       swipe_action: 'like' | 'pass';
       match_status: 'active' | 'unmatched';
       subscription_status: 'inactive' | 'active' | 'expired' | 'cancelled';

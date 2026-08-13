@@ -24,7 +24,7 @@ type BooleanSetting = 'discovery_enabled' | 'push_matches' | 'push_messages';
 export function SettingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { session } = useAuthSession();
+  const { session, adminRole } = useAuthSession();
   const userId = session?.user.id;
   const [signingOut, setSigningOut] = useState(false);
   const [accountBusy, setAccountBusy] = useState(false);
@@ -211,6 +211,17 @@ export function SettingsScreen() {
               onPress={() => showComingSoon('개인정보처리방침')}
             />
           </SettingSection>
+
+          {adminRole ? (
+            <SettingSection title="운영">
+              <SettingLink
+                icon="shield-checkmark"
+                label="운영 센터"
+                onPress={() => router.push('/operations')}
+                value={adminRole === 'master' ? '마스터' : '운영자'}
+              />
+            </SettingSection>
+          ) : null}
 
           <SettingSection title="계정">
             <SettingLink

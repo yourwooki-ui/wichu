@@ -34,7 +34,7 @@
 
 - [ ] 프로필/대화 신고, 차단, match 종료 — 신고 사유·차단 확인 UI와 저장 연결 완료, 차단 RLS 원격 적용 및 match 종료 대기
 - [ ] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제와 삭제 요청 queue까지 연결, Auth·Storage 실제 삭제 worker 및 보존 정책 대기
-- [ ] 신고 triage용 최소 운영 도구 또는 검증된 Dashboard 절차 — 프로필 심사 queue/approve/reject RPC 완료, 운영 UI 대기
+- [x] 신고 triage와 프로필 심사용 최소 운영 센터 — DB role 기반 진입, queue/approve/reject/resolve 전용 RPC 연결
 - [ ] Push 등록과 Match/메시지 deep link — 실기기 token 등록, Match/메시지 outbox, Edge Function 발송, 안전한 앱 딥링크까지 완료; EAS 실기기 수신 QA와 receipt 정리 대기
 - [ ] 개인정보 최소화, 민감 로그 redaction, rate limit
 - [ ] 크래시·API 실패·핵심 funnel 관측성 연결
@@ -58,7 +58,7 @@
 - [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free 광고 차단 entitlement 경계 완료
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900 확정, Gold DB 권한·방문자·우선 노출 원격 적용 완료, 실제 Store product 대기
 - [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA
-- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 18+·생년월일 포맷 단위 테스트 6건 추가, 원격 RLS/Swipe/Match/Chat E2E 대기
+- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 18+·생년월일 포맷 단위 테스트와 `p0_rls_contract.sql` 추가, 격리 DB/CI 자동 실행 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 
 ## 출시 게이트

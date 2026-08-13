@@ -19,7 +19,7 @@ SplashScreen.setOptions({ duration: 450, fade: true });
 
 function RootNavigator() {
   const theme = useAppTheme();
-  const { session, profileCompleted, isLoading } = useAuthSession();
+  const { session, profileCompleted, adminRole, isLoading } = useAuthSession();
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
 
@@ -49,6 +49,9 @@ function RootNavigator() {
           <Stack.Screen name="chat/[matchId]" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="ad-free" />
+        </Stack.Protected>
+        <Stack.Protected guard={Boolean(session) && Boolean(adminRole)}>
+          <Stack.Screen name="operations" />
         </Stack.Protected>
       </Stack>
       {session && profileCompleted ? <AppPermissionOnboarding /> : null}

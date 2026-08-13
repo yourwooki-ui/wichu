@@ -15,6 +15,7 @@ import { usePresenceHeartbeat } from '@/hooks/use-presence-heartbeat';
 import type { Database } from '@/types/database';
 
 type ProfileReviewStatus = Database['public']['Enums']['profile_review_status'];
+type AdminRole = 'master' | 'operator';
 
 type AuthContextValue = {
   session: Session | null;
@@ -23,6 +24,7 @@ type AuthContextValue = {
   profileApproved: boolean;
   profileReviewStatus: ProfileReviewStatus | null;
   profileReviewNote: string | null;
+  adminRole: AdminRole | null;
   refreshProfile: () => Promise<void>;
 };
 
@@ -74,6 +76,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
   });
 
+  const { data: adminAccess, isLoading: isAdminLoading } = useQuery({
+    queryKey: ['auth', 'admin-access', userId],
+    enabled: Boolean(userId),
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await getSupabaseClient().rpc('get_my_admin_access');
+      if (error) throw error;
+      return data[0] ?? null;
+    },
+  });
+
   const refreshProfile = useCallback(async () => {
     await refetchProfile();
   }, [refetchProfile]);
@@ -81,7 +94,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
-      isLoading: isSessionLoading || (Boolean(session) && isProfileLoading),
+      isLoading: isSessionLoading || (Boolean(session) && (isProfileLoading || isAdminLoading)),
+      adminRole: adminAccess?.active ? adminAccess.role : null,
       profileCompleted: profile?.profile_completed ?? false,
       profileApproved: Boolean(profile?.profile_completed) && profile?.review_status === 'approved',
       profileReviewStatus: profile?.review_status ?? null,
@@ -90,7 +104,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }),
     [
       isProfileLoading,
+      isAdminLoading,
       isSessionLoading,
+      adminAccess?.active,
+      adminAccess?.role,
       profile?.profile_completed,
       profile?.review_note,
       profile?.review_status,
