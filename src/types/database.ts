@@ -518,6 +518,7 @@ export type Database = {
       };
       deactivate_my_account: { Args: Record<never, never>; Returns: undefined };
       request_my_account_deletion: { Args: Record<never, never>; Returns: undefined };
+      claim_my_account_deletion: { Args: Record<never, never>; Returns: boolean };
       save_my_profile_for_review: {
         Args: {
           p_display_name: string;

@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(19);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -78,6 +78,20 @@ select lives_ok(
 );
 select is((select count(*) from public.matches), 0::bigint, 'ended match is hidden from participant');
 select is((select count(*) from public.messages), 0::bigint, 'ended match messages are hidden');
+
+select lives_ok(
+  $$select public.request_my_account_deletion()$$,
+  'user can request their own account deletion'
+);
+select ok(
+  public.claim_my_account_deletion(),
+  'user can atomically claim their pending deletion request'
+);
+select isnt(
+  public.claim_my_account_deletion(),
+  true,
+  'a processing deletion request cannot be claimed twice'
+);
 select * from finish();
 
 rollback;

@@ -89,16 +89,22 @@ export function MeScreen() {
       const databasePaths = [...data.profile_photos]
         .sort((a, b) => a.position - b.position)
         .map((photo) => photo.storage_path);
+      const cachedSignedPhotos = [...data.profile_photos]
+        .sort((a, b) => a.position - b.position)
+        .map((photo) => photo.signed_url)
+        .filter((photo): photo is string => Boolean(photo));
       const storagePaths = databasePaths.length
         ? databasePaths
         : await profilePhotoService.listMyStoredPhotos(userId!);
 
-      const photos = await Promise.all(
-        storagePaths.map(async (storagePath) => {
-          const { data: signed } = await profilePhotoService.createSignedPhotoUrl(storagePath);
-          return signed?.signedUrl ?? null;
-        }),
-      );
+      const photos = cachedSignedPhotos.length
+        ? cachedSignedPhotos
+        : await Promise.all(
+            storagePaths.map(async (storagePath) => {
+              const { data: signed } = await profilePhotoService.createSignedPhotoUrl(storagePath);
+              return signed?.signedUrl ?? null;
+            }),
+          );
 
       return {
         ...operational,

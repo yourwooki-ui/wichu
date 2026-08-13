@@ -27,7 +27,15 @@
       "favicon": "./assets/brand/wichu-app-icon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false,
+            "default": false
+          }
+        }
+      ],
       "expo-image",
       [
         "expo-image-picker",

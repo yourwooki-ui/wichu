@@ -28,7 +28,10 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="discover"
       screenOptions={({ route }) => ({
+        detachInactiveScreens: false,
+        freezeOnBlur: true,
         headerShown: false,
+        lazy: false,
         sceneStyle: { backgroundColor: theme.colors.background },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarAllowFontScaling: false,

@@ -73,8 +73,8 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 - Match/메시지 trigger는 사용자 알림 설정과 차단 상태를 확인한 뒤 `notification_outbox`에 한 번만 적재한다. Database Webhook이 비공개 Edge Function을 호출하며 Expo Push의 `data.url`은 허용된 앱 내부 경로만 사용한다.
 - 비활성화 RPC는 즉시 프로필을 비공개로 전환하고 활성 Match와 Push를 중지한다.
 - `end_my_match`는 참여자 본인의 활성 Match만 `unmatched`로 전환한다. 전환 직후 Match 행과 기존 메시지는 양쪽 사용자에게 모두 보이지 않고 새 메시지 작성도 거부된다.
-- 계정 삭제 요청은 Auth, 프로필, 사진, 관계 데이터와 provider 데이터를 추적 가능한 작업으로 처리
-- 사용자 삭제 전 활성 session을 revoke/sign-out하고 삭제 완료를 별도로 검증
+- 계정 삭제 요청은 즉시 프로필·Match·Push를 비활성화한 뒤 원자적으로 worker 실행권을 획득한다. worker는 Storage API로 사진을 먼저 제거하고 Auth 사용자를 삭제해 cascade로 관계 데이터를 정리한다.
+- 삭제 worker는 15분 경과한 중단 작업만 재시도하고 동시 실행을 거부한다. Auth 삭제 전 trigger가 사용자 UUID의 SHA-256 fingerprint, 요청·완료 시각, 제거 사진 수만 비식별 감사 기록으로 보존한다.
 - 신고 보존 기간과 사용자 삭제 예외는 정책 문서와 일치시킴
 - 메시지/민감 데이터는 분석 이벤트나 일반 로그에 복제하지 않음
 - production migration 전 backup/restore 가능 여부와 예상 lock을 확인

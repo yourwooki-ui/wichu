@@ -36,6 +36,14 @@ app routes
 
 접속 상태는 전역 Auth 계층의 단일 heartbeat에서만 갱신한다. 카드별 heartbeat는 만들지 않으며, UI 상대 시간 갱신도 덱 단위 1분 timer 하나를 공유한다.
 
+## Navigation 성능 경로
+
+- 하단 5개 핵심 탭은 lazy route로 분리하지 않고 최초 앱 번들에 포함한다.
+- 탭 화면은 최초 앱 안정화 시 eager mount하고, 비활성 화면은 분리하지 않은 채 freeze하여 재방문 렌더와 네트워크 요청을 피한다.
+- TanStack Query의 공통 `matches/connections`와 entitlement cache를 Match·Chat·Shop·Me가 공유한다.
+- 프로필 사진은 운영 프로필 조회에서 이미 발급된 signed URL을 재사용하고 `expo-image`의 memory/disk cache를 유지한다.
+- 로컬 개발 서버 전환 시간은 production 성능 수치로 사용하지 않되, eager mount 이후에도 빈 화면이 노출되지 않는지 회귀 측정한다.
+
 ## Chat 경로
 
 - TanStack Query cache에 임시 ID 메시지를 즉시 추가
