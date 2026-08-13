@@ -15,6 +15,13 @@ export type MatchConnection = {
 };
 
 export const matchesService = {
+  async endMatch(matchId: string) {
+    const { data, error } = await getSupabaseClient().rpc('end_my_match', {
+      p_match_id: matchId,
+    });
+    if (error) throw error;
+    return data;
+  },
   async listConnections(userId: string): Promise<MatchConnection[]> {
     const supabase = getSupabaseClient();
     const { data: matches, error: matchesError } = await supabase

@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(16);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -68,6 +68,16 @@ select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-0000000
 set local role authenticated;
 select is((select count(*) from public.get_pending_reports()), 1::bigint, 'admin can read report queue');
 select lives_ok($$select public.resolve_report((select id from public.get_pending_reports() limit 1), 'reviewed')$$, 'admin can resolve report');
+
+select set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000001', false);
+select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
+set local role authenticated;
+select lives_ok(
+  format('select public.end_my_match(%L)', (select id from public.matches limit 1)),
+  'participant can end active match'
+);
+select is((select count(*) from public.matches), 0::bigint, 'ended match is hidden from participant');
+select is((select count(*) from public.messages), 0::bigint, 'ended match messages are hidden');
 select * from finish();
 
 rollback;

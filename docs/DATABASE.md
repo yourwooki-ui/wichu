@@ -50,7 +50,7 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 - Data API의 table/function grant는 프로젝트 기본값에 기대지 않고 migration에서 최소 권한으로 명시
 - 공개 프로필도 인증 사용자에게 필요한 컬럼만 노출
 - swipe/settings/report는 소유자 범위로 제한
-- match/message는 참여자만 접근하고 차단 시 즉시 거부
+- match/message는 활성 상태의 참여자만 접근하고 차단 또는 매치 종료 시 즉시 거부
 - 구독/결제 상태는 클라이언트 쓰기 금지
 - 사진 bucket은 private, path 첫 segment는 소유자 ID
 - privileged function은 비노출 schema, 고정 search path, 최소 권한 사용
@@ -72,6 +72,7 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 - `push_devices`는 본인 토큰만 등록·조회·삭제할 수 있고 로그아웃 시 기기 토큰 행을 제거한다.
 - Match/메시지 trigger는 사용자 알림 설정과 차단 상태를 확인한 뒤 `notification_outbox`에 한 번만 적재한다. Database Webhook이 비공개 Edge Function을 호출하며 Expo Push의 `data.url`은 허용된 앱 내부 경로만 사용한다.
 - 비활성화 RPC는 즉시 프로필을 비공개로 전환하고 활성 Match와 Push를 중지한다.
+- `end_my_match`는 참여자 본인의 활성 Match만 `unmatched`로 전환한다. 전환 직후 Match 행과 기존 메시지는 양쪽 사용자에게 모두 보이지 않고 새 메시지 작성도 거부된다.
 - 계정 삭제 요청은 Auth, 프로필, 사진, 관계 데이터와 provider 데이터를 추적 가능한 작업으로 처리
 - 사용자 삭제 전 활성 session을 revoke/sign-out하고 삭제 완료를 별도로 검증
 - 신고 보존 기간과 사용자 삭제 예외는 정책 문서와 일치시킴

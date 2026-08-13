@@ -32,7 +32,7 @@
 
 ## P0 — 안전과 운영
 
-- [ ] 프로필/대화 신고, 차단, match 종료 — 신고 사유·차단 확인 UI와 저장 연결 완료, 차단 RLS 원격 적용 및 match 종료 대기
+- [x] 프로필/대화 신고, 차단, match 종료 — 신고 사유·차단 확인 UI와 저장, 차단 RLS, 채팅 안전 메뉴의 매치 종료 및 즉시 메시지 차단 연결
 - [ ] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제와 삭제 요청 queue까지 연결, Auth·Storage 실제 삭제 worker 및 보존 정책 대기
 - [x] 신고 triage와 프로필 심사용 최소 운영 센터 — DB role 기반 진입, queue/approve/reject/resolve 전용 RPC 연결
 - [ ] Push 등록과 Match/메시지 deep link — 실기기 token 등록, Match/메시지 outbox, Edge Function 발송, 안전한 앱 딥링크까지 완료; EAS 실기기 수신 QA와 receipt 정리 대기

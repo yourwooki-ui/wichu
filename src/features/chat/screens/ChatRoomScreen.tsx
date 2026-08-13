@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -40,6 +40,7 @@ type LocalMessage = {
 
 export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { i18n } = useTranslation();
   const { session } = useAuthSession();
@@ -190,6 +191,41 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         },
       },
     ]);
+  };
+
+  const confirmEndMatch = () => {
+    if (isMock) {
+      setSafetyOpen(false);
+      Alert.alert('테스트 매치', '샘플 대화는 개발 중 반복해서 확인할 수 있도록 유지돼요.');
+      return;
+    }
+    Alert.alert(
+      `${profile.name}님과의 매치를 종료할까요?`,
+      '대화가 즉시 종료되고 서로 메시지를 주고받을 수 없게 됩니다. 차단과 신고는 별도로 할 수 있어요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '매치 종료',
+          style: 'destructive',
+          onPress: async () => {
+            setSafetyBusy(true);
+            try {
+              await matchesService.endMatch(matchId);
+              queryClient.removeQueries({ queryKey: ['chat', matchId] });
+              queryClient.removeQueries({ queryKey: ['match', matchId] });
+              await queryClient.invalidateQueries({ queryKey: ['matches'] });
+              await queryClient.invalidateQueries({ queryKey: ['chat-list'] });
+              setSafetyOpen(false);
+              router.replace('/(tabs)/chat');
+            } catch {
+              Alert.alert('매치를 종료하지 못했어요', '이미 종료됐거나 연결이 불안정해요.');
+            } finally {
+              setSafetyBusy(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const loading = !isMock && (connectionQuery.isLoading || messagesQuery.isLoading);
@@ -385,6 +421,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             <SafetyAction
               danger
               disabled={safetyBusy}
+              icon="heart-dislike-outline"
+              label="매치 종료"
+              onPress={confirmEndMatch}
+            />
+            <SafetyAction
+              danger
+              disabled={safetyBusy}
               icon="ban-outline"
               label="차단하기"
               onPress={confirmBlock}
@@ -445,7 +488,7 @@ function SafetyAction({
 }: {
   danger?: boolean;
   disabled: boolean;
-  icon: 'person-outline' | 'flag-outline' | 'ban-outline';
+  icon: 'person-outline' | 'flag-outline' | 'heart-dislike-outline' | 'ban-outline';
   label: string;
   onPress: () => void;
 }) {
