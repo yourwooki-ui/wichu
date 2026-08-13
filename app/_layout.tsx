@@ -13,6 +13,7 @@ import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
 import { queryClient } from '@/lib/query-client';
+import { useNotificationObserver } from '@/services/use-notification-observer';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
 
@@ -20,6 +21,7 @@ function RootNavigator() {
   const theme = useAppTheme();
   const { session, profileCompleted, isLoading } = useAuthSession();
   useProfileLocationSync();
+  useNotificationObserver(Boolean(session) && profileCompleted);
 
   if (isLoading) return null;
 

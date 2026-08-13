@@ -27,7 +27,13 @@ export const settingsService = {
     if (error) throw error;
   },
   async requestAccountDeletion() {
-    const { error } = await getSupabaseClient().rpc('request_my_account_deletion');
-    if (error) throw error;
+    const supabase = getSupabaseClient();
+    const { error: requestError } = await supabase.rpc('request_my_account_deletion');
+    if (requestError) throw requestError;
+
+    const { error: deletionError } = await supabase.functions.invoke('delete-account-v2', {
+      body: {},
+    });
+    if (deletionError) throw deletionError;
   },
 };

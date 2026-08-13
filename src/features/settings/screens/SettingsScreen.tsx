@@ -108,7 +108,7 @@ export function SettingsScreen() {
             setAccountBusy(true);
             try {
               await settingsService.requestAccountDeletion();
-              await authService.signOut();
+              await authService.clearLocalSession();
             } catch {
               Alert.alert('삭제를 요청하지 못했어요', '잠시 후 다시 시도해주세요.');
             } finally {

@@ -100,4 +100,7 @@ export const authService = {
     if (data.user) await notificationsService.unregister(data.user.id).catch(() => undefined);
     return supabase.auth.signOut();
   },
+  clearLocalSession() {
+    return getSupabaseClient().auth.signOut({ scope: 'local' });
+  },
 };

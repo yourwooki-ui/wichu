@@ -35,7 +35,7 @@
 - [ ] 프로필/대화 신고, 차단, match 종료 — 신고 사유·차단 확인 UI와 저장 연결 완료, 차단 RLS 원격 적용 및 match 종료 대기
 - [ ] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제와 삭제 요청 queue까지 연결, Auth·Storage 실제 삭제 worker 및 보존 정책 대기
 - [ ] 신고 triage용 최소 운영 도구 또는 검증된 Dashboard 절차 — 프로필 심사 queue/approve/reject RPC 완료, 운영 UI 대기
-- [ ] Push 등록과 Match/메시지 deep link — 실기기 권한 요청·Expo token 등록/로그아웃 정리 완료, 서버 발송과 알림 응답 deep link 대기
+- [ ] Push 등록과 Match/메시지 deep link — 실기기 token 등록, Match/메시지 outbox, Edge Function 발송, 안전한 앱 딥링크까지 완료; EAS 실기기 수신 QA와 receipt 정리 대기
 - [ ] 개인정보 최소화, 민감 로그 redaction, rate limit
 - [ ] 크래시·API 실패·핵심 funnel 관측성 연결
 

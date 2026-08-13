@@ -4,24 +4,25 @@
 
 ## 핵심 테이블
 
-| Table               | 역할                     | 필수 불변조건                             |
-| ------------------- | ------------------------ | ----------------------------------------- |
-| `profiles`          | 공개 발견 프로필         | auth user PK, 18+ 검증, 운영 심사 상태    |
-| `profile_photos`    | 순서가 있는 Storage 경로 | 사용자당 position 1~6 unique              |
-| `interests`         | 관심사 카탈로그          | unique slug                               |
-| `profile_interests` | 프로필/관심사 연결       | composite PK                              |
-| `profile_languages` | 추가 구사 언어/수준      | 사용자·언어 unique, owner-only            |
-| `profile_tags`      | 관계 목적/분위기 메타    | 허용 category/value 조합, composite PK    |
-| `swipes`            | like/pass 선택           | `(swiper_id,target_id)` unique, self 금지 |
-| `matches`           | 상호 선택 관계           | canonical user pair unique                |
-| `messages`          | Match 대화               | 활성 Match 참여자만 작성                  |
-| `blocks`            | 방향성 차단              | pair unique, 즉시 접근 차단               |
-| `reports`           | 안전 신고                | 신고자 소유, 운영 검토 상태               |
-| `user_settings`     | 필터/환경설정            | owner-only, 선호 연령 18~90세             |
-| `subscriptions`     | Ad-Free 상태             | client read-only, server write            |
-| `profile_visits`    | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read          |
-| `push_devices`      | Expo Push 기기 토큰      | owner-only, token unique                  |
-| `account_deletion_requests` | 삭제 작업 queue  | client 직접 접근 차단, user unique        |
+| Table                       | 역할                     | 필수 불변조건                             |
+| --------------------------- | ------------------------ | ----------------------------------------- |
+| `profiles`                  | 공개 발견 프로필         | auth user PK, 18+ 검증, 운영 심사 상태    |
+| `profile_photos`            | 순서가 있는 Storage 경로 | 사용자당 position 1~6 unique              |
+| `interests`                 | 관심사 카탈로그          | unique slug                               |
+| `profile_interests`         | 프로필/관심사 연결       | composite PK                              |
+| `profile_languages`         | 추가 구사 언어/수준      | 사용자·언어 unique, owner-only            |
+| `profile_tags`              | 관계 목적/분위기 메타    | 허용 category/value 조합, composite PK    |
+| `swipes`                    | like/pass 선택           | `(swiper_id,target_id)` unique, self 금지 |
+| `matches`                   | 상호 선택 관계           | canonical user pair unique                |
+| `messages`                  | Match 대화               | 활성 Match 참여자만 작성                  |
+| `blocks`                    | 방향성 차단              | pair unique, 즉시 접근 차단               |
+| `reports`                   | 안전 신고                | 신고자 소유, 운영 검토 상태               |
+| `user_settings`             | 필터/환경설정            | owner-only, 선호 연령 18~90세             |
+| `subscriptions`             | Ad-Free 상태             | client read-only, server write            |
+| `profile_visits`            | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read          |
+| `push_devices`              | Expo Push 기기 토큰      | owner-only, token unique                  |
+| `account_deletion_requests` | 삭제 작업 queue          | client 직접 접근 차단, user unique        |
+| `notification_outbox`       | Match/메시지 Push 작업   | client 접근 차단, source별 idempotent     |
 
 ## Swipe와 Match
 
@@ -67,6 +68,7 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 
 - 프로필 편집은 새 사진을 먼저 private Storage에 임시 업로드한 뒤 `save_my_profile_for_review` RPC 한 트랜잭션으로 프로필·설정·언어·키워드·관심사·사진 순서·심사 재제출을 저장한다. 실패하면 새 업로드만 정리하고 기존 공개 데이터는 보존한다.
 - `push_devices`는 본인 토큰만 등록·조회·삭제할 수 있고 로그아웃 시 기기 토큰 행을 제거한다.
+- Match/메시지 trigger는 사용자 알림 설정과 차단 상태를 확인한 뒤 `notification_outbox`에 한 번만 적재한다. Database Webhook이 비공개 Edge Function을 호출하며 Expo Push의 `data.url`은 허용된 앱 내부 경로만 사용한다.
 - 비활성화 RPC는 즉시 프로필을 비공개로 전환하고 활성 Match와 Push를 중지한다.
 - 계정 삭제 요청은 Auth, 프로필, 사진, 관계 데이터와 provider 데이터를 추적 가능한 작업으로 처리
 - 사용자 삭제 전 활성 session을 revoke/sign-out하고 삭제 완료를 별도로 검증

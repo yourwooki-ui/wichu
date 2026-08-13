@@ -411,6 +411,50 @@ export type Database = {
           created_at?: string;
         }
       >;
+      notification_outbox: Table<
+        {
+          id: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body: string;
+          route: string;
+          source_id: string;
+          status: string;
+          attempts: number;
+          last_error: string | null;
+          sent_at: string | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body: string;
+          route: string;
+          source_id: string;
+          status?: string;
+          attempts?: number;
+          last_error?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          user_id?: string;
+          kind?: string;
+          title?: string;
+          body?: string;
+          route?: string;
+          source_id?: string;
+          status?: string;
+          attempts?: number;
+          last_error?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+        }
+      >;
     };
     Views: Record<never, never>;
     Functions: {
