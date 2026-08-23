@@ -46,3 +46,7 @@ yarn-error.*
 
 # Raw design handoff attachments (canonical copies live in assets/brand)
 KakaoTalk_*.png
+
+.vercel/
+.env*
+!.env.example

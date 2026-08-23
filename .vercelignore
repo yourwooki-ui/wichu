@@ -1,0 +1,15 @@
+.git/
+.github/
+.vercel/
+.expo/
+node_modules/
+dist/
+dist-release/
+tmp/
+.tmp/
+docs/
+supabase/seed-assets/
+KakaoTalk_*.png
+*.apk
+*.aab
+*.ipa
