@@ -7,6 +7,9 @@ export const AD_FREE_PRODUCT = {
 
 export const GOLD_PRODUCT = {
   id: 'wichu_gold_monthly',
+  billingPeriod: 'monthly',
+  fallbackPriceKrw: 19_900,
+  fallbackPriceLabelKo: '월 ₩19,900',
 } as const;
 
 export type MonetizationProductId = typeof AD_FREE_PRODUCT.id | typeof GOLD_PRODUCT.id;

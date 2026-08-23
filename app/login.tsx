@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,6 +29,7 @@ type AuthStage = 'welcome' | 'sign-in' | 'sign-up';
 type LoadingMethod = 'email' | 'google' | null;
 
 export default function LoginRoute() {
+  const router = useRouter();
   const { t } = useTranslation();
   const scrollRef = useRef<ScrollView>(null);
   const [stage, setStage] = useState<AuthStage>('welcome');
@@ -164,6 +166,15 @@ export default function LoginRoute() {
                     onPress={() => setConsented((value) => !value)}
                     label={t('auth.consent')}
                   />
+                  <View style={styles.policyLinks}>
+                    <Pressable onPress={() => router.push('/legal/terms')}>
+                      <Text style={styles.policyLink}>이용약관 보기</Text>
+                    </Pressable>
+                    <Text style={styles.policyDot}>·</Text>
+                    <Pressable onPress={() => router.push('/legal/privacy')}>
+                      <Text style={styles.policyLink}>개인정보처리방침 보기</Text>
+                    </Pressable>
+                  </View>
                 </>
               ) : null}
 
@@ -201,6 +212,17 @@ export default function LoginRoute() {
                 showPasswordLabel={t('auth.showPassword')}
                 hidePasswordLabel={t('auth.hidePassword')}
               />
+
+              {!isSignUp ? (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loading}
+                  onPress={() => router.push('/forgot-password')}
+                  style={styles.forgotButton}
+                >
+                  <Text style={styles.forgotText}>비밀번호를 잊으셨나요?</Text>
+                </Pressable>
+              ) : null}
 
               {message ? <Text style={styles.message}>{message}</Text> : null}
               <PrimaryButton
@@ -287,6 +309,16 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   formPanel: { gap: spacing.md },
+  policyLinks: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  policyLink: {
+    color: '#B8B8C0',
+    fontSize: 10,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
+  },
+  policyDot: { color: '#5F5F68', fontSize: 10 },
+  forgotButton: { alignSelf: 'flex-end', marginTop: -5 },
+  forgotText: { color: '#B8B8C0', fontSize: 11, fontWeight: '800' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#2A2A30' },
   dividerLabel: { color: '#74747D', fontSize: 10, fontWeight: '800' },

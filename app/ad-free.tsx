@@ -3,8 +3,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
-import { AD_FREE_PRODUCT } from '@/features/monetization/constants/products';
+import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
 const GOLD_BENEFITS = [
@@ -12,6 +14,7 @@ const GOLD_BENEFITS = [
   '내 프로필 방문자 확인',
   'Discover 노출 우선순위',
   '모든 광고 제거',
+  '광고 없이 무제한 되돌리기',
 ];
 
 export default function PassDetailRoute() {
@@ -37,11 +40,11 @@ export default function PassDetailRoute() {
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.mark, adFreeOnly && styles.markPink]}>
-          <Ionicons
-            color={adFreeOnly ? palette.pink : '#4A3500'}
-            name={adFreeOnly ? 'remove-circle' : 'diamond'}
-            size={29}
-          />
+          {adFreeOnly ? (
+            <Ionicons color={palette.pink} name="remove-circle" size={29} />
+          ) : (
+            <IllustratedIcon size={76} source={illustratedIcons.goldPremium} />
+          )}
         </View>
         <Text style={styles.eyebrow}>{adFreeOnly ? 'WICHU AD-FREE' : 'WICHU GOLD PASS'}</Text>
         <Text style={styles.title}>
@@ -54,7 +57,7 @@ export default function PassDetailRoute() {
         </Text>
 
         <View style={styles.benefits}>
-          {(adFreeOnly ? ['모든 광고 제거'] : GOLD_BENEFITS).map((benefit) => (
+          {(adFreeOnly ? ['자동 노출 광고 제거'] : GOLD_BENEFITS).map((benefit) => (
             <View key={benefit} style={styles.benefitRow}>
               <View style={[styles.check, !adFreeOnly && styles.checkGold]}>
                 <Ionicons
@@ -71,7 +74,7 @@ export default function PassDetailRoute() {
         <View style={styles.priceCard}>
           <Text style={styles.priceLabel}>월간 이용권</Text>
           <Text style={styles.price}>
-            {adFreeOnly ? AD_FREE_PRODUCT.fallbackPriceLabelKo : '가격은 스토어 연결 후 표시'}
+            {adFreeOnly ? AD_FREE_PRODUCT.fallbackPriceLabelKo : GOLD_PRODUCT.fallbackPriceLabelKo}
           </Text>
           <Text style={styles.priceHint}>
             {adFreeOnly ? '매월 자동 갱신 · 언제든 취소 가능' : '자동 갱신 · 언제든 취소 가능'}
@@ -110,13 +113,11 @@ const styles = StyleSheet.create({
   content: { alignItems: 'center', paddingBottom: 30, paddingHorizontal: 22, paddingTop: 22 },
   mark: {
     alignItems: 'center',
-    backgroundColor: '#FFD35A',
-    borderRadius: 31,
-    height: 62,
+    height: 80,
     justifyContent: 'center',
-    width: 62,
+    width: 80,
   },
-  markPink: { backgroundColor: '#FFE4ED' },
+  markPink: { backgroundColor: '#FFE4ED', borderRadius: 31, height: 62, width: 62 },
   eyebrow: { color: '#A2760D', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginTop: 18 },
   title: {
     color: palette.ink,

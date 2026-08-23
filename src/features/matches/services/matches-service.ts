@@ -5,6 +5,7 @@ import type { Tables } from '@/types/database';
 export type MatchConnection = {
   matchId: string;
   matchedAt: string;
+  unreadCount: number;
   lastMessage: Pick<Tables<'messages'>, 'content' | 'created_at' | 'sender_id'> | null;
   profile: Pick<
     Tables<'profiles'>,
@@ -14,7 +15,55 @@ export type MatchConnection = {
   };
 };
 
+export type IncomingLike = {
+  profileId: string;
+  displayName: string;
+  birthDate: string;
+  countryCode: string;
+  lastActiveAt: string | null;
+  distanceKm: number | null;
+  isGoldPass: boolean;
+  likedAt: string;
+  photo: string;
+};
+
 export const matchesService = {
+  async listIncomingLikes(): Promise<IncomingLike[]> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_my_incoming_likes', { p_limit: 50 });
+    if (error) throw error;
+
+    const signedPhotos = new Map<string, string>();
+    await Promise.all(
+      (data ?? []).flatMap((like) =>
+        like.photo_path
+          ? [
+              profilePhotoService.createSignedPhotoUrl(like.photo_path, 3600).then(({ data }) => {
+                if (data?.signedUrl) signedPhotos.set(like.profile_id, data.signedUrl);
+              }),
+            ]
+          : [],
+      ),
+    );
+
+    return (data ?? []).flatMap((like) => {
+      const photo = signedPhotos.get(like.profile_id);
+      if (!photo) return [];
+      return [
+        {
+          profileId: like.profile_id,
+          displayName: like.display_name,
+          birthDate: like.birth_date,
+          countryCode: like.country_code,
+          lastActiveAt: like.last_active_at,
+          distanceKm: like.distance_km,
+          isGoldPass: like.is_gold_pass,
+          likedAt: like.liked_at,
+          photo,
+        },
+      ];
+    });
+  },
   async endMatch(matchId: string) {
     const { data, error } = await getSupabaseClient().rpc('end_my_match', {
       p_match_id: matchId,
@@ -39,6 +88,7 @@ export const matchesService = {
       { data: profiles, error: profilesError },
       { data: photos, error: photosError },
       { data: messages, error: messagesError },
+      { data: unreadCounts, error: unreadCountsError },
     ] = await Promise.all([
       supabase
         .from('profiles')
@@ -58,10 +108,12 @@ export const matchesService = {
         )
         .order('created_at', { ascending: false })
         .limit(100),
+      supabase.rpc('get_my_unread_counts'),
     ]);
     if (profilesError) throw profilesError;
     if (photosError) throw photosError;
     if (messagesError) throw messagesError;
+    if (unreadCountsError) throw unreadCountsError;
 
     const firstPhotoByProfile = new Map<string, string>();
     for (const photo of photos ?? []) {
@@ -79,6 +131,9 @@ export const matchesService = {
     );
 
     const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+    const unreadCountByMatch = new Map(
+      (unreadCounts ?? []).map((item) => [item.match_id, Number(item.unread_count)]),
+    );
     const lastMessageByMatch = new Map<string, (typeof messages)[number]>();
     for (const message of messages ?? []) {
       if (!lastMessageByMatch.has(message.match_id)) {
@@ -93,6 +148,7 @@ export const matchesService = {
         {
           matchId: match.id,
           matchedAt: match.matched_at,
+          unreadCount: unreadCountByMatch.get(match.id) ?? 0,
           lastMessage: lastMessageByMatch.get(match.id) ?? null,
           profile: { ...profile, photo: signedPhotos.get(profileId) ?? null },
         },

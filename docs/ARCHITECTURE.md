@@ -46,11 +46,12 @@ app routes
 
 ## Chat 경로
 
-- TanStack Query cache에 임시 ID 메시지를 즉시 추가
-- DB insert 성공 시 서버 레코드로 교체, 실패 시 재시도 상태 표시
+- Expo Crypto UUID를 `client_id`로 사용해 메시지를 즉시 표시
+- `send_my_message` RPC가 동일 UUID 재시도를 idempotent하게 처리하고, 실패 메시지는 인라인 재전송
 - match 단위 Realtime channel만 구독
+- 대화방 진입과 상대 메시지 수신 시 읽음 상태를 저장하고 목록 unread cache를 갱신
 - 차단, match status, 참여자 여부를 DB가 재검증
-- 번역은 원문을 보존하고 별도 provider 결과를 연결
+- 번역은 상대 메시지의 `번역 보기` 요청 때만 Edge Function을 호출하고, 원문 보존·참여자 재검증·언어별 DB cache·일일 제한을 거쳐 DeepL adapter 결과를 연결
 
 ## 환경과 배포
 
@@ -82,3 +83,6 @@ app routes
 - 클라이언트는 다른 사용자의 좌표를 읽을 수 없으며 `get_discovery_candidates`가 PostGIS로 계산한 정수 km만 받는다.
 - 위치 기준은 6시간 주기로 갱신하며 백그라운드 위치 추적은 사용하지 않는다.
 - 알림 권한은 `expo-notifications`로 요청하며 Android 기본 채널은 `wichu-default`로 분리한다.
+- Android 채널은 토큰 발급 전에 생성하고, 이미 알림 권한을 허용한 사용자는 앱 진입 때 Expo token을 재등록해 토큰 교체와 계정 전환을 복구한다.
+- Match/메시지 outbox는 secret-auth Edge Function이 원자적으로 claim한다. Expo ticket은 기기별로 저장하고 15분 이후 receipt를 최대 1,000개씩 확인하며, 24시간이 지난 미확인 receipt는 만료 처리한다.
+- Expo가 `DeviceNotRegistered`를 반환하면 해당 기기만 비활성화한다. 알림 탭은 허용 목록(`/matches`, `/chat`, `/chat/:uuid`)을 통과한 기본 액션만 라우팅하고 처리한 cold-start 응답은 즉시 비운다.

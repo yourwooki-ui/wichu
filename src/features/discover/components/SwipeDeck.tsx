@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppViewport } from '@/components/NativePreviewFrame';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { palette, radius, spacing } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
@@ -27,20 +30,29 @@ type SwipeDeckProps = {
   profiles: Profile[];
   isLoading: boolean;
   error: string | null;
+  onAdjustFilters: () => void;
   onSwipe: (profile: Profile, action: SwipeAction) => void;
   onRetry: () => void;
 };
 
-export function SwipeDeck({ profiles, isLoading, error, onSwipe, onRetry }: SwipeDeckProps) {
+export function SwipeDeck({
+  profiles,
+  isLoading,
+  error,
+  onAdjustFilters,
+  onSwipe,
+  onRetry,
+}: SwipeDeckProps) {
   const router = useRouter();
   const theme = useAppTheme();
-  const { height, width } = useWindowDimensions();
-  const [position] = useState(() => new Animated.ValueXY());
-  const [pickPulse] = useState(() => new Animated.Value(0));
-  const [isAnimating, setIsAnimating] = useState(false);
+  const { height, width } = useAppViewport();
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
-  const lastTapAtRef = useRef(0);
+  const lastTapRef = useRef(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const pickPulse = useSharedValue(0);
+  const interactionLocked = useSharedValue(false);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
   const deckHeight = Math.min(620, Math.max(330, height - 242));
@@ -52,122 +64,172 @@ export function SwipeDeck({ profiles, isLoading, error, onSwipe, onRetry }: Swip
     return () => clearInterval(interval);
   }, []);
 
-  const completeSwipe = useCallback(
+  const commitSwipe = useCallback(
     (action: SwipeAction) => {
-      if (!currentProfile || isAnimating) return;
-      setIsAnimating(true);
-      Animated.timing(position, {
-        toValue: { x: action === 'like' ? width * 1.35 : -width * 1.35, y: 12 },
-        duration: 210,
-        useNativeDriver: true,
-      }).start(() => {
-        position.setValue({ x: 0, y: 0 });
-        onSwipe(currentProfile, action);
-        setIsAnimating(false);
-      });
+      if (currentProfile) onSwipe(currentProfile, action);
     },
-    [currentProfile, isAnimating, onSwipe, position, width],
+    [currentProfile, onSwipe],
   );
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          !isAnimating && Math.abs(gesture.dx) > 6 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-        onPanResponderMove: Animated.event([null, { dx: position.x, dy: position.y }], {
-          useNativeDriver: false,
-        }),
-        onPanResponderRelease: (_, gesture) => {
-          const isFastRight =
-            gesture.vx > SWIPE_VELOCITY_THRESHOLD && gesture.dx > SWIPE_MIN_DISTANCE;
-          const isFastLeft =
-            gesture.vx < -SWIPE_VELOCITY_THRESHOLD && gesture.dx < -SWIPE_MIN_DISTANCE;
+  const openProfile = useCallback(() => {
+    if (currentProfile) router.push(`/profile/${currentProfile.id}`);
+  }, [currentProfile, router]);
 
-          if (gesture.dx > SWIPE_THRESHOLD || isFastRight) completeSwipe('like');
-          else if (gesture.dx < -SWIPE_THRESHOLD || isFastLeft) completeSwipe('pass');
-          else {
-            Animated.spring(position, {
-              toValue: { x: 0, y: 0 },
-              friction: 6,
-              tension: 70,
-              useNativeDriver: true,
-            }).start();
-          }
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: true,
-          }).start();
-        },
-      }),
-    [completeSwipe, isAnimating, position],
+  const startSwipe = useCallback(
+    (action: SwipeAction) => {
+      if (interactionLocked.get()) return;
+      interactionLocked.set(true);
+      translateY.set(withTiming(12, { duration: 210 }));
+      translateX.set(
+        withTiming(
+          action === 'like' ? width * 1.35 : -width * 1.35,
+          { duration: 210 },
+          (finished) => {
+            if (finished) runOnJS(commitSwipe)(action);
+          },
+        ),
+      );
+    },
+    [commitSwipe, interactionLocked, translateX, translateY, width],
   );
 
   const handleCardPress = useCallback(() => {
-    if (!currentProfile || isAnimating) return;
-    const now = Date.now();
-    const isDoubleTap = now - lastTapAtRef.current <= DOUBLE_TAP_DELAY;
+    const tappedAt = Date.now();
+    const isDoubleTap = tappedAt - lastTapRef.current <= DOUBLE_TAP_DELAY;
+    lastTapRef.current = tappedAt;
 
     if (isDoubleTap) {
       if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
       singleTapTimerRef.current = null;
-      lastTapAtRef.current = 0;
-      pickPulse.setValue(0);
-      Animated.sequence([
-        Animated.timing(pickPulse, { toValue: 1, duration: 110, useNativeDriver: true }),
-        Animated.timing(pickPulse, { toValue: 0, duration: 150, useNativeDriver: true }),
-      ]).start();
-      completeSwipe('like');
+      lastTapRef.current = 0;
+      pickPulse.set(
+        withSequence(withTiming(1, { duration: 110 }), withTiming(0, { duration: 150 })),
+      );
+      startSwipe('like');
       return;
     }
 
-    lastTapAtRef.current = now;
     singleTapTimerRef.current = setTimeout(() => {
-      lastTapAtRef.current = 0;
       singleTapTimerRef.current = null;
-      router.push(`/profile/${currentProfile.id}`);
+      lastTapRef.current = 0;
+      openProfile();
     }, DOUBLE_TAP_DELAY);
-  }, [completeSwipe, currentProfile, isAnimating, pickPulse, router]);
+  }, [openProfile, pickPulse, startSwipe]);
+
+  useEffect(
+    () => () => {
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
-    return () => {
-      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-      singleTapTimerRef.current = null;
-      lastTapAtRef.current = 0;
-    };
-  }, [currentProfile?.id]);
+    translateX.set(0);
+    translateY.set(0);
+    pickPulse.set(0);
+    interactionLocked.set(false);
+  }, [currentProfile?.id, interactionLocked, pickPulse, translateX, translateY]);
 
-  const rotate = position.x.interpolate({
-    inputRange: [-width, 0, width],
-    outputRange: ['-12deg', '0deg', '12deg'],
-    extrapolate: 'clamp',
-  });
-  const likeOpacity = position.x.interpolate({
-    inputRange: [15, SWIPE_THRESHOLD],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const passOpacity = position.x.interpolate({
-    inputRange: [-SWIPE_THRESHOLD, -15],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const nextTranslateX = position.x.interpolate({
-    inputRange: [-width, 0, width],
-    outputRange: [0, width * 1.05, 0],
-    extrapolate: 'clamp',
-  });
-  const pickPulseScale = pickPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.72, 1],
-  });
+  const gesture = useMemo(() => {
+    const finishSwipe = (action: SwipeAction) => {
+      'worklet';
+      if (interactionLocked.get()) return;
+      interactionLocked.set(true);
+      translateY.set(withTiming(12, { duration: 210 }));
+      translateX.set(
+        withTiming(
+          action === 'like' ? width * 1.35 : -width * 1.35,
+          { duration: 210 },
+          (finished) => {
+            if (finished) runOnJS(commitSwipe)(action);
+          },
+        ),
+      );
+    };
+
+    const pan = Gesture.Pan()
+      .activeOffsetX([-6, 6])
+      .failOffsetY([-14, 14])
+      .onUpdate((event) => {
+        if (interactionLocked.get()) return;
+        translateX.set(event.translationX);
+        translateY.set(event.translationY);
+      })
+      .onEnd((event) => {
+        if (interactionLocked.get()) return;
+        const isFastRight =
+          event.velocityX > SWIPE_VELOCITY_THRESHOLD * 1000 &&
+          event.translationX > SWIPE_MIN_DISTANCE;
+        const isFastLeft =
+          event.velocityX < -SWIPE_VELOCITY_THRESHOLD * 1000 &&
+          event.translationX < -SWIPE_MIN_DISTANCE;
+
+        if (event.translationX > SWIPE_THRESHOLD || isFastRight) finishSwipe('like');
+        else if (event.translationX < -SWIPE_THRESHOLD || isFastLeft) finishSwipe('pass');
+        else {
+          translateX.set(withSpring(0, { damping: 18, stiffness: 210 }));
+          translateY.set(withSpring(0, { damping: 18, stiffness: 210 }));
+        }
+      });
+
+    return Gesture.Simultaneous(pan, Gesture.Native());
+  }, [commitSwipe, interactionLocked, translateX, translateY, width]);
+
+  const topCardStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.get() },
+      { translateY: translateY.get() },
+      {
+        rotate: `${interpolate(
+          translateX.get(),
+          [-width, 0, width],
+          [-12, 0, 12],
+          Extrapolation.CLAMP,
+        )}deg`,
+      },
+    ],
+  }));
+  const nextCardStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(
+          translateX.get(),
+          [-width, 0, width],
+          [0, width * 1.05, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+  const pickPulseStyle = useAnimatedStyle(() => ({
+    opacity: pickPulse.get(),
+    transform: [{ scale: interpolate(pickPulse.get(), [0, 1], [0.72, 1]) }],
+  }));
+  const likeDecisionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
+  }));
+  const passDecisionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.get(), [-SWIPE_THRESHOLD, -15], [1, 0], Extrapolation.CLAMP),
+  }));
 
   if (isLoading) {
     return (
       <View style={styles.finished}>
-        <ActivityIndicator color={theme.colors.primary} size="large" />
-        <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>후보를 찾는 중…</Text>
+        <View style={styles.loadingCard}>
+          <View style={styles.loadingGlow}>
+            <ActivityIndicator color={theme.colors.primary} size="small" />
+          </View>
+          <View style={styles.loadingCopy}>
+            <View style={[styles.loadingLine, styles.loadingLineWide]} />
+            <View style={[styles.loadingLine, styles.loadingLineShort]} />
+          </View>
+        </View>
+        <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>
+          새로운 사람을 찾고 있어요
+        </Text>
+        <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>
+          사진을 미리 준비해 바로 넘길 수 있게 할게요.
+        </Text>
       </View>
     );
   }
@@ -179,17 +241,29 @@ export function SwipeDeck({ profiles, isLoading, error, onSwipe, onRetry }: Swip
           <Ionicons name="sparkles-outline" size={32} color={theme.colors.primary} />
         </View>
         <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
-          새로운 프로필 준비 중
+          {error ? '프로필을 불러오지 못했어요' : '오늘의 후보를 모두 확인했어요'}
         </Text>
         <Text style={[styles.finishedText, { color: theme.colors.textMuted }]}>
-          {error ?? '조건에 맞는 새로운 프로필이 생기면 여기에 표시돼요.'}
+          {error ?? '탐색 조건을 넓히거나 잠시 후 새로운 프로필을 확인해보세요.'}
         </Text>
-        <Pressable
-          style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
-          onPress={onRetry}
-        >
-          <Text style={styles.resetButtonText}>다시 확인</Text>
-        </Pressable>
+        <View style={styles.finishedActions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAdjustFilters}
+            style={styles.adjustButton}
+          >
+            <Ionicons color={theme.colors.text} name="options-outline" size={17} />
+            <Text style={[styles.adjustButtonText, { color: theme.colors.text }]}>조건 조정</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
+            onPress={onRetry}
+          >
+            <Ionicons color={palette.white} name="refresh" size={16} />
+            <Text style={styles.resetButtonText}>다시 확인</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -209,41 +283,37 @@ export function SwipeDeck({ profiles, isLoading, error, onSwipe, onRetry }: Swip
           <Animated.View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={[styles.nextCard, { transform: [{ translateX: nextTranslateX }] }]}
+            style={[styles.nextCard, nextCardStyle]}
           >
             <ProfileCard now={presenceNow} profile={nextProfile} />
           </Animated.View>
         ) : null}
-        <Animated.View
-          style={[styles.topCard, { transform: [...position.getTranslateTransform(), { rotate }] }]}
-          {...panResponder.panHandlers}
-        >
-          <ProfileCard now={presenceNow} profile={currentProfile} onPress={handleCardPress} />
-          <Animated.View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[
-              styles.pickPulse,
-              { opacity: pickPulse, transform: [{ scale: pickPulseScale }] },
-            ]}
-          >
-            <Ionicons color={palette.white} name="heart" size={44} />
+        <GestureDetector gesture={gesture}>
+          <Animated.View style={[styles.topCard, topCardStyle]}>
+            <ProfileCard now={presenceNow} onPress={handleCardPress} profile={currentProfile} />
+            <Animated.View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.pickPulse, pickPulseStyle]}
+            >
+              <Ionicons color={palette.white} name="heart" size={44} />
+            </Animated.View>
+            <Animated.View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.decision, styles.likeDecision, likeDecisionStyle]}
+            >
+              <Text style={styles.likeText}>PICK</Text>
+            </Animated.View>
+            <Animated.View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.decision, styles.passDecision, passDecisionStyle]}
+            >
+              <Text style={styles.passText}>PASS</Text>
+            </Animated.View>
           </Animated.View>
-          <Animated.View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.decision, styles.likeDecision, { opacity: likeOpacity }]}
-          >
-            <Text style={styles.likeText}>PICK</Text>
-          </Animated.View>
-          <Animated.View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.decision, styles.passDecision, { opacity: passOpacity }]}
-          >
-            <Text style={styles.passText}>PASS</Text>
-          </Animated.View>
-        </Animated.View>
+        </GestureDetector>
       </View>
     </View>
   );
@@ -320,13 +390,53 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   finishedTitle: { fontSize: 23, fontWeight: '800' },
-  finishedText: { marginTop: 8, fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  loadingText: { fontSize: 13, marginTop: 12 },
-  resetButton: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
+  finishedText: { marginTop: 8, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  loadingCard: {
+    backgroundColor: '#E4E4E8',
+    borderRadius: 28,
+    height: 250,
+    justifyContent: 'flex-end',
+    maxWidth: 310,
+    overflow: 'hidden',
+    padding: 20,
+    width: '88%',
+  },
+  loadingGlow: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderRadius: 22,
+    height: 48,
+    justifyContent: 'center',
+    marginBottom: 54,
+    width: 48,
+  },
+  loadingCopy: { gap: 8 },
+  loadingLine: { backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: 5, height: 10 },
+  loadingLineWide: { width: '58%' },
+  loadingLineShort: { width: '38%' },
+  loadingTitle: { fontSize: 17, fontWeight: '900', marginTop: 18 },
+  loadingText: { fontSize: 11, lineHeight: 17, marginTop: 5, textAlign: 'center' },
+  finishedActions: { flexDirection: 'row', gap: 8, marginTop: 22 },
+  adjustButton: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: '#DEDEE3',
     borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  adjustButtonText: { fontSize: 11, fontWeight: '900' },
+  resetButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 20,
+    borderRadius: radius.pill,
+    paddingVertical: 12,
   },
   resetButtonText: { color: '#FFFFFF', fontWeight: '800' },
 });

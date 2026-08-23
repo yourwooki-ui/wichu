@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
 import {
   getLanguageOptions,
@@ -157,7 +157,7 @@ export function LanguagePreferencesField({
         ))}
       </View>
 
-      <Modal
+      <AppModal
         animationType="slide"
         onRequestClose={closePicker}
         transparent
@@ -218,7 +218,7 @@ export function LanguagePreferencesField({
             />
           </SafeAreaView>
         </KeyboardAvoidingView>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

@@ -221,6 +221,27 @@ export function ProfilePhotoPicker({
         {photos.map((photo, index) => (
           <View key={photo.draftId} style={[styles.photoTile, { backgroundColor: surfaceColor }]}>
             <Image source={{ uri: photo.uri }} contentFit="cover" style={StyleSheet.absoluteFill} />
+            {photo.reviewStatus === 'pending' || photo.reviewStatus === 'rejected' ? (
+              <View
+                style={[
+                  styles.reviewBadge,
+                  photo.reviewStatus === 'rejected' && styles.reviewBadgeRejected,
+                ]}
+              >
+                <Ionicons
+                  color="#FFFFFF"
+                  name={photo.reviewStatus === 'pending' ? 'time-outline' : 'alert-circle-outline'}
+                  size={11}
+                />
+                <Text style={styles.reviewBadgeText}>
+                  {photo.reviewStatus === 'pending' ? '사진 심사 중' : '사진 반려'}
+                </Text>
+              </View>
+            ) : !photo.storagePath ? (
+              <View style={styles.newPhotoBadge}>
+                <Text style={styles.newPhotoBadgeText}>새 사진 · 저장 후 심사</Text>
+              </View>
+            ) : null}
             {index === 0 ? (
               <View style={[styles.primaryBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.primaryText}>{t('profileSetup.photos.primary')}</Text>
@@ -420,6 +441,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   primaryText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.6 },
+  reviewBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(25,25,29,0.78)',
+    borderRadius: radius.pill,
+    bottom: 41,
+    flexDirection: 'row',
+    gap: 4,
+    left: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    position: 'absolute',
+  },
+  reviewBadgeRejected: { backgroundColor: 'rgba(196,45,63,0.88)' },
+  reviewBadgeText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
+  newPhotoBadge: {
+    backgroundColor: 'rgba(25,25,29,0.78)',
+    borderRadius: radius.pill,
+    bottom: 41,
+    left: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    position: 'absolute',
+  },
+  newPhotoBadgeText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
   removeButton: {
     position: 'absolute',
     top: 6,

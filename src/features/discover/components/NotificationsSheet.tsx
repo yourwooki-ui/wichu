@@ -1,8 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { palette } from '@/constants/theme';
+import { matchesService } from '@/features/matches/services/matches-service';
+import { useAuthSession } from '@/hooks/use-auth-session';
 
 export function NotificationsSheet({
   visible,
@@ -11,8 +17,44 @@ export function NotificationsSheet({
   visible: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const { session } = useAuthSession();
+  const connectionsQuery = useQuery({
+    enabled: visible && Boolean(session?.user.id),
+    queryFn: () => matchesService.listConnections(session!.user.id),
+    queryKey: ['matches', 'connections', session?.user.id],
+    staleTime: 20_000,
+  });
+  const items = (connectionsQuery.data ?? []).flatMap((connection) => {
+    if (connection.unreadCount > 0) {
+      return [
+        {
+          id: `message:${connection.matchId}`,
+          matchId: connection.matchId,
+          photo: connection.profile.photo,
+          title: `${connection.profile.display_name}님의 새 메시지`,
+          body: connection.lastMessage?.content ?? '새 메시지가 도착했어요.',
+          time: connection.lastMessage?.created_at ?? connection.matchedAt,
+        },
+      ];
+    }
+    if (!connection.lastMessage) {
+      return [
+        {
+          id: `match:${connection.matchId}`,
+          matchId: connection.matchId,
+          photo: connection.profile.photo,
+          title: `${connection.profile.display_name}님과 매치됐어요`,
+          body: '지금 첫 인사를 보내보세요.',
+          time: connection.matchedAt,
+        },
+      ];
+    }
+    return [];
+  });
+
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+    <AppModal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.overlay}>
         <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
@@ -23,19 +65,62 @@ export function NotificationsSheet({
               <Ionicons color={palette.ink} name="close" size={21} />
             </Pressable>
           </View>
-          <View style={styles.empty}>
-            <View style={styles.icon}>
-              <Ionicons color="#E9AD17" name="notifications-outline" size={27} />
+          {connectionsQuery.isLoading ? (
+            <View style={styles.empty}>
+              <ActivityIndicator color={palette.pink} />
+              <Text style={styles.loadingText}>알림을 불러오는 중이에요</Text>
             </View>
-            <Text style={styles.emptyTitle}>새로운 알림이 없어요</Text>
-            <Text style={styles.emptyText}>
-              새로운 Pick, Match와 메시지가 생기면 여기에 알려드릴게요.
-            </Text>
-          </View>
+          ) : items.length ? (
+            <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+              {items.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    onClose();
+                    router.push(`/chat/${item.matchId}`);
+                  }}
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                >
+                  {item.photo ? (
+                    <Image source={{ uri: item.photo }} style={styles.avatar} />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Ionicons color={palette.pink} name="heart" size={18} />
+                    </View>
+                  )}
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>{item.title}</Text>
+                    <Text numberOfLines={1} style={styles.rowBody}>
+                      {item.body}
+                    </Text>
+                  </View>
+                  <Text style={styles.rowTime}>{formatActivityTime(item.time)}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.empty}>
+              <View style={styles.icon}>
+                <Ionicons color="#E9AD17" name="notifications-outline" size={27} />
+              </View>
+              <Text style={styles.emptyTitle}>새로운 알림이 없어요</Text>
+              <Text style={styles.emptyText}>
+                새로운 Pick, Match와 메시지가 생기면 여기에 알려드릴게요.
+              </Text>
+            </View>
+          )}
         </SafeAreaView>
       </View>
-    </Modal>
+    </AppModal>
   );
+}
+
+function formatActivityTime(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
+  if (minutes < 1) return '방금';
+  if (minutes < 60) return `${minutes}분`;
+  if (minutes < 1_440) return `${Math.floor(minutes / 60)}시간`;
+  return `${Math.floor(minutes / 1_440)}일`;
 }
 
 const styles = StyleSheet.create({
@@ -74,6 +159,32 @@ const styles = StyleSheet.create({
     width: 36,
   },
   empty: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 32 },
+  loadingText: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginTop: 10 },
+  list: { paddingBottom: 18, paddingHorizontal: 12, paddingTop: 12 },
+  row: {
+    alignItems: 'center',
+    borderBottomColor: '#E1E1E5',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 11,
+    minHeight: 76,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  rowPressed: { backgroundColor: palette.white, borderRadius: 17 },
+  avatar: { borderRadius: 24, height: 48, width: 48 },
+  avatarFallback: {
+    alignItems: 'center',
+    backgroundColor: '#FFE8EF',
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  rowCopy: { flex: 1, minWidth: 0 },
+  rowTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  rowBody: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
+  rowTime: { color: palette.inkMuted, fontSize: 8, fontWeight: '700' },
   icon: {
     alignItems: 'center',
     backgroundColor: '#FFF4CF',

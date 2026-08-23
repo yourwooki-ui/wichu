@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -13,15 +14,14 @@ import {
   View,
 } from 'react-native';
 
-import { BrandWordmark } from '@/components/BrandWordmark';
+import { AppTabHeader } from '@/components/AppTabHeader';
 import { Screen } from '@/components/Screen';
-import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { ConnectionAvatar } from '@/features/matches/components/ConnectionAvatar';
 import {
   type ConnectionProfile,
   type ConversationPreview,
-  mockConnections,
   mockConversations,
 } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
@@ -30,7 +30,6 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 
 export function ChatListScreen() {
   const router = useRouter();
-  const theme = useAppTheme();
   const { session } = useAuthSession();
   const [query, setQuery] = useState('');
   const [now] = useState(() => Date.now());
@@ -59,7 +58,7 @@ export function ChatListScreen() {
         } satisfies ConnectionProfile,
         message: connection.lastMessage?.content ?? '새로운 매치예요. 먼저 인사해보세요.',
         time: formatRelativeTime(connection.lastMessage?.created_at ?? connection.matchedAt, now),
-        unreadCount: 0,
+        unreadCount: connection.unreadCount,
       })),
     [matchesQuery.data, now],
   );
@@ -73,22 +72,20 @@ export function ChatListScreen() {
       ),
     [normalizedQuery, sourceConversations],
   );
-  const activeProfiles = conversations
+  const activeProfiles = sourceConversations
     .map((conversation) => conversation.profile)
     .filter((profile) => profile.isOnline);
   const unreadCount = conversations.reduce((total, item) => total + item.unreadCount, 0);
+  const listError = matchesQuery.isError && !__DEV__;
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <BrandWordmark color={theme.colors.text} size={23} />
-          <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>메시지</Text>
-        </View>
-        <Pressable accessibilityLabel="Chat settings" style={styles.headerAction}>
-          <Ionicons color={palette.ink} name="options-outline" size={23} />
-        </Pressable>
-      </View>
+      <AppTabHeader
+        actionAccessibilityLabel="채팅 알림 설정"
+        actionIcon={illustratedIcons.chatControls}
+        eyebrow="메시지"
+        onAction={() => router.push('/settings')}
+      />
 
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.heading}>
@@ -96,28 +93,27 @@ export function ChatListScreen() {
           <Text style={styles.subtitle}>가볍게 인사하고 새로운 이야기를 시작해보세요.</Text>
         </View>
 
-        <ScrollView
+        <FlashList
           contentContainerStyle={styles.activeContent}
+          data={activeProfiles}
           horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.activeRail}
-        >
-          {(activeProfiles.length
-            ? activeProfiles
-            : mockConnections.filter((profile) => profile.isOnline)
-          ).map((profile) => (
+          keyExtractor={(profile) => profile.id}
+          renderItem={({ item: profile }) => (
             <ConnectionAvatar
-              key={profile.id}
               onPress={() => {
-                const conversation = conversations.find((item) => item.profile.id === profile.id);
+                const conversation = sourceConversations.find(
+                  (item) => item.profile.id === profile.id,
+                );
                 router.push(
                   `/chat/${conversation?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
                 );
               }}
               profile={profile}
             />
-          ))}
-        </ScrollView>
+          )}
+          showsHorizontalScrollIndicator={false}
+          style={styles.activeRail}
+        />
 
         <View style={styles.searchWrap}>
           <Ionicons color={palette.inkMuted} name="search" size={19} />
@@ -152,63 +148,120 @@ export function ChatListScreen() {
               <Text style={styles.loadingText}>대화를 불러오는 중이에요</Text>
             </View>
           ) : null}
-          {conversations.map((conversation) => (
-            <Pressable
-              accessibilityLabel={`Open chat with ${conversation.profile.name}`}
-              key={conversation.matchId}
-              onPress={() => router.push(`/chat/${conversation.matchId}`)}
-              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-            >
-              <View style={styles.avatarWrap}>
-                <Image
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                  source={{ uri: conversation.profile.photo }}
-                  style={{ borderRadius: 29, height: 58, width: 58 }}
-                />
-                {conversation.profile.isOnline ? <View style={styles.onlineDot} /> : null}
-              </View>
-              <View style={styles.rowCopy}>
-                <View style={styles.rowTop}>
-                  <Text style={[styles.name, conversation.unreadCount > 0 && styles.nameUnread]}>
-                    {conversation.profile.name}
-                  </Text>
-                  <Text style={[styles.time, conversation.unreadCount > 0 && styles.timeUnread]}>
-                    {conversation.time}
-                  </Text>
-                </View>
-                <View style={styles.messageRow}>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.message, conversation.unreadCount > 0 && styles.messageUnread]}
-                  >
-                    {conversation.isTyping ? '입력 중…' : conversation.message}
-                  </Text>
-                  {conversation.unreadCount > 0 ? (
-                    <View style={styles.unreadCount}>
-                      <Text style={styles.unreadCountText}>{conversation.unreadCount}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                {conversation.isTranslated ? (
-                  <View style={styles.translatedRow}>
-                    <Ionicons color={palette.inkMuted} name="language" size={11} />
-                    <Text style={styles.translatedText}>번역 가능</Text>
+          {listError ? (
+            <ChatListState
+              actionLabel="다시 시도"
+              body="대화 내용은 그대로예요. 연결 상태를 확인해주세요."
+              icon="cloud-offline-outline"
+              onAction={() => matchesQuery.refetch()}
+              title="메시지를 불러오지 못했어요"
+            />
+          ) : null}
+          {!matchesQuery.isLoading && !listError
+            ? conversations.map((conversation) => (
+                <Pressable
+                  accessibilityLabel={`Open chat with ${conversation.profile.name}`}
+                  key={conversation.matchId}
+                  onPress={() => router.push(`/chat/${conversation.matchId}`)}
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                >
+                  <View style={styles.avatarWrap}>
+                    <Image
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      source={{ uri: conversation.profile.photo }}
+                      style={{ borderRadius: 29, height: 58, width: 58 }}
+                    />
+                    {conversation.profile.isOnline ? <View style={styles.onlineDot} /> : null}
                   </View>
-                ) : null}
-              </View>
-            </Pressable>
-          ))}
-          {!matchesQuery.isLoading && !conversations.length ? (
-            <View style={styles.noResult}>
-              <Ionicons color={palette.inkMuted} name="search-outline" size={25} />
-              <Text style={styles.noResultTitle}>검색 결과가 없어요</Text>
-              <Text style={styles.noResultText}>다른 이름을 검색해보세요.</Text>
-            </View>
+                  <View style={styles.rowCopy}>
+                    <View style={styles.rowTop}>
+                      <Text
+                        style={[styles.name, conversation.unreadCount > 0 && styles.nameUnread]}
+                      >
+                        {conversation.profile.name}
+                      </Text>
+                      <Text
+                        style={[styles.time, conversation.unreadCount > 0 && styles.timeUnread]}
+                      >
+                        {conversation.time}
+                      </Text>
+                    </View>
+                    <View style={styles.messageRow}>
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.message,
+                          conversation.unreadCount > 0 && styles.messageUnread,
+                        ]}
+                      >
+                        {conversation.isTyping ? '입력 중…' : conversation.message}
+                      </Text>
+                      {conversation.unreadCount > 0 ? (
+                        <View style={styles.unreadCount}>
+                          <Text style={styles.unreadCountText}>{conversation.unreadCount}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {conversation.isTranslated ? (
+                      <View style={styles.translatedRow}>
+                        <Ionicons color={palette.inkMuted} name="language" size={11} />
+                        <Text style={styles.translatedText}>번역 가능</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </Pressable>
+              ))
+            : null}
+          {!matchesQuery.isLoading && !listError && !conversations.length ? (
+            query ? (
+              <ChatListState
+                body="철자나 다른 이름으로 다시 검색해보세요."
+                icon="search-outline"
+                title="검색 결과가 없어요"
+              />
+            ) : (
+              <ChatListState
+                actionLabel="발견하러 가기"
+                body="서로 Pick하면 이곳에서 바로 대화를 시작할 수 있어요."
+                icon="chatbubbles-outline"
+                onAction={() => router.push('/(tabs)/discover')}
+                title="아직 시작된 대화가 없어요"
+              />
+            )
           ) : null}
         </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function ChatListState({
+  actionLabel,
+  body,
+  icon,
+  onAction,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onAction?: () => void;
+  title: string;
+}) {
+  return (
+    <View style={styles.noResult}>
+      <View style={styles.noResultIcon}>
+        <Ionicons color={palette.pink} name={icon} size={24} />
+      </View>
+      <Text style={styles.noResultTitle}>{title}</Text>
+      <Text style={styles.noResultText}>{body}</Text>
+      {actionLabel && onAction ? (
+        <Pressable onPress={onAction} style={styles.noResultAction}>
+          <Text style={styles.noResultActionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -225,25 +278,21 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    height: 80,
+    height: 76,
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
   headerAction: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: '#DFDFE4',
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    height: 44,
+    height: 50,
     justifyContent: 'center',
-    width: 44,
+    width: 50,
   },
   heading: { paddingHorizontal: 20, paddingTop: 7 },
   title: { color: palette.ink, fontSize: 27, fontWeight: '900', letterSpacing: -0.8 },
   subtitle: { color: palette.inkMuted, fontSize: 13, fontWeight: '600', marginTop: 3 },
-  activeRail: { marginTop: 18 },
+  activeRail: { height: 118, marginTop: 18 },
   activeContent: { gap: 5, paddingHorizontal: 20 },
   searchWrap: {
     alignItems: 'center',
@@ -272,7 +321,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  unreadPillText: { color: palette.pink, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  unreadPillText: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
   list: { marginTop: 7, paddingBottom: 25, paddingHorizontal: 12 },
   loadingRow: { alignItems: 'center', gap: 9, paddingVertical: 28 },
   loadingText: { color: palette.inkMuted, fontSize: 12, fontWeight: '700' },
@@ -319,8 +368,30 @@ const styles = StyleSheet.create({
   },
   unreadCountText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   translatedRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
-  translatedText: { color: palette.inkMuted, fontSize: 9, fontWeight: '700' },
+  translatedText: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
   noResult: { alignItems: 'center', paddingHorizontal: 30, paddingVertical: 45 },
+  noResultIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFE8EF',
+    borderRadius: 22,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
   noResultTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', marginTop: 10 },
-  noResultText: { color: palette.inkMuted, fontSize: 12, marginTop: 4 },
+  noResultText: {
+    color: palette.inkMuted,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  noResultAction: {
+    backgroundColor: palette.ink,
+    borderRadius: radius.pill,
+    marginTop: 16,
+    paddingHorizontal: 17,
+    paddingVertical: 10,
+  },
+  noResultActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
 });

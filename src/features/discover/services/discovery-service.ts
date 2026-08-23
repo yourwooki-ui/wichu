@@ -14,10 +14,20 @@ export type DiscoveryFilters = {
   maxDistanceKm: number;
   genders: string[];
   countryCodes?: string[];
+  excludeSameCountry: boolean;
 };
 
 const PHOTO_BUCKET = 'profile-photos';
 const SIGNED_PHOTO_TTL_SECONDS = 60 * 60;
+
+function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+    (error.code === '42P01' ||
+      error.code === 'PGRST205' ||
+      error.message?.includes('profile_details')),
+  );
+}
 
 type CandidateRow = {
   id: string;
@@ -25,6 +35,7 @@ type CandidateRow = {
   birth_date: string;
   gender: string;
   country_code: string;
+  native_language?: string | null;
   languages: string[];
   language_details?:
     | {
@@ -42,7 +53,9 @@ type CandidateRow = {
   interests: string[];
 };
 
-export type DiscoveryPreferences = DiscoveryFilters;
+export type DiscoveryPreferences = DiscoveryFilters & {
+  viewerCountryCode?: string;
+};
 
 function isGender(value: string): value is Gender {
   return ['woman', 'man', 'nonbinary', 'other'].includes(value);
@@ -91,6 +104,14 @@ const DEV_KO_PROFILE_COPY: Record<string, { bio: string; interests: string[] }> 
 
 function isDevelopmentSampleProfile(profileId: string) {
   return __DEV__ && DEVELOPMENT_SAMPLE_PROFILE_IDS.includes(profileId);
+}
+
+function isMissingSameCountryPreference(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return (
+    ['42703', 'PGRST204'].includes(error.code ?? '') &&
+    (error.message ?? '').includes('exclude_same_country')
+  );
 }
 
 const DEV_LANGUAGE_LEVEL_BY_PROFILE_ID: Record<string, Record<string, ProfileLanguageLevel>> = {
@@ -163,6 +184,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         interests: localizedDevCopy?.interests ?? candidate.interests,
         photos,
         lastActiveAt: candidate.last_active_at,
+        isPhotoReviewed: true,
         isNew: Date.now() - new Date(candidate.created_at).getTime() <= 7 * 24 * 60 * 60 * 1000,
       },
     ];
@@ -170,26 +192,122 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
 }
 
 export const discoveryService = {
+  async getProfileById(profileId: string, locale: string): Promise<Profile | null> {
+    const supabase = getSupabaseClient();
+    const [profileResult, detailResult, photosResult, profileInterestsResult, languageResult] =
+      await Promise.all([
+        supabase
+          .from('profiles')
+          .select(
+            'id, display_name, birth_date, gender, country_code, native_language, languages, bio, created_at, last_active_at',
+          )
+          .eq('id', profileId)
+          .maybeSingle(),
+        supabase.from('profile_details').select('*').eq('profile_id', profileId).maybeSingle(),
+        supabase
+          .from('profile_photos')
+          .select('storage_path, position')
+          .eq('profile_id', profileId)
+          .order('position'),
+        supabase.from('profile_interests').select('interest_id').eq('profile_id', profileId),
+        supabase
+          .from('profile_languages')
+          .select('language_code, proficiency')
+          .eq('profile_id', profileId),
+      ]);
+
+    const firstError = [
+      profileResult.error,
+      isMissingProfileDetails(detailResult.error) ? null : detailResult.error,
+      photosResult.error,
+      profileInterestsResult.error,
+      languageResult.error,
+    ].find(Boolean);
+    if (firstError) throw firstError;
+    if (!profileResult.data) return null;
+    const profile = profileResult.data;
+
+    const interestIds = (profileInterestsResult.data ?? []).map((row) => row.interest_id);
+    const interestResult = interestIds.length
+      ? await supabase.from('interests').select('label').in('id', interestIds).order('label')
+      : { data: [], error: null };
+    if (interestResult.error) throw interestResult.error;
+
+    const spokenLanguages = [
+      profile.native_language
+        ? { code: profile.native_language, level: 'native', is_native: true }
+        : null,
+      ...(languageResult.data ?? [])
+        .filter((language) => language.language_code !== profile.native_language)
+        .map((language) => ({
+          code: language.language_code,
+          level: language.proficiency,
+          is_native: false,
+        })),
+    ].filter((language): language is NonNullable<typeof language> => Boolean(language));
+    const candidate: CandidateRow = {
+      ...profile,
+      language_details: spokenLanguages,
+      languages: [
+        profile.native_language,
+        ...profile.languages.filter((language) => language !== profile.native_language),
+      ].filter((language): language is string => Boolean(language)),
+      photo_paths: (photosResult.data ?? []).map((photo) => photo.storage_path),
+      interests: (interestResult.data ?? []).map((interest) => interest.label),
+    };
+    const hydrated = (await hydrateCandidates([candidate], locale))[0] ?? null;
+    if (!hydrated || !detailResult.data) return hydrated;
+
+    return {
+      ...hydrated,
+      details: {
+        occupation: detailResult.data.occupation ?? undefined,
+        educationLevel: detailResult.data.education_level ?? undefined,
+        heightCm: detailResult.data.height_cm ?? undefined,
+        personalityType: detailResult.data.personality_type ?? undefined,
+        drinking: detailResult.data.drinking ?? undefined,
+        smoking: detailResult.data.smoking ?? undefined,
+        exercise: detailResult.data.exercise ?? undefined,
+        pets: detailResult.data.pets ?? undefined,
+      },
+    };
+  },
   async getPreferences(userId: string): Promise<DiscoveryPreferences> {
     const supabase = getSupabaseClient();
-    const [profileResult, settingsResult] = await Promise.all([
-      supabase.from('profiles').select('interested_in').eq('id', userId).single(),
+    const [profileResult, settingsWithExclusionResult] = await Promise.all([
+      supabase.from('profiles').select('interested_in, country_code').eq('id', userId).single(),
       supabase
         .from('user_settings')
-        .select('min_age, max_age, max_distance_km, country_codes')
+        .select('min_age, max_age, max_distance_km, country_codes, exclude_same_country')
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
 
+    let settingsData = settingsWithExclusionResult.data;
+    let settingsError = settingsWithExclusionResult.error;
+    if (isMissingSameCountryPreference(settingsWithExclusionResult.error)) {
+      const fallbackResult = await supabase
+        .from('user_settings')
+        .select('min_age, max_age, max_distance_km, country_codes')
+        .eq('user_id', userId)
+        .maybeSingle();
+      settingsData = fallbackResult.data
+        ? { ...fallbackResult.data, exclude_same_country: false }
+        : fallbackResult.data;
+      settingsError = fallbackResult.error;
+    }
+
     if (profileResult.error) throw profileResult.error;
-    if (settingsResult.error) throw settingsResult.error;
+    if (settingsError) throw settingsError;
 
     return {
-      minAge: settingsResult.data?.min_age ?? 18,
-      maxAge: settingsResult.data?.max_age ?? 29,
-      maxDistanceKm: settingsResult.data?.max_distance_km ?? 0,
+      minAge: settingsData?.min_age ?? 18,
+      maxAge: settingsData?.max_age ?? 29,
+      maxDistanceKm: settingsData?.max_distance_km ?? 0,
       genders: profileResult.data.interested_in,
-      countryCodes: settingsResult.data?.country_codes ?? [],
+      countryCodes: settingsData?.country_codes ?? [],
+      excludeSameCountry: settingsData?.exclude_same_country ?? false,
+      viewerCountryCode: profileResult.data.country_code,
     };
   },
   async getCandidates(filters: DiscoveryFilters, locale: string, offset = 0): Promise<Profile[]> {
@@ -207,25 +325,47 @@ export const discoveryService = {
     if (error) throw error;
     return hydrateCandidates((data ?? []) as CandidateRow[], locale);
   },
-  async updatePreferences(userId: string, filters: DiscoveryFilters) {
+  async updatePreferences(
+    userId: string,
+    filters: DiscoveryFilters,
+  ): Promise<DiscoveryPreferences> {
     const supabase = getSupabaseClient();
-    const [profileResult, settingsResult] = await Promise.all([
-      supabase.from('profiles').update({ interested_in: filters.genders }).eq('id', userId),
+    const [profileResult, settingsWithExclusionResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .update({ interested_in: filters.genders })
+        .eq('id', userId)
+        .select('country_code')
+        .single(),
       supabase.from('user_settings').upsert({
         user_id: userId,
         min_age: filters.minAge,
         max_age: filters.maxAge,
         max_distance_km: filters.maxDistanceKm,
         country_codes: filters.countryCodes ?? [],
+        exclude_same_country: filters.excludeSameCountry,
       }),
     ]);
 
-    const error = profileResult.error ?? settingsResult.error;
+    let settingsError = settingsWithExclusionResult.error;
+    if (isMissingSameCountryPreference(settingsWithExclusionResult.error)) {
+      const fallbackResult = await supabase.from('user_settings').upsert({
+        user_id: userId,
+        min_age: filters.minAge,
+        max_age: filters.maxAge,
+        max_distance_km: filters.maxDistanceKm,
+        country_codes: filters.countryCodes ?? [],
+      });
+      settingsError = fallbackResult.error;
+    }
+
+    const error = profileResult.error ?? settingsError;
     if (error) throw error;
-    return filters;
+    if (!profileResult.data) throw new Error('Profile country is unavailable.');
+    return { ...filters, viewerCountryCode: profileResult.data.country_code };
   },
   async getDevelopmentSampleCandidates(
-    filters: DiscoveryFilters,
+    filters: DiscoveryPreferences,
     locale: string,
   ): Promise<Profile[]> {
     const supabase = getSupabaseClient();
@@ -289,45 +429,41 @@ export const discoveryService = {
     return hydrateCandidates(
       candidateRows.filter(
         (candidate) =>
-          filters.maxDistanceKm === 0 ||
-          (candidate.distance_km != null && candidate.distance_km <= filters.maxDistanceKm),
+          (filters.maxDistanceKm === 0 ||
+            (candidate.distance_km != null && candidate.distance_km <= filters.maxDistanceKm)) &&
+          (!filters.excludeSameCountry ||
+            !filters.viewerCountryCode ||
+            candidate.country_code !== filters.viewerCountryCode),
       ),
       locale,
     );
   },
-  async swipe(userId: string, targetId: string, action: SwipeAction) {
+  async swipe(_userId: string, targetId: string, action: SwipeAction) {
     if (isDevelopmentSampleProfile(targetId)) return { matchId: null };
 
     const supabase = getSupabaseClient();
-    const { error } = await supabase.from('swipes').insert({ target_id: targetId, action });
+    const { data, error } = await supabase
+      .rpc('record_my_swipe', { p_target_id: targetId, p_action: action })
+      .single();
     if (error) throw error;
-
-    if (action === 'pass') return { matchId: null };
-
-    const [userA, userB] = [userId, targetId].sort();
-    const { data: match, error: matchError } = await supabase
-      .from('matches')
-      .select('id')
-      .eq('user_a', userA)
-      .eq('user_b', userB)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (matchError) throw matchError;
-    return { matchId: match?.id ?? null };
+    return { matchId: data.match_id };
   },
-  async undoSwipe(userId: string, targetId: string) {
-    if (isDevelopmentSampleProfile(targetId)) return;
+  async undoSwipe(_userId: string, targetId: string) {
+    if (isDevelopmentSampleProfile(targetId)) {
+      return { creditsRemaining: 0, unlimited: __DEV__ };
+    }
 
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('swipes')
-      .delete()
-      .eq('swiper_id', userId)
-      .eq('target_id', targetId)
-      .select('id')
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('undo_my_swipe', { p_target_id: targetId }).single();
 
     if (error) throw error;
-    if (!data) throw new Error('The swipe is no longer available to undo.');
+    if (!data.undone) throw new Error('The swipe is no longer available to undo.');
+    return { creditsRemaining: data.credits_remaining, unlimited: data.unlimited };
+  },
+  async getUndoEntitlement() {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_my_undo_entitlement').single();
+    if (error) throw error;
+    return { credits: data.credits, unlimited: data.unlimited };
   },
 };

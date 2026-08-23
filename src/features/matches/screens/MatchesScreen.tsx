@@ -4,12 +4,21 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { BrandWordmark } from '@/components/BrandWordmark';
+import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
-import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
@@ -45,7 +54,7 @@ const categoryCopy: Record<MatchCategory, { title: string; description: string }
 };
 
 const profilesByCategory: Record<MatchCategory, ConnectionProfile[]> = {
-  'picked-me': [mockConnections[1], mockConnections[3], mockConnections[4]],
+  'picked-me': [mockConnections[0], mockConnections[1], mockConnections[3], mockConnections[4]],
   matched: mockConnections,
   visitors: [mockConnections[2], mockConnections[0], mockConnections[4], mockConnections[3]],
 };
@@ -59,11 +68,16 @@ const visitorTimes: Record<string, string> = {
 
 export function MatchesScreen() {
   const router = useRouter();
-  const theme = useAppTheme();
   const entitlement = usePassEntitlement();
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
   const [now] = useState(() => Date.now());
+  const incomingLikesQuery = useQuery({
+    enabled: Boolean(session?.user.id),
+    queryFn: matchesService.listIncomingLikes,
+    queryKey: ['matches', 'incoming-likes', session?.user.id],
+    staleTime: 20_000,
+  });
   const visitorsQuery = useQuery({
     enabled: entitlement.data?.tier === 'gold',
     queryFn: profileVisitService.getMyVisitors,
@@ -103,17 +117,45 @@ export function MatchesScreen() {
       now - new Date(connection.profile.last_active_at!).getTime() <= 5 * 60 * 1000,
     isNew: now - new Date(connection.matchedAt).getTime() <= 24 * 60 * 60 * 1000,
   }));
+  const incomingLikes = (incomingLikesQuery.data ?? []).map((like): ConnectionProfile => ({
+    id: like.profileId,
+    name: like.displayName,
+    age: getProfileAge(like.birthDate),
+    countryCode: like.countryCode,
+    distanceKm: like.distanceKm ?? 0,
+    photo: like.photo,
+    matchedAt: like.likedAt,
+    isOnline:
+      Boolean(like.lastActiveAt) && now - new Date(like.lastActiveAt!).getTime() <= 5 * 60 * 1000,
+    isNew: now - new Date(like.likedAt).getTime() <= 24 * 60 * 60 * 1000,
+    isGoldPass: like.isGoldPass,
+  }));
   const matchedProfiles = realMatches.length || !__DEV__ ? realMatches : profilesByCategory.matched;
+  const pickedProfiles = prioritizeGoldProfiles(
+    incomingLikes.length || !__DEV__ ? incomingLikes : profilesByCategory['picked-me'],
+  );
+  const visitorProfiles = visitors.length || !__DEV__ ? visitors : profilesByCategory.visitors;
   const profiles =
     category === 'visitors'
-      ? visitors
+      ? visitorProfiles
       : category === 'matched'
         ? matchedProfiles
-        : __DEV__
-          ? profilesByCategory[category]
-          : [];
+        : pickedProfiles;
   const copy = categoryCopy[category];
   const visitorsLocked = category === 'visitors' && entitlement.data?.tier !== 'gold';
+  const categoryLoading =
+    category === 'picked-me'
+      ? incomingLikesQuery.isLoading
+      : category === 'matched'
+        ? matchesQuery.isLoading
+        : !visitorsLocked && visitorsQuery.isLoading;
+  const categoryError =
+    !__DEV__ &&
+    (category === 'picked-me'
+      ? incomingLikesQuery.isError
+      : category === 'matched'
+        ? matchesQuery.isError
+        : !visitorsLocked && visitorsQuery.isError);
 
   const openProfile = (profileId: string) => router.push(`/profile/${profileId}`);
 
@@ -124,27 +166,17 @@ export function MatchesScreen() {
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <BrandWordmark color={theme.colors.text} size={23} />
-          <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>연결</Text>
-        </View>
-        <View style={styles.headerMark}>
-          <Ionicons color={palette.pink} name="people" size={23} />
-        </View>
-      </View>
+      <AppTabHeader actionIcon={illustratedIcons.matches} eyebrow="연결" />
 
       <View accessibilityRole="tablist" style={styles.categories}>
         {categories.map((item) => {
           const selected = item.key === category;
           const count =
             item.key === 'visitors'
-              ? visitors.length
+              ? visitorProfiles.length
               : item.key === 'matched'
                 ? matchedProfiles.length
-                : __DEV__
-                  ? profilesByCategory['picked-me'].length
-                  : 0;
+                : pickedProfiles.length;
           return (
             <Pressable
               accessibilityRole="tab"
@@ -174,41 +206,91 @@ export function MatchesScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>{copy.title}</Text>
-          <Text style={styles.subtitle}>{copy.description}</Text>
+          <View style={styles.titleCopy}>
+            <Text style={styles.title}>{copy.title}</Text>
+            <Text style={styles.subtitle}>{copy.description}</Text>
+          </View>
         </View>
 
         {visitorsLocked ? (
           <View style={styles.visitorLock}>
-            <View style={styles.visitorLockIcon}>
-              <Ionicons color="#493400" name="diamond" size={22} />
+            <View style={styles.visitorLockCopy}>
+              <View style={styles.visitorLockIcon}>
+                <IllustratedIcon size={37} source={illustratedIcons.goldPremium} />
+              </View>
+              <View style={styles.visitorLockTextBlock}>
+                <Text style={styles.visitorLockTitle}>누가 방문했는지 궁금한가요?</Text>
+                <Text style={styles.visitorLockText}>
+                  Gold Pass에서 프로필을 선명하게 확인해요.
+                </Text>
+              </View>
             </View>
-            <Text style={styles.visitorLockTitle}>방문자 확인은 Gold Pass 혜택이에요</Text>
-            <Text style={styles.visitorLockText}>
-              내 프로필을 확인한 사용자를 보고 새로운 연결을 시작해보세요.
-            </Text>
-            <Pressable onPress={() => router.push('/ad-free')} style={styles.visitorLockAction}>
-              <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
+            <Pressable onPress={() => router.push('/(tabs)/shop')} style={styles.visitorLockAction}>
+              <Text style={styles.visitorLockActionText}>확인하기</Text>
             </Pressable>
           </View>
+        ) : null}
+
+        {categoryLoading ? (
+          <ConnectionState
+            body="새로운 연결을 정리하고 있어요."
+            icon="sparkles-outline"
+            loading
+            title="연결을 불러오는 중"
+          />
+        ) : categoryError ? (
+          <ConnectionState
+            actionLabel="다시 시도"
+            body="저장된 연결은 그대로예요. 잠시 후 다시 확인해주세요."
+            icon="cloud-offline-outline"
+            onAction={() => {
+              if (category === 'picked-me') void incomingLikesQuery.refetch();
+              if (category === 'matched') void matchesQuery.refetch();
+              if (category === 'visitors') void visitorsQuery.refetch();
+            }}
+            title="연결을 불러오지 못했어요"
+          />
+        ) : !profiles.length ? (
+          <ConnectionState
+            actionLabel="발견하러 가기"
+            body={
+              category === 'matched'
+                ? '서로 Pick하면 새로운 연결이 여기에 모여요.'
+                : category === 'visitors'
+                  ? '내 프로필을 본 사람이 생기면 여기에 알려드려요.'
+                  : '새로운 Pick이 도착하면 가장 먼저 보여드릴게요.'
+            }
+            icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
+            onAction={() => router.push('/(tabs)/discover')}
+            title={category === 'matched' ? '아직 매치가 없어요' : '아직 새로운 연결이 없어요'}
+          />
         ) : (
           <View style={styles.grid}>
             {profiles.map((profile) => (
               <ProfileTile
-                category={category}
-                key={profile.id}
-                onChat={() => openChat(profile)}
-                onPress={() => openProfile(profile.id)}
-                profile={profile}
-                visitorTime={
+                activityTime={
                   category === 'visitors'
                     ? formatVisitTime(
                         visitorsQuery.data?.find((visitor) => visitor.visitor_id === profile.id)
                           ?.last_visited_at,
                         now,
                       )
-                    : visitorTimes[profile.id]
+                    : category === 'picked-me'
+                      ? formatVisitTime(
+                          incomingLikesQuery.data?.find((like) => like.profileId === profile.id)
+                            ?.likedAt,
+                          now,
+                        )
+                      : visitorTimes[profile.id]
                 }
+                category={category}
+                key={profile.id}
+                locked={visitorsLocked}
+                onChat={() => openChat(profile)}
+                onPress={() =>
+                  visitorsLocked ? router.push('/(tabs)/shop') : openProfile(profile.id)
+                }
+                profile={profile}
               />
             ))}
           </View>
@@ -219,84 +301,148 @@ export function MatchesScreen() {
 }
 
 type ProfileTileProps = {
+  activityTime?: string;
   category: MatchCategory;
+  locked?: boolean;
   onChat: () => void;
   onPress: () => void;
   profile: ConnectionProfile;
-  visitorTime?: string;
 };
 
-function ProfileTile({ category, onChat, onPress, profile, visitorTime }: ProfileTileProps) {
+function ProfileTile({
+  activityTime,
+  category,
+  locked = false,
+  onChat,
+  onPress,
+  profile,
+}: ProfileTileProps) {
   const isMatched = category === 'matched';
-  const isPickedMe = category === 'picked-me';
 
   return (
     <Pressable
-      accessibilityLabel={`Open ${profile.name}'s profile`}
+      accessibilityLabel={locked ? 'Gold Pass로 방문자 확인' : `${profile.name} 프로필 열기`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       <Image
+        blurRadius={locked ? 28 : 0}
         cachePolicy="memory-disk"
         contentFit="cover"
         source={{ uri: profile.photo }}
         style={StyleSheet.absoluteFill}
         transition={160}
       />
-      {profile.isGoldPass ? <View pointerEvents="none" style={styles.goldCardBorder} /> : null}
+      {locked ? <View style={[styles.lockedVeil, styles.nonInteractive]} /> : null}
+      {!locked && profile.isGoldPass ? (
+        <View style={[styles.goldCardBorder, styles.nonInteractive]} />
+      ) : null}
       <LinearGradient
         colors={['transparent', 'rgba(5,5,8,0.86)']}
         locations={[0.42, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.cardTop}>
-        {profile.isOnline ? (
-          <View style={styles.onlinePill}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>온라인</Text>
+      {!locked ? (
+        <View style={styles.cardTop}>
+          <View style={styles.statusSlot}>
+            {profile.isOnline ? (
+              <View style={styles.onlinePill}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.onlineText}>온라인</Text>
+              </View>
+            ) : profile.isNew ? (
+              <View style={styles.newPill}>
+                <Text style={styles.newPillText}>NEW</Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-        {isPickedMe ? (
-          <View style={styles.pickedBadge}>
-            <Ionicons color={palette.white} name="sparkles" size={12} />
-          </View>
-        ) : null}
-        {profile.isGoldPass ? (
-          <View style={styles.goldBadge}>
-            <Text style={styles.goldDiamond}>◆</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.cardContent}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>
-            {profile.name}, {profile.age}
-          </Text>
-          <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
+          {profile.isGoldPass ? (
+            <View style={styles.goldBadge}>
+              <IllustratedIcon size={23} source={illustratedIcons.goldPremium} />
+              <Text style={styles.goldBadgeText}>GOLD</Text>
+            </View>
+          ) : null}
         </View>
-        <Text style={styles.meta}>
-          {profile.distanceKm}km 거리
-          {category === 'visitors' ? ` · ${visitorTime} 방문` : ''}
-        </Text>
+      ) : null}
 
-        {isMatched ? (
-          <Pressable
-            accessibilityLabel={`Message ${profile.name}`}
-            onPress={(event) => {
-              event.stopPropagation();
-              onChat();
-            }}
-            style={styles.cardAction}
-          >
-            <Ionicons color={palette.ink} name="chatbubble" size={14} />
-            <Text style={styles.cardActionText}>메시지</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {locked ? (
+        <View style={styles.lockedContent}>
+          <View style={styles.lockedIcon}>
+            <Ionicons color={palette.white} name="lock-closed" size={17} />
+          </View>
+          <Text style={styles.lockedLabel}>방문자 확인</Text>
+          <Text style={styles.lockedHint}>Gold Pass 전용</Text>
+        </View>
+      ) : (
+        <View style={styles.cardContent}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>
+              {profile.name}, {profile.age}
+            </Text>
+            <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
+          </View>
+          <View style={styles.metaRow}>
+            <Ionicons color="rgba(255,255,255,0.78)" name="navigate" size={11} />
+            <Text style={styles.meta}>
+              {profile.distanceKm}km 거리
+              {category === 'visitors' ? ` · ${activityTime} 방문` : ''}
+              {category === 'picked-me' ? ` · ${activityTime ?? '최근'} Pick` : ''}
+            </Text>
+          </View>
+
+          {isMatched ? (
+            <Pressable
+              accessibilityLabel={`Message ${profile.name}`}
+              onPress={(event) => {
+                event.stopPropagation();
+                onChat();
+              }}
+              style={styles.cardAction}
+            >
+              <Ionicons color={palette.ink} name="chatbubble" size={14} />
+              <Text style={styles.cardActionText}>메시지</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
     </Pressable>
+  );
+}
+
+function ConnectionState({
+  actionLabel,
+  body,
+  icon,
+  loading = false,
+  onAction,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  loading?: boolean;
+  onAction?: () => void;
+  title: string;
+}) {
+  return (
+    <View style={styles.stateCard}>
+      <View style={styles.stateIcon}>
+        {loading ? (
+          <ActivityIndicator color={palette.pink} />
+        ) : (
+          <Ionicons color={palette.pink} name={icon} size={25} />
+        )}
+      </View>
+      <Text style={styles.stateTitle}>{title}</Text>
+      <Text style={styles.stateBody}>{body}</Text>
+      {actionLabel && onAction ? (
+        <Pressable onPress={onAction} style={styles.stateAction}>
+          <Text style={styles.stateActionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -307,6 +453,12 @@ function formatVisitTime(value: string | undefined, now: number) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}시간 전`;
   return `${Math.floor(hours / 24)}일 전`;
+}
+
+function prioritizeGoldProfiles(profiles: ConnectionProfile[]) {
+  return [...profiles].sort(
+    (left, right) => Number(Boolean(right.isGoldPass)) - Number(Boolean(left.isGoldPass)),
+  );
 }
 
 const styles = StyleSheet.create({
@@ -321,30 +473,32 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
   headerMark: {
     alignItems: 'center',
-    backgroundColor: '#FFE5EE',
-    borderRadius: 22,
-    height: 44,
+    height: 50,
     justifyContent: 'center',
-    width: 44,
+    width: 50,
   },
   categories: {
-    borderBottomColor: '#D9D9DE',
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#E8E8EC',
+    borderRadius: 18,
     flexDirection: 'row',
-    paddingHorizontal: 14,
+    gap: 3,
+    marginHorizontal: 20,
+    padding: 4,
   },
   category: {
     alignItems: 'center',
-    borderBottomColor: 'transparent',
-    borderBottomWidth: 3,
+    borderRadius: 14,
     flex: 1,
     flexDirection: 'row',
     gap: 5,
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 42,
     paddingHorizontal: 3,
   },
-  categorySelected: { borderBottomColor: palette.pink },
+  categorySelected: {
+    backgroundColor: palette.white,
+    ...Platform.select({ web: { boxShadow: '0 2px 8px rgba(17,17,17,0.08)' } }),
+  },
   categoryPressed: { opacity: 0.64 },
   categoryLabel: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
   categoryLabelSelected: { color: palette.ink, fontWeight: '900' },
@@ -358,41 +512,119 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   categoryCountSelected: { backgroundColor: '#FFE1EB' },
-  categoryCountText: { color: palette.inkMuted, fontSize: 8, fontWeight: '900' },
+  categoryCountText: { color: palette.inkMuted, fontSize: 9, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
-  titleBlock: { paddingBottom: 17, paddingTop: 20 },
+  titleBlock: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 17,
+    paddingTop: 22,
+  },
+  titleCopy: { flex: 1 },
   title: { color: palette.ink, fontSize: 25, fontWeight: '900', letterSpacing: -0.7 },
-  subtitle: { color: palette.inkMuted, fontSize: 12, fontWeight: '600', marginTop: 3 },
+  subtitle: {
+    color: palette.inkMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+    marginTop: 4,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  stateCard: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: '#E1E1E6',
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 250,
+    paddingHorizontal: 28,
+    paddingVertical: 42,
+  },
+  stateIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFE8EF',
+    borderRadius: 23,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  stateTitle: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 15 },
+  stateBody: {
+    color: palette.inkMuted,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  stateAction: {
+    backgroundColor: palette.ink,
+    borderRadius: radius.pill,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  stateActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   card: {
     aspectRatio: 0.76,
     backgroundColor: '#D8D8DE',
-    borderRadius: 23,
+    borderRadius: 20,
     overflow: 'hidden',
     width: '48.6%',
-    ...Platform.select({ web: { boxShadow: '0 7px 18px rgba(17,17,17,0.10)' } }),
+    ...Platform.select({ web: { boxShadow: '0 5px 14px rgba(17,17,17,0.07)' } }),
   },
   cardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
-  goldCardBorder: {
-    borderColor: '#DCAF2D',
-    borderRadius: 23,
-    borderWidth: 3,
+  nonInteractive: { pointerEvents: 'none' },
+  lockedVeil: {
+    backgroundColor: 'rgba(17,17,17,0.22)',
     bottom: 0,
     left: 0,
     position: 'absolute',
     right: 0,
     top: 0,
   },
+  lockedContent: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  lockedIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,17,0.62)',
+    borderColor: 'rgba(255,255,255,0.34)',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  lockedLabel: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 10 },
+  lockedHint: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '700', marginTop: 2 },
+  goldCardBorder: {
+    borderColor: '#D7AC43',
+    borderRadius: 20,
+    borderWidth: 2,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    ...Platform.select({ web: { boxShadow: 'inset 0 0 0 1px rgba(255,239,178,0.45)' } }),
+  },
   cardTop: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     left: 11,
     position: 'absolute',
     right: 11,
     top: 11,
   },
+  statusSlot: { alignItems: 'flex-start', flex: 1 },
   onlinePill: {
     alignItems: 'center',
     backgroundColor: 'rgba(17,17,17,0.66)',
@@ -403,33 +635,32 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   onlineDot: { backgroundColor: palette.lime, borderRadius: 3, height: 6, width: 6 },
-  onlineText: { color: palette.white, fontSize: 7, fontWeight: '900', letterSpacing: 0.8 },
-  pickedBadge: {
-    alignItems: 'center',
-    backgroundColor: palette.pink,
-    borderRadius: 15,
-    height: 30,
-    justifyContent: 'center',
-    marginLeft: 'auto',
-    width: 30,
+  onlineText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
+  newPill: {
+    backgroundColor: palette.lime,
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
+  newPillText: { color: palette.ink, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
   goldBadge: {
     alignItems: 'center',
-    backgroundColor: 'rgba(17,17,17,0.72)',
-    borderColor: '#FFD35A',
-    borderRadius: 15,
-    borderWidth: 1,
-    height: 30,
+    backgroundColor: 'rgba(13,13,15,0.78)',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 1,
+    height: 28,
     justifyContent: 'center',
-    marginLeft: 5,
-    width: 30,
+    paddingLeft: 1,
+    paddingRight: 9,
   },
-  goldDiamond: { color: '#FFD35A', fontSize: 12 },
+  goldBadgeText: { color: '#FFE7A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
   cardContent: { bottom: 14, left: 14, position: 'absolute', right: 14 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   name: { color: palette.white, fontSize: 17, fontWeight: '900' },
   flag: { borderColor: 'rgba(255,255,255,0.48)', borderRadius: 3, height: 13, width: 19 },
-  meta: { color: 'rgba(255,255,255,0.76)', fontSize: 10, fontWeight: '700', marginTop: 3 },
+  metaRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
+  meta: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '700' },
   cardAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -443,7 +674,7 @@ const styles = StyleSheet.create({
   },
   cardActionText: {
     color: palette.ink,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -451,34 +682,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     borderColor: '#E4CD85',
-    borderRadius: 25,
+    borderRadius: 19,
     borderWidth: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 31,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    padding: 12,
   },
+  visitorLockCopy: { alignItems: 'center', flex: 1, flexDirection: 'row' },
   visitorLockIcon: {
     alignItems: 'center',
     backgroundColor: '#FFD35A',
-    borderRadius: 25,
-    height: 50,
+    borderRadius: 20,
+    height: 40,
     justifyContent: 'center',
-    width: 50,
+    width: 40,
   },
-  visitorLockTitle: { color: palette.ink, fontSize: 16, fontWeight: '900', marginTop: 15 },
+  visitorLockTextBlock: { flex: 1, marginLeft: 10 },
+  visitorLockTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   visitorLockText: {
     color: palette.inkMuted,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 6,
-    maxWidth: 260,
-    textAlign: 'center',
+    fontSize: 10,
+    lineHeight: 13,
+    marginTop: 2,
   },
   visitorLockAction: {
     backgroundColor: palette.ink,
     borderRadius: radius.pill,
-    marginTop: 17,
-    paddingHorizontal: 19,
-    paddingVertical: 12,
+    marginLeft: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
   },
-  visitorLockActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
+  visitorLockActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
 });

@@ -1,14 +1,20 @@
 import { Image, type ImageSource } from 'expo-image';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
+import { DiscoverGestureCoach } from '@/features/discover/components/DiscoverGestureCoach';
 import { DiscoveryFilterSheet } from '@/features/discover/components/DiscoveryFilterSheet';
+import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { NotificationsSheet } from '@/features/discover/components/NotificationsSheet';
 import { useDiscoverDeck } from '@/features/discover/hooks/use-discover-deck';
+import { matchesService } from '@/features/matches/services/matches-service';
+import { useAuthSession } from '@/hooks/use-auth-session';
 
 const headerIcons = {
   undo: require('../../../../assets/header-icons/undo.png'),
@@ -17,10 +23,54 @@ const headerIcons = {
 } satisfies Record<string, ImageSource>;
 
 export function DiscoverScreen() {
+  const router = useRouter();
   const theme = useAppTheme();
+  const { session } = useAuthSession();
   const deck = useDiscoverDeck();
+  const { clearLastMatch, lastMatch } = deck;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsQuery = useQuery({
+    enabled: Boolean(session?.user.id),
+    queryFn: () => matchesService.listConnections(session!.user.id),
+    queryKey: ['matches', 'connections', session?.user.id],
+    staleTime: 20_000,
+  });
+  const hasUnreadNotifications = (notificationsQuery.data ?? []).some(
+    (connection) => connection.unreadCount > 0,
+  );
+
+  const handleUndo = () => {
+    if (deck.canUndoWithoutAd) {
+      deck.undo();
+      return;
+    }
+    Alert.alert(
+      '되돌리기 1회 받기',
+      '광고를 끝까지 시청하면 마지막 선택을 한 번 되돌릴 수 있어요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '광고 보기',
+          onPress: async () => {
+            const result = await deck.watchRewardedAdAndUndo();
+            if (result === 'dismissed') Alert.alert('광고 시청이 완료되지 않았어요.');
+            if (result === 'unavailable') Alert.alert('지금은 광고를 불러올 수 없어요.');
+            if (result === 'pending-credit') {
+              Alert.alert('보상 확인 중', '광고 보상이 확인되면 되돌리기 1회가 지급돼요.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openMatchedChat = () => {
+    if (!lastMatch) return;
+    const matchId = lastMatch.matchId;
+    clearLastMatch();
+    router.push(`/chat/${matchId}`);
+  };
 
   return (
     <Screen edges={['top', 'left', 'right']} style={styles.screen}>
@@ -30,10 +80,10 @@ export function DiscoverScreen() {
             disabled={!deck.canUndo}
             icon={headerIcons.undo}
             label="마지막 선택 되돌리기"
-            onPress={deck.undo}
+            onPress={handleUndo}
           />
         </View>
-        <View pointerEvents="none" style={styles.brandBlock}>
+        <View style={styles.brandBlock}>
           <BrandWordmark color={theme.colors.text} size={24} />
         </View>
         <View style={[styles.headerSide, styles.headerActions]}>
@@ -43,6 +93,7 @@ export function DiscoverScreen() {
             onPress={() => setFiltersOpen(true)}
           />
           <HeaderAction
+            badge={hasUnreadNotifications}
             icon={headerIcons.notification}
             label="알림 열기"
             onPress={() => setNotificationsOpen(true)}
@@ -52,6 +103,7 @@ export function DiscoverScreen() {
       <SwipeDeck
         error={deck.error}
         isLoading={deck.isLoading}
+        onAdjustFilters={() => setFiltersOpen(true)}
         onRetry={deck.retry}
         onSwipe={deck.swipe}
         profiles={deck.profiles}
@@ -66,6 +118,12 @@ export function DiscoverScreen() {
         />
       ) : null}
       <NotificationsSheet onClose={() => setNotificationsOpen(false)} visible={notificationsOpen} />
+      <MatchCelebration
+        onChat={openMatchedChat}
+        onContinue={clearLastMatch}
+        profile={lastMatch?.profile ?? null}
+      />
+      <DiscoverGestureCoach />
     </Screen>
   );
 }
@@ -118,6 +176,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: '50%',
     position: 'absolute',
+    pointerEvents: 'none',
     top: 0,
     transform: [{ translateX: -48 }],
     width: 96,

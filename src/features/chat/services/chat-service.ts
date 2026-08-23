@@ -5,27 +5,57 @@ import type { Tables } from '@/types/database';
 
 export type ChatMessage = Tables<'messages'>;
 
+export const MESSAGE_PAGE_SIZE = 50;
+
+export type ChatMessagePage = {
+  messages: ChatMessage[];
+  nextCursor: string | null;
+};
+
+type ListMessagesOptions = {
+  before?: string | null;
+  limit?: number;
+};
+
 export const chatService = {
-  async listMessages(matchId: string) {
-    const { data, error } = await getSupabaseClient()
+  async listMessages(
+    matchId: string,
+    { before, limit = MESSAGE_PAGE_SIZE }: ListMessagesOptions = {},
+  ): Promise<ChatMessagePage> {
+    let query = getSupabaseClient()
       .from('messages')
       .select('*')
       .eq('match_id', matchId)
-      .order('created_at');
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (before) query = query.lt('created_at', before);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const messages = data ?? [];
+    const oldestMessage = messages[messages.length - 1];
+
+    return {
+      messages: [...messages].reverse(),
+      nextCursor: messages.length === limit ? (oldestMessage?.created_at ?? null) : null,
+    };
+  },
+  async sendMessage(matchId: string, clientId: string, content: string, originalLanguage = '') {
+    const { data, error } = await getSupabaseClient().rpc('send_my_message', {
+      p_match_id: matchId,
+      p_client_id: clientId,
+      p_content: content,
+      p_original_language: originalLanguage,
+    });
     if (error) throw error;
     return data;
   },
-  async sendMessage(matchId: string, senderId: string, content: string, originalLanguage = 'ko') {
-    const { data, error } = await getSupabaseClient()
-      .from('messages')
-      .insert({
-        match_id: matchId,
-        sender_id: senderId,
-        content,
-        original_language: originalLanguage,
-      })
-      .select()
-      .single();
+  async markRead(matchId: string) {
+    const { data, error } = await getSupabaseClient().rpc('mark_match_read', {
+      p_match_id: matchId,
+    });
     if (error) throw error;
     return data;
   },

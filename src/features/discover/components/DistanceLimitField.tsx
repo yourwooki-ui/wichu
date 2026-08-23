@@ -1,12 +1,5 @@
-import { useState } from 'react';
-import {
-  type GestureResponderEvent,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useRef, useState } from 'react';
+import { type GestureResponderEvent, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { palette, radius } from '@/constants/theme';
 
@@ -53,22 +46,41 @@ type DistanceLimitFieldProps = {
 };
 
 export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps) {
+  const trackRef = useRef<View>(null);
   const [trackWidth, setTrackWidth] = useState(0);
+  const [trackPageX, setTrackPageX] = useState<number | null>(null);
   const [dragStart, setDragStart] = useState<{ index: number; pageX: number } | null>(null);
   const stepIndex = getNearestStepIndex(value);
   const percent = (stepIndex / (DISTANCE_STEPS.length - 1)) * 100;
   const isUnlimited = value === UNLIMITED_DISCOVERY_DISTANCE_KM;
+  const availableTrackWidth = Math.max(0, trackWidth - HANDLE_SIZE);
 
-  const updateFromTrackPosition = (locationX: number) => {
-    if (!trackWidth) return;
-    const nextIndex = Math.round(clamp(locationX / trackWidth, 0, 1) * (DISTANCE_STEPS.length - 1));
-    onChange(DISTANCE_STEPS[nextIndex]);
+  const stepIndexFromPageX = (pageX: number) => {
+    if (!availableTrackWidth || trackPageX == null) return null;
+    const position = clamp((pageX - trackPageX - HANDLE_SIZE / 2) / availableTrackWidth, 0, 1);
+    return Math.round(position * (DISTANCE_STEPS.length - 1));
+  };
+
+  const beginInteraction = (event: GestureResponderEvent) => {
+    const pageX = event.nativeEvent.pageX;
+    const touchedIndex = stepIndexFromPageX(pageX);
+    if (touchedIndex == null) return;
+
+    const handleCenter =
+      HANDLE_SIZE / 2 + (stepIndex / (DISTANCE_STEPS.length - 1)) * availableTrackWidth;
+    const localX = pageX - (trackPageX ?? 0);
+    const touchedHandle = Math.abs(localX - handleCenter) <= HANDLE_SIZE / 2 + 6;
+    const startIndex = touchedHandle ? stepIndex : touchedIndex;
+
+    if (!touchedHandle) onChange(DISTANCE_STEPS[touchedIndex]);
+    setDragStart({ index: startIndex, pageX });
   };
 
   const moveHandle = (event: GestureResponderEvent) => {
-    if (!dragStart || !trackWidth) return;
+    if (!dragStart || !availableTrackWidth) return;
     const stepDelta = Math.round(
-      ((event.nativeEvent.pageX - dragStart.pageX) / trackWidth) * (DISTANCE_STEPS.length - 1),
+      ((event.nativeEvent.pageX - dragStart.pageX) / availableTrackWidth) *
+        (DISTANCE_STEPS.length - 1),
     );
     const nextIndex = clamp(dragStart.index + stepDelta, 0, DISTANCE_STEPS.length - 1);
     onChange(DISTANCE_STEPS[nextIndex]);
@@ -91,7 +103,7 @@ export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps)
           {!isUnlimited ? <Text style={styles.qualifier}> 이하</Text> : null}
         </View>
       </View>
-      <Pressable
+      <View
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         accessibilityLabel="최대 탐색 거리"
         accessibilityRole="adjustable"
@@ -104,29 +116,30 @@ export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps)
         onAccessibilityAction={(event) =>
           adjustByOneStep(event.nativeEvent.actionName === 'increment' ? 1 : -1)
         }
-        onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+        onLayout={(event) => {
+          setTrackWidth(event.nativeEvent.layout.width);
+          trackRef.current?.measureInWindow((pageX) => setTrackPageX(pageX));
+        }}
         onMoveShouldSetResponder={() => true}
-        onPress={(event) => updateFromTrackPosition(event.nativeEvent.locationX)}
-        onResponderGrant={(event) =>
-          setDragStart({ index: stepIndex, pageX: event.nativeEvent.pageX })
-        }
+        onResponderGrant={beginInteraction}
         onResponderMove={moveHandle}
         onResponderRelease={() => setDragStart(null)}
         onResponderTerminate={() => setDragStart(null)}
         onStartShouldSetResponder={() => true}
+        ref={trackRef}
         style={styles.touchTrack}
       >
         <View style={styles.track} />
-        <View style={[styles.activeTrack, { width: `${percent}%` }]} />
+        <View style={[styles.activeTrack, { width: availableTrackWidth * (percent / 100) }]} />
         <View
           style={[
             styles.handle,
-            { transform: [{ translateX: (trackWidth * percent) / 100 - HANDLE_SIZE / 2 }] },
+            { transform: [{ translateX: availableTrackWidth * (percent / 100) }] },
           ]}
         >
           <View style={styles.handleCore} />
         </View>
-      </Pressable>
+      </View>
       <View style={styles.bounds}>
         <Text style={styles.bound}>1km</Text>
         <Text style={styles.bound}>무제한</Text>
@@ -175,8 +188,21 @@ const styles = StyleSheet.create({
   value: { color: palette.pinkPressed, fontSize: 13, fontWeight: '900' },
   qualifier: { color: palette.pinkPressed, fontSize: 9, fontWeight: '800' },
   touchTrack: { height: 44, justifyContent: 'center', position: 'relative' },
-  track: { backgroundColor: '#DADAE0', borderRadius: 3, height: 5, width: '100%' },
-  activeTrack: { backgroundColor: palette.pink, borderRadius: 3, height: 5, position: 'absolute' },
+  track: {
+    backgroundColor: '#DADAE0',
+    borderRadius: 3,
+    height: 5,
+    left: HANDLE_SIZE / 2,
+    position: 'absolute',
+    right: HANDLE_SIZE / 2,
+  },
+  activeTrack: {
+    backgroundColor: palette.pink,
+    borderRadius: 3,
+    height: 5,
+    left: HANDLE_SIZE / 2,
+    position: 'absolute',
+  },
   handle: {
     alignItems: 'center',
     backgroundColor: palette.white,

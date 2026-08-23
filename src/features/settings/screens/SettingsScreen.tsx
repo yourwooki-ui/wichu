@@ -68,9 +68,6 @@ export function SettingsScreen() {
     ]);
   };
 
-  const showComingSoon = (title: string) =>
-    Alert.alert(title, '운영 정책과 서버 기능을 연결한 뒤 사용할 수 있어요.');
-
   const confirmDeactivation = () =>
     Alert.alert(
       '계정을 비활성화할까요?',
@@ -124,6 +121,7 @@ export function SettingsScreen() {
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로"
+          accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.headerButton}
         >
@@ -161,7 +159,7 @@ export function SettingsScreen() {
                 {session?.user.email ?? '로그인된 계정'}
               </Text>
             </View>
-            <Pressable onPress={() => router.push('/profile-setup')} style={styles.editPill}>
+            <Pressable onPress={() => router.push('/profile-edit')} style={styles.editPill}>
               <Text style={styles.editPillText}>프로필 수정</Text>
             </Pressable>
           </View>
@@ -197,18 +195,18 @@ export function SettingsScreen() {
             <SettingLink
               icon="ban-outline"
               label="차단한 사용자"
-              onPress={() => showComingSoon('차단한 사용자')}
+              onPress={() => router.push('/blocked-users')}
               value="관리"
             />
             <SettingLink
               icon="shield-checkmark-outline"
               label="커뮤니티 가이드"
-              onPress={() => showComingSoon('커뮤니티 가이드')}
+              onPress={() => router.push('/legal/community')}
             />
             <SettingLink
               icon="document-text-outline"
               label="개인정보처리방침"
-              onPress={() => showComingSoon('개인정보처리방침')}
+              onPress={() => router.push('/legal/privacy')}
             />
           </SettingSection>
 
@@ -233,7 +231,7 @@ export function SettingsScreen() {
             <SettingLink
               icon="help-circle-outline"
               label="도움말 및 문의"
-              onPress={() => showComingSoon('도움말 및 문의')}
+              onPress={() => router.push('/support')}
             />
             <SettingLink
               danger
@@ -319,7 +317,11 @@ function SettingLink({
 }) {
   const color = danger ? palette.danger : palette.ink;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
       <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
         <Ionicons color={color} name={icon} size={19} />
       </View>
@@ -387,11 +389,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
-  editPillText: { color: palette.white, fontSize: 9, fontWeight: '900' },
+  editPillText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   sectionWrap: { marginBottom: 22 },
   sectionTitle: {
     color: palette.inkMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.2,
     marginBottom: 8,
@@ -419,7 +421,7 @@ const styles = StyleSheet.create({
   rowCopy: { flex: 1, marginHorizontal: 11 },
   rowLabel: { color: palette.ink, fontSize: 13, fontWeight: '800' },
   rowLinkLabel: { flex: 1, marginLeft: 11 },
-  rowDescription: { color: palette.inkMuted, fontSize: 9, lineHeight: 13, marginTop: 3 },
+  rowDescription: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   rowValue: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginRight: 5 },
   signOutButton: {
     alignItems: 'center',
@@ -429,6 +431,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   signOutText: { color: palette.danger, fontSize: 12, fontWeight: '900' },
-  version: { color: '#A2A2A9', fontSize: 9, marginTop: 18, textAlign: 'center' },
+  version: { color: '#A2A2A9', fontSize: 10, marginTop: 18, textAlign: 'center' },
   pressed: { opacity: 0.62 },
 });

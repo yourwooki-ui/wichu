@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
@@ -37,6 +38,9 @@ function RootNavigator() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="auth/callback" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="legal/[document]" />
         <Stack.Protected guard={!session}>
           <Stack.Screen name="login" />
         </Stack.Protected>
@@ -45,9 +49,13 @@ function RootNavigator() {
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session) && profileCompleted}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile-edit" />
+          <Stack.Screen name="profile-preview" />
           <Stack.Screen name="profile/[id]" />
           <Stack.Screen name="chat/[matchId]" />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="blocked-users" />
+          <Stack.Screen name="support" />
           <Stack.Screen name="ad-free" />
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session) && Boolean(adminRole)}>
@@ -61,16 +69,18 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ThemeProvider>
-            <NativePreviewFrame>
-              <RootNavigator />
-            </NativePreviewFrame>
-          </ThemeProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ThemeProvider>
+              <NativePreviewFrame>
+                <RootNavigator />
+              </NativePreviewFrame>
+            </ThemeProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

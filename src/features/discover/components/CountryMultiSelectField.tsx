@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
 import { getCountryOptions } from '@/constants/countries';
 import { palette, radius } from '@/constants/theme';
@@ -56,7 +57,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
         <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
       </Pressable>
 
-      <Modal animationType="slide" onRequestClose={close} transparent visible={visible}>
+      <AppModal animationType="slide" onRequestClose={close} transparent visible={visible}>
         <View style={styles.overlay}>
           <Pressable onPress={close} style={StyleSheet.absoluteFill} />
           <SafeAreaView edges={['bottom']} style={styles.sheet}>
@@ -114,7 +115,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
             </Pressable>
           </SafeAreaView>
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

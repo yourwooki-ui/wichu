@@ -8,6 +8,17 @@ export type ProfileLanguage = {
   isNative: boolean;
 };
 
+export type PublicProfileDetails = {
+  occupation?: string;
+  educationLevel?: string;
+  heightCm?: number;
+  personalityType?: string;
+  drinking?: string;
+  smoking?: string;
+  exercise?: string;
+  pets?: string;
+};
+
 export type Profile = {
   id: string;
   name: string;
@@ -22,9 +33,10 @@ export type Profile = {
   interests: string[];
   photos: string[];
   lastActiveAt: string | null;
-  isVerified?: boolean;
+  isPhotoReviewed?: boolean;
   isNew?: boolean;
   isGoldPass?: boolean;
+  details?: PublicProfileDetails;
 };
 
 export type SwipeAction = 'like' | 'pass';

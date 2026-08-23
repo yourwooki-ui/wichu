@@ -4,15 +4,14 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { BrandWordmark } from '@/components/BrandWordmark';
+import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
-import { useAppTheme } from '@/components/ThemeProvider';
-import { getRepresentativeCountryCode } from '@/constants/languages';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
@@ -20,12 +19,7 @@ import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
-const REVIEW_LABELS = {
-  draft: '작성 중',
-  pending: '사진 심사 중',
-  approved: '프로필 승인 완료',
-  rejected: '프로필 수정 필요',
-} as const;
+type ReviewStatus = 'approved' | 'draft' | 'pending' | 'rejected';
 
 const TAG_LABELS: Record<string, string> = {
   dating: '데이트',
@@ -48,13 +42,6 @@ const TAG_LABELS: Record<string, string> = {
   balanced: '균형 잡힌',
 };
 
-const LANGUAGE_LEVELS: Record<string, string> = {
-  beginner: '기초',
-  intermediate: '일상 회화',
-  advanced: '고급',
-  fluent: '능숙',
-};
-
 const INTEREST_LABELS: Record<string, string> = {
   Music: '음악',
   Travel: '여행',
@@ -70,14 +57,11 @@ const INTEREST_LABELS: Record<string, string> = {
 
 export function MeScreen() {
   const router = useRouter();
-  const theme = useAppTheme();
-  const { i18n } = useTranslation();
   const { profileReviewStatus, refreshProfile, session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const userId = session?.user.id;
   const [photoRepairing, setPhotoRepairing] = useState(false);
   const [photoRepairError, setPhotoRepairError] = useState<string | null>(null);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ['me', 'operational-profile', userId],
@@ -86,37 +70,34 @@ export function MeScreen() {
     queryFn: async () => {
       const operational = await profileService.getMyOperationalProfile(userId!);
       const data = operational.profile;
-      const databasePaths = [...data.profile_photos]
-        .sort((a, b) => a.position - b.position)
-        .map((photo) => photo.storage_path);
-      const cachedSignedPhotos = [...data.profile_photos]
-        .sort((a, b) => a.position - b.position)
-        .map((photo) => photo.signed_url)
-        .filter((photo): photo is string => Boolean(photo));
-      const storagePaths = databasePaths.length
-        ? databasePaths
-        : await profilePhotoService.listMyStoredPhotos(userId!);
-
-      const photos = cachedSignedPhotos.length
-        ? cachedSignedPhotos
+      const databasePhotos = [...data.profile_photos].sort((a, b) => a.position - b.position);
+      const photos = databasePhotos.length
+        ? databasePhotos
+            .map((photo) => ({
+              storagePath: photo.storage_path,
+              uri: photo.signed_url,
+              reviewStatus: photo.review_status ?? data.review_status,
+              reviewNote: photo.review_note,
+            }))
+            .filter((photo) => Boolean(photo.uri))
         : await Promise.all(
-            storagePaths.map(async (storagePath) => {
+            (await profilePhotoService.listMyStoredPhotos(userId!)).map(async (storagePath) => {
               const { data: signed } = await profilePhotoService.createSignedPhotoUrl(storagePath);
-              return signed?.signedUrl ?? null;
+              return {
+                storagePath,
+                uri: signed?.signedUrl ?? '',
+                reviewStatus: 'pending' as const,
+                reviewNote: null,
+              };
             }),
           );
 
       return {
         ...operational,
-        photos: photos.filter((photo): photo is string => Boolean(photo)),
+        photos: photos.filter((photo) => Boolean(photo.uri)),
       };
     },
   });
-
-  const languageNames = useMemo(
-    () => new Intl.DisplayNames([i18n.language], { type: 'language' }),
-    [i18n.language],
-  );
 
   if (profileQuery.isLoading) return <MeSkeleton />;
 
@@ -150,36 +131,27 @@ export function MeScreen() {
     );
   }
 
-  const {
-    interests,
-    languages: spokenLanguages,
-    photos,
-    profile,
-    settings,
-    tags: profileTags,
-  } = profileQuery.data;
+  const { details, interests, photos, profile, settings, tags: profileTags } = profileQuery.data;
   const reviewStatus = profileReviewStatus ?? profile.review_status;
-  const photosUnderReview = reviewStatus === 'pending';
+  const primaryPhoto = photos[0];
+  const photosUnderReview = photos.filter((photo) => photo.reviewStatus === 'pending').length;
+  const rejectedPhotos = photos.filter((photo) => photo.reviewStatus === 'rejected');
+  const primaryPhotoUnderReview = primaryPhoto?.reviewStatus === 'pending';
   const interestLabels = interests.map(
     (interest) => INTEREST_LABELS[interest.label] ?? interest.label,
   );
-  const languages = [
-    profile.native_language
-      ? { code: profile.native_language, level: '모국어', native: true }
-      : null,
-    ...spokenLanguages.map((language) => ({
-      code: language.language_code,
-      level: LANGUAGE_LEVELS[language.proficiency] ?? language.proficiency,
-      native: false,
-    })),
-  ].filter((language): language is NonNullable<typeof language> => Boolean(language));
   const tags = profileTags.map((tag) => TAG_LABELS[tag.value] ?? tag.value);
-  const interestedIn = profile.interested_in.map((gender) => formatGender(gender)).join(', ');
   const tier = entitlement.data?.tier ?? 'free';
   const tierLabel = tier === 'gold' ? 'Gold Pass' : tier === 'ad_free' ? 'Ad-Free' : 'Free';
   const isDiscoverable = settings?.discovery_enabled ?? true;
-  const previewTags = [...tags, ...interestLabels.map((item) => `# ${item}`)].slice(0, 3);
-
+  const previewTags = [
+    details?.personality_type,
+    details?.occupation,
+    ...tags,
+    ...interestLabels.map((item) => `# ${item}`),
+  ]
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 3);
   const repairMissingPhotos = async () => {
     if (!userId || photoRepairing) return;
     setPhotoRepairError(null);
@@ -227,95 +199,135 @@ export function MeScreen() {
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <BrandWordmark color={theme.colors.text} size={23} />
-          <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>내 프로필</Text>
-        </View>
-        <Pressable
-          accessibilityLabel="설정 열기"
-          onPress={() => router.push('/settings')}
-          style={styles.headerButton}
-        >
-          <Ionicons color={palette.ink} name="settings-outline" size={23} />
-        </Pressable>
-      </View>
+      <AppTabHeader
+        actionAccessibilityLabel="설정 열기"
+        actionIcon={illustratedIcons.settings}
+        eyebrow="내 프로필"
+        onAction={() => router.push('/settings')}
+      />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileHub}>
-          <View
-            style={[styles.avatarRing, entitlement.data?.tier === 'gold' && styles.avatarRingGold]}
-          >
-            {photos[0] ? (
-              <View style={styles.avatarMedia}>
-                <Image
-                  blurRadius={photosUnderReview ? 18 : 0}
-                  cachePolicy="memory-disk"
-                  source={{ uri: photos[0] }}
-                  style={styles.avatar}
-                />
-                {photosUnderReview ? (
-                  <View style={styles.avatarReviewOverlay}>
-                    <Ionicons color={palette.white} name="time" size={17} />
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <View style={styles.avatarEmpty}>
-                <Ionicons color={palette.inkMuted} name="person" size={40} />
-              </View>
-            )}
-          </View>
-          <View style={styles.identityCopy}>
-            <View style={styles.nameRow}>
-              <Text numberOfLines={1} style={styles.name}>
-                {profile.display_name}, {getProfileAge(profile.birth_date)}
-              </Text>
-              <CountryFlag compact countryCode={profile.country_code} style={styles.flag} />
-            </View>
-            <Text numberOfLines={1} style={styles.accountEmail}>
-              {session?.user.email}
-            </Text>
-            <View style={styles.identityBadges}>
-              <View style={styles.reviewPill}>
-                <View
-                  style={[
-                    styles.reviewDot,
-                    {
-                      backgroundColor:
-                        reviewStatus === 'approved'
-                          ? '#20B775'
-                          : reviewStatus === 'rejected'
-                            ? palette.danger
-                            : '#E6A800',
-                    },
-                  ]}
-                />
-                <Text style={styles.reviewText}>{REVIEW_LABELS[reviewStatus]}</Text>
-              </View>
-              {tier === 'gold' ? (
-                <View style={styles.goldProfileBadge}>
-                  <Text style={styles.goldProfileDiamond}>◆</Text>
-                  <Text style={styles.goldProfileText}>GOLD</Text>
-                </View>
-              ) : null}
-            </View>
+        <View style={styles.profileHeroHeader}>
+          <View style={styles.profileHeroHeading}>
+            <Text style={styles.profileHeroEyebrow}>PUBLIC PROFILE</Text>
+            <Text style={styles.profileHeroTitle}>내 공개 프로필</Text>
+            <Text style={styles.profileHeroAccount}>상대방에게 보이는 모습을 관리해요</Text>
           </View>
           <Pressable
             accessibilityLabel="프로필 수정"
-            onPress={() => router.push('/profile-setup')}
-            style={({ pressed }) => [styles.hubEditButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            onPress={() => router.push('/profile-edit')}
+            style={({ pressed }) => [styles.profileEditAction, pressed && styles.pressed]}
           >
-            <Ionicons color={palette.ink} name="pencil" size={17} />
+            <Ionicons color={palette.white} name="pencil" size={14} />
+            <Text style={styles.profileEditActionText}>수정</Text>
           </Pressable>
         </View>
 
-        {reviewStatus === 'rejected' && profile.review_note ? (
+        <Pressable
+          accessibilityHint="상대방에게 보이는 전체 프로필을 확인합니다"
+          accessibilityLabel="내 공개 프로필 전체 미리보기"
+          accessibilityRole="button"
+          onPress={() => router.push('/profile-preview')}
+          style={({ pressed }) => [
+            styles.profilePreview,
+            tier === 'gold' && styles.profilePreviewGold,
+            pressed && styles.previewPressed,
+          ]}
+        >
+          {primaryPhoto ? (
+            <Image
+              blurRadius={primaryPhotoUnderReview ? 16 : 0}
+              cachePolicy="memory-disk"
+              contentPosition="center"
+              source={{ uri: primaryPhoto.uri }}
+              style={styles.previewImage}
+            />
+          ) : (
+            <LinearGradient colors={['#DDDDE3', '#BDBEC7']} style={styles.previewPlaceholder}>
+              <View style={styles.previewPlaceholderIcon}>
+                <Ionicons color={palette.white} name="images-outline" size={28} />
+              </View>
+              <Text style={styles.previewPlaceholderTitle}>
+                {photosUnderReview ? '사진 확인 중' : '대표 사진이 필요해요'}
+              </Text>
+              <Text style={styles.previewPlaceholderText}>
+                {photosUnderReview > 0
+                  ? '승인 전에는 공개 사진이 제한돼요'
+                  : '사진을 추가해 첫인상을 완성하세요'}
+              </Text>
+            </LinearGradient>
+          )}
+          <LinearGradient
+            colors={['rgba(10,10,14,0.04)', 'rgba(10,10,14,0.1)', 'rgba(10,10,14,0.9)']}
+            locations={[0, 0.48, 1]}
+            style={styles.previewGradient}
+          />
+          {photosUnderReview > 0 ? (
+            <View style={styles.previewReviewBadge}>
+              <Ionicons color={palette.white} name="time-outline" size={13} />
+              <Text style={styles.previewReviewText}>{photosUnderReview}장 심사 중</Text>
+            </View>
+          ) : null}
+          <View style={styles.previewModeBadge}>
+            <Ionicons color={palette.white} name="eye-outline" size={12} />
+            <Text style={styles.previewModeText}>전체 미리보기</Text>
+          </View>
+          <View style={styles.previewCopy}>
+            <View style={styles.previewNameRow}>
+              <Text style={styles.previewName}>
+                {profile.display_name}, {getProfileAge(profile.birth_date)}
+              </Text>
+              <CountryFlag compact countryCode={profile.country_code} style={styles.previewFlag} />
+              {tier === 'gold' ? (
+                <IllustratedIcon
+                  size={27}
+                  source={illustratedIcons.goldPremium}
+                  style={styles.previewDiamond}
+                />
+              ) : null}
+            </View>
+            {profile.bio ? (
+              <Text numberOfLines={2} style={styles.previewBio}>
+                {profile.bio}
+              </Text>
+            ) : null}
+            {previewTags.length ? (
+              <View style={styles.previewTags}>
+                {previewTags.map((tag) => (
+                  <Text key={tag} style={styles.previewTag}>
+                    {tag}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
+
+        {photosUnderReview > 0 ? (
+          <View style={styles.pendingNotice}>
+            <View style={styles.pendingNoticeIcon}>
+              <Ionicons color="#A36B00" name="time-outline" size={20} />
+            </View>
+            <View style={styles.pendingNoticeCopy}>
+              <Text style={styles.pendingNoticeTitle}>
+                새 사진 {photosUnderReview}장을 확인하고 있어요
+              </Text>
+              <Text style={styles.pendingNoticeText}>
+                기존 승인 사진과 프로필 정보는 그대로 공개되고, 새 사진만 승인 전까지 제한돼요.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {rejectedPhotos.length > 0 ? (
           <View style={styles.reviewNotice}>
             <Ionicons color={palette.danger} name="alert-circle" size={20} />
             <View style={styles.reviewNoticeCopy}>
-              <Text style={styles.reviewNoticeTitle}>프로필 수정이 필요해요</Text>
-              <Text style={styles.reviewNoticeText}>{profile.review_note}</Text>
+              <Text style={styles.reviewNoticeTitle}>반려된 사진이 있어요</Text>
+              <Text style={styles.reviewNoticeText}>
+                {rejectedPhotos[0]?.reviewNote ?? '사진 기준을 확인한 뒤 해당 사진을 교체해주세요.'}
+              </Text>
             </View>
           </View>
         ) : null}
@@ -330,8 +342,23 @@ export function MeScreen() {
           <View style={styles.statusDivider} />
           <StatusCell
             icon="shield-checkmark-outline"
-            label="심사 상태"
-            value={shortReviewLabel(reviewStatus)}
+            label="사진 심사"
+            tone={
+              photosUnderReview > 0
+                ? 'amber'
+                : rejectedPhotos.length > 0
+                  ? 'neutral'
+                  : reviewStatus === 'approved'
+                    ? 'green'
+                    : 'neutral'
+            }
+            value={
+              photosUnderReview > 0
+                ? `${photosUnderReview}장 확인 중`
+                : rejectedPhotos.length > 0
+                  ? `${rejectedPhotos.length}장 반려`
+                  : shortReviewLabel(reviewStatus)
+            }
           />
           <View style={styles.statusDivider} />
           <StatusCell
@@ -376,14 +403,17 @@ export function MeScreen() {
           </View>
         ) : null}
 
-        <Text style={styles.groupTitle}>빠른 메뉴</Text>
+        <View style={styles.managementHeading}>
+          <Text style={styles.groupTitle}>관리</Text>
+          <Text style={styles.groupHint}>프로필, 탐색 조건과 이용권을 설정해요</Text>
+        </View>
         <View style={styles.quickGrid}>
           <QuickAction
             color="#FFE5EE"
             detail="사진 · 소개 · 관심사"
             icon="person-outline"
             label="프로필 수정"
-            onPress={() => router.push('/profile-setup')}
+            onPress={() => router.push('/profile-edit')}
           />
           <QuickAction
             color="#E9F8C8"
@@ -408,205 +438,20 @@ export function MeScreen() {
           />
         </View>
 
-        <View style={styles.previewHeader}>
-          <View>
-            <Text style={styles.groupTitle}>내 프로필 미리보기</Text>
-            <Text style={styles.groupHint}>다른 사용자에게 보이는 첫인상이에요</Text>
-          </View>
-          <Pressable onPress={() => router.push('/profile-setup')}>
-            <Text style={styles.previewEditText}>수정</Text>
-          </Pressable>
-        </View>
-        <View style={[styles.profilePreview, tier === 'gold' && styles.profilePreviewGold]}>
-          {photos[0] ? (
-            <Image
-              blurRadius={photosUnderReview ? 20 : 0}
-              cachePolicy="memory-disk"
-              contentPosition="center"
-              source={{ uri: photos[0] }}
-              style={styles.previewImage}
-            />
-          ) : (
-            <LinearGradient colors={['#DDDDE3', '#BDBEC7']} style={styles.previewPlaceholder}>
-              <Ionicons color="rgba(255,255,255,0.72)" name="person" size={72} />
-            </LinearGradient>
-          )}
-          <LinearGradient
-            colors={['transparent', 'rgba(15,15,18,0.84)']}
-            locations={[0.34, 1]}
-            style={styles.previewGradient}
-          />
-          {photosUnderReview ? (
-            <View style={styles.previewReviewBadge}>
-              <Ionicons color={palette.white} name="time-outline" size={13} />
-              <Text style={styles.previewReviewText}>사진 심사 중</Text>
-            </View>
-          ) : null}
-          <View style={styles.previewCopy}>
-            <View style={styles.previewNameRow}>
-              <Text style={styles.previewName}>
-                {profile.display_name}, {getProfileAge(profile.birth_date)}
-              </Text>
-              <CountryFlag compact countryCode={profile.country_code} style={styles.previewFlag} />
-              {tier === 'gold' ? <Text style={styles.previewDiamond}>◆</Text> : null}
-            </View>
-            {profile.bio ? (
-              <Text numberOfLines={2} style={styles.previewBio}>
-                {profile.bio}
-              </Text>
-            ) : null}
-            {previewTags.length ? (
-              <View style={styles.previewTags}>
-                {previewTags.map((tag) => (
-                  <Text key={tag} style={styles.previewTag}>
-                    {tag}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        </View>
-
         <Pressable
           accessibilityRole="button"
-          onPress={() => setDetailsExpanded((current) => !current)}
+          onPress={() => router.push('/profile-preview')}
           style={({ pressed }) => [styles.detailsToggle, pressed && styles.pressed]}
         >
-          <View>
-            <Text style={styles.detailsTitle}>프로필 상세 정보</Text>
-            <Text style={styles.detailsHint}>사진, 언어, 관심사와 탐색 조건</Text>
+          <View style={styles.detailsToggleIcon}>
+            <Ionicons color={palette.pink} name="eye-outline" size={20} />
           </View>
-          <Ionicons
-            color={palette.ink}
-            name={detailsExpanded ? 'chevron-up' : 'chevron-down'}
-            size={19}
-          />
+          <View style={styles.detailsToggleCopy}>
+            <Text style={styles.detailsTitle}>공개 프로필 전체 보기</Text>
+            <Text style={styles.detailsHint}>상대방에게 보이는 실제 순서로 확인해요</Text>
+          </View>
+          <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
         </Pressable>
-
-        {detailsExpanded ? (
-          <View style={styles.detailsBody}>
-            <Section title="프로필 사진" meta={`${photos.length} / 6`}>
-              {photos.length ? (
-                <ScrollView
-                  contentContainerStyle={styles.photoRail}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                >
-                  {photos.map((photo, index) => (
-                    <View key={photo} style={styles.photoWrap}>
-                      <Image
-                        blurRadius={photosUnderReview ? 22 : 0}
-                        source={{ uri: photo }}
-                        style={styles.photo}
-                      />
-                      {index === 0 ? (
-                        <View style={styles.mainBadge}>
-                          <Text style={styles.mainBadgeText}>대표</Text>
-                        </View>
-                      ) : null}
-                      {photosUnderReview ? (
-                        <View style={styles.photoReviewOverlay}>
-                          <Ionicons color={palette.white} name="time-outline" size={18} />
-                          <Text style={styles.photoReviewText}>심사 중</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ))}
-                </ScrollView>
-              ) : (
-                <View style={styles.photoMissingBlock}>
-                  <MissingValue label="제출한 사진이 저장되지 않았어요. 심사를 계속하려면 사진을 다시 추가해주세요." />
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={photoRepairing}
-                    onPress={repairMissingPhotos}
-                    style={({ pressed }) => [
-                      styles.photoRepairAction,
-                      (pressed || photoRepairing) && styles.pressed,
-                    ]}
-                  >
-                    <Ionicons color={palette.white} name="images-outline" size={16} />
-                    <Text style={styles.photoRepairText}>
-                      {photoRepairing ? '사진 저장 중…' : '프로필 사진 추가'}
-                    </Text>
-                  </Pressable>
-                  {photoRepairError ? (
-                    <Text style={styles.photoRepairError}>{photoRepairError}</Text>
-                  ) : null}
-                </View>
-              )}
-            </Section>
-
-            <Section title="자기소개">
-              {profile.bio ? (
-                <Text style={styles.bio}>{profile.bio}</Text>
-              ) : (
-                <MissingValue label="작성한 자기소개가 없어요" />
-              )}
-            </Section>
-
-            <Section title="프로필 정보">
-              <InfoRow icon="person-outline" label="성별" value={formatGender(profile.gender)} />
-              <InfoRow icon="heart-outline" label="관심 성별" value={interestedIn || '미설정'} />
-              <InfoRow
-                icon="calendar-outline"
-                label="선호 연령"
-                value={settings ? `${settings.min_age}세 – ${settings.max_age}세` : '미설정'}
-              />
-              <InfoRow
-                icon="navigate-outline"
-                label="최대 탐색 거리"
-                value={
-                  settings
-                    ? settings.max_distance_km === 0
-                      ? '무제한'
-                      : `${new Intl.NumberFormat('ko-KR').format(settings.max_distance_km)}km 이하`
-                    : '미설정'
-                }
-              />
-              <InfoRow
-                icon="globe-outline"
-                label="탐색 국가"
-                value={
-                  settings?.country_codes.length ? settings.country_codes.join(', ') : '모든 국가'
-                }
-              />
-            </Section>
-
-            <Section title="언어">
-              {languages.length ? (
-                <View style={styles.chips}>
-                  {languages.map((language) => (
-                    <View key={`${language.code}-${language.level}`} style={styles.languageChip}>
-                      <CountryFlag
-                        compact
-                        countryCode={getRepresentativeCountryCode(language.code)}
-                        style={styles.languageFlag}
-                      />
-                      <View>
-                        <Text style={styles.languageName}>
-                          {languageNames.of(language.code) ?? language.code.toUpperCase()}
-                        </Text>
-                        <Text style={styles.languageLevel}>{language.level}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <MissingValue label="등록한 언어가 없어요" />
-              )}
-            </Section>
-
-            <Section title="프로필 키워드">
-              <ChipList items={tags} empty="선택한 프로필 키워드가 없어요" />
-            </Section>
-
-            <Section title="관심사">
-              <ChipList items={interestLabels} empty="선택한 관심사가 없어요" pink />
-            </Section>
-          </View>
-        ) : null}
-
         <Pressable
           onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.settingsAction, pressed && styles.pressed]}
@@ -625,26 +470,6 @@ export function MeScreen() {
   );
 }
 
-function Section({
-  children,
-  meta,
-  title,
-}: {
-  children: React.ReactNode;
-  meta?: string;
-  title: string;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {meta ? <Text style={styles.sectionMeta}>{meta}</Text> : null}
-      </View>
-      {children}
-    </View>
-  );
-}
-
 function StatusCell({
   icon,
   label,
@@ -653,10 +478,17 @@ function StatusCell({
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  tone?: 'gold' | 'green' | 'neutral';
+  tone?: 'amber' | 'gold' | 'green' | 'neutral';
   value: string;
 }) {
-  const color = tone === 'gold' ? '#9A7000' : tone === 'green' ? '#16895A' : palette.ink;
+  const color =
+    tone === 'gold'
+      ? '#9A7000'
+      : tone === 'green'
+        ? '#16895A'
+        : tone === 'amber'
+          ? '#A36B00'
+          : palette.ink;
   return (
     <View style={styles.statusCell}>
       <Ionicons color={color} name={icon} size={17} />
@@ -701,54 +533,6 @@ function QuickAction({
   );
 }
 
-function InfoRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIcon}>
-        <Ionicons color={palette.ink} name={icon} size={18} />
-      </View>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-function ChipList({
-  empty,
-  items,
-  pink = false,
-}: {
-  empty: string;
-  items: string[];
-  pink?: boolean;
-}) {
-  if (!items.length) return <MissingValue label={empty} />;
-  return (
-    <View style={styles.chips}>
-      {items.map((item) => (
-        <View key={item} style={[styles.chip, pink && styles.chipPink]}>
-          <Text style={[styles.chipText, pink && styles.chipTextPink]}>
-            {pink ? '# ' : ''}
-            {item}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MissingValue({ label }: { label: string }) {
-  return <Text style={styles.missing}>{label}</Text>;
-}
-
 function MeSkeleton() {
   return (
     <Screen edges={['top', 'left', 'right']} style={styles.centered}>
@@ -759,15 +543,7 @@ function MeSkeleton() {
   );
 }
 
-function formatGender(value: string) {
-  if (value === 'woman') return '여성';
-  if (value === 'man') return '남성';
-  if (value === 'nonbinary') return '논바이너리';
-  if (value === 'other') return '기타';
-  return value || '미설정';
-}
-
-function shortReviewLabel(status: keyof typeof REVIEW_LABELS) {
+function shortReviewLabel(status: ReviewStatus) {
   if (status === 'approved') return '승인';
   if (status === 'rejected') return '수정 필요';
   if (status === 'pending') return '심사 중';
@@ -779,26 +555,53 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    height: 80,
+    height: 76,
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
   headerButton: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: '#DFDFE4',
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    height: 44,
+    height: 50,
     justifyContent: 'center',
-    width: 44,
+    width: 50,
   },
-  content: { paddingBottom: 34, paddingHorizontal: 20 },
+  content: { paddingBottom: 34, paddingHorizontal: 16 },
+  profileHeroHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  profileHeroHeading: { flex: 1, minWidth: 0, paddingRight: 12 },
+  profileHeroEyebrow: {
+    color: palette.pink,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  profileHeroTitle: {
+    color: palette.ink,
+    fontSize: 23,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginTop: 3,
+  },
+  profileHeroAccount: { color: palette.inkMuted, fontSize: 11, marginTop: 4 },
+  profileEditAction: {
+    alignItems: 'center',
+    backgroundColor: palette.ink,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+  profileEditActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   profileHub: {
     alignItems: 'center',
-    backgroundColor: palette.white,
+    borderColor: 'rgba(255,45,111,0.08)',
     borderRadius: 24,
+    borderWidth: 1,
     flexDirection: 'row',
     padding: 14,
   },
@@ -825,8 +628,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  goldProfileDiamond: { color: '#FFD35A', fontSize: 9 },
-  goldProfileText: { color: '#FFE59A', fontSize: 8, fontWeight: '900', letterSpacing: 0.8 },
+  goldProfileText: { color: '#FFE59A', fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   avatarMedia: {
     borderRadius: 39,
     height: 78,
@@ -847,12 +649,13 @@ const styles = StyleSheet.create({
   },
   avatarEmpty: {
     alignItems: 'center',
-    backgroundColor: '#DCDCE1',
+    backgroundColor: '#F0E9EC',
     borderRadius: 39,
     height: 78,
     justifyContent: 'center',
     width: 78,
   },
+  avatarInitial: { color: palette.pinkPressed, fontSize: 29, fontWeight: '900' },
   hubEditButton: {
     alignItems: 'center',
     backgroundColor: '#F1F1F4',
@@ -865,7 +668,7 @@ const styles = StyleSheet.create({
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   name: { color: palette.ink, flexShrink: 1, fontSize: 19, fontWeight: '900', letterSpacing: -0.5 },
   flag: { borderRadius: 4, height: 14, width: 21 },
-  accountEmail: { color: palette.inkMuted, fontSize: 9, marginTop: 3 },
+  accountEmail: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
   identityBadges: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 8 },
   reviewPill: {
     alignItems: 'center',
@@ -878,7 +681,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   reviewDot: { borderRadius: 4, height: 8, width: 8 },
-  reviewText: { color: palette.ink, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  reviewText: { color: palette.ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.3 },
   reviewNotice: {
     alignItems: 'flex-start',
     backgroundColor: '#FFF0F1',
@@ -891,25 +694,54 @@ const styles = StyleSheet.create({
   reviewNoticeCopy: { flex: 1 },
   reviewNoticeTitle: { color: palette.danger, fontSize: 12, fontWeight: '900' },
   reviewNoticeText: { color: palette.ink, fontSize: 11, lineHeight: 16, marginTop: 3 },
+  pendingNotice: {
+    alignItems: 'flex-start',
+    backgroundColor: palette.white,
+    borderColor: '#E8D9A9',
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 11,
+    marginTop: 10,
+    padding: 14,
+  },
+  pendingNoticeIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFF3C9',
+    borderRadius: 14,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  pendingNoticeCopy: { flex: 1 },
+  pendingNoticeTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  pendingNoticeText: { color: palette.inkMuted, fontSize: 10, lineHeight: 15, marginTop: 3 },
   statusStrip: {
     alignItems: 'center',
     backgroundColor: palette.white,
-    borderRadius: 20,
+    borderRadius: 18,
     flexDirection: 'row',
     marginTop: 10,
-    minHeight: 74,
+    minHeight: 68,
     paddingHorizontal: 7,
   },
   statusCell: { alignItems: 'center', flex: 1, minWidth: 0 },
   statusDivider: { backgroundColor: '#E5E5E9', height: 31, width: StyleSheet.hairlineWidth },
-  statusLabel: { color: palette.inkMuted, fontSize: 8, fontWeight: '700', marginTop: 4 },
+  statusLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4 },
   statusValue: { fontSize: 10, fontWeight: '900', marginTop: 1, maxWidth: '92%' },
-  attentionCard: { backgroundColor: palette.ink, borderRadius: 22, marginTop: 10, padding: 16 },
+  attentionCard: {
+    backgroundColor: palette.white,
+    borderColor: '#E5E5E9',
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 10,
+    padding: 16,
+  },
   attentionTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   attentionCopy: { flex: 1, paddingRight: 10 },
-  attentionEyebrow: { color: palette.pink, fontSize: 8, fontWeight: '900', letterSpacing: 1.1 },
-  attentionTitle: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 5 },
-  attentionValue: { color: palette.lime, fontSize: 23, fontWeight: '900' },
+  attentionEyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  attentionTitle: { color: palette.ink, fontSize: 13, fontWeight: '900', marginTop: 5 },
+  attentionValue: { color: palette.pink, fontSize: 23, fontWeight: '900' },
   attentionAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -923,34 +755,39 @@ const styles = StyleSheet.create({
   },
   attentionActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   completionTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  completionEyebrow: { color: palette.pink, fontSize: 8, fontWeight: '900', letterSpacing: 1.1 },
+  completionEyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   completionTitle: { color: palette.white, fontSize: 14, fontWeight: '900', marginTop: 5 },
   completionValue: { color: palette.lime, fontSize: 25, fontWeight: '900' },
   progressTrack: {
-    backgroundColor: '#36363C',
+    backgroundColor: '#E8E8EC',
     borderRadius: 3,
     height: 5,
     marginTop: 15,
     overflow: 'hidden',
   },
-  progressFill: { backgroundColor: palette.lime, borderRadius: 3, height: '100%' },
+  progressFill: { backgroundColor: palette.pink, borderRadius: 3, height: '100%' },
   groupTitle: {
     color: palette.ink,
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: -0.2,
-    marginTop: 22,
   },
-  groupHint: { color: palette.inkMuted, fontSize: 9, marginTop: 3 },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  groupHint: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
+  managementHeading: { marginTop: 20, paddingHorizontal: 2 },
+  quickGrid: {
+    backgroundColor: '#DCDCE1',
+    borderRadius: 22,
+    gap: StyleSheet.hairlineWidth,
+    marginTop: 10,
+    overflow: 'hidden',
+  },
   quickAction: {
     alignItems: 'center',
     backgroundColor: palette.white,
-    borderRadius: 18,
     flexDirection: 'row',
-    minHeight: 66,
-    paddingHorizontal: 11,
-    width: '48.8%',
+    minHeight: 69,
+    paddingHorizontal: 14,
+    width: '100%',
   },
   quickIcon: {
     alignItems: 'center',
@@ -961,29 +798,38 @@ const styles = StyleSheet.create({
   },
   quickCopy: { flex: 1, marginLeft: 9, minWidth: 0 },
   quickLabel: { color: palette.ink, fontSize: 11, fontWeight: '900' },
-  quickDetail: { color: palette.inkMuted, fontSize: 8, marginTop: 3 },
-  previewHeader: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
-  previewEditText: {
-    color: palette.pinkPressed,
-    fontSize: 10,
-    fontWeight: '900',
-    paddingVertical: 4,
-  },
+  quickDetail: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
   profilePreview: {
     backgroundColor: '#D8D8DE',
-    borderRadius: 24,
-    height: 300,
-    marginTop: 10,
+    borderRadius: 26,
+    height: 294,
+    marginTop: 14,
     overflow: 'hidden',
     position: 'relative',
   },
   profilePreviewGold: { borderColor: '#DCAF2D', borderWidth: 2 },
+  previewPressed: { opacity: 0.92 },
   previewImage: { height: '100%', width: '100%' },
   previewPlaceholder: {
     alignItems: 'center',
     height: '100%',
     justifyContent: 'center',
     width: '100%',
+  },
+  previewPlaceholderIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,17,0.22)',
+    borderRadius: 22,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  previewPlaceholderTitle: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 11 },
+  previewPlaceholderText: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 4,
   },
   previewGradient: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   previewReviewBadge: {
@@ -998,12 +844,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 13,
   },
-  previewReviewText: { color: palette.white, fontSize: 8, fontWeight: '900' },
-  previewCopy: { bottom: 17, left: 17, position: 'absolute', right: 17 },
+  previewReviewText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  previewModeBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,19,0.46)',
+    borderColor: 'rgba(255,255,255,0.24)',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+    right: 13,
+    top: 13,
+  },
+  previewModeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  previewCopy: { bottom: 18, left: 18, position: 'absolute', right: 18 },
   previewNameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  previewName: { color: palette.white, fontSize: 24, fontWeight: '900', letterSpacing: -0.7 },
+  previewName: { color: palette.white, fontSize: 25, fontWeight: '900', letterSpacing: -0.7 },
   previewFlag: { borderRadius: 4, height: 15, width: 22 },
-  previewDiamond: { color: '#FFD35A', fontSize: 12 },
+  previewDiamond: { marginLeft: 3 },
   previewBio: {
     color: 'rgba(255,255,255,0.84)',
     fontSize: 10,
@@ -1016,7 +877,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: radius.pill,
     color: palette.white,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '800',
     overflow: 'hidden',
     paddingHorizontal: 9,
@@ -1027,13 +888,21 @@ const styles = StyleSheet.create({
     backgroundColor: palette.white,
     borderRadius: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     marginTop: 12,
-    minHeight: 67,
-    paddingHorizontal: 16,
+    minHeight: 72,
+    paddingHorizontal: 14,
   },
+  detailsToggleIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
+    borderRadius: 16,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  detailsToggleCopy: { flex: 1, marginLeft: 11 },
   detailsTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  detailsHint: { color: palette.inkMuted, fontSize: 9, marginTop: 3 },
+  detailsHint: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
   detailsBody: { marginTop: 4 },
   editAction: {
     alignItems: 'center',
@@ -1059,7 +928,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { color: palette.ink, fontSize: 17, fontWeight: '900' },
-  sectionMeta: { color: palette.inkMuted, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
+  sectionMeta: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   photoRail: { gap: 9 },
   photoWrap: {
     borderRadius: 18,
@@ -1081,7 +950,7 @@ const styles = StyleSheet.create({
   },
   photoReviewText: {
     color: palette.white,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.8,
     marginTop: 5,
@@ -1107,7 +976,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
   },
-  mainBadgeText: { color: palette.white, fontSize: 7, fontWeight: '900', letterSpacing: 0.8 },
+  mainBadgeText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
   bio: { color: palette.ink, fontSize: 14, lineHeight: 22 },
   infoRow: { alignItems: 'center', flexDirection: 'row', minHeight: 48 },
   infoIcon: {
@@ -1148,7 +1017,7 @@ const styles = StyleSheet.create({
   },
   languageFlag: { borderRadius: 5, height: 20, width: 28 },
   languageName: { color: palette.ink, fontSize: 11, fontWeight: '900' },
-  languageLevel: { color: palette.inkMuted, fontSize: 8, fontWeight: '700', marginTop: 1 },
+  languageLevel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 1 },
   missing: { color: palette.inkMuted, fontSize: 12, fontStyle: 'italic' },
   settingsAction: {
     alignItems: 'center',
@@ -1169,7 +1038,7 @@ const styles = StyleSheet.create({
   },
   settingsCopy: { flex: 1 },
   settingsTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  settingsText: { color: palette.inkMuted, fontSize: 9, marginTop: 3 },
+  settingsText: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
   centered: { alignItems: 'center', justifyContent: 'center' },
   emptyIcon: {
     alignItems: 'center',

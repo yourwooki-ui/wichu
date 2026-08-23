@@ -440,3 +440,9 @@ entrypoint = "./functions/delete-account-v2/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/delete-account-v2/*.html" ]
+
+[functions.translate-message]
+enabled = true
+verify_jwt = true
+import_map = "./functions/translate-message/deno.json"
+entrypoint = "./functions/translate-message/index.ts"

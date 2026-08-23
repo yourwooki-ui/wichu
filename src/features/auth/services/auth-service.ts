@@ -12,6 +12,10 @@ export function getAuthCallbackUrl() {
   return makeRedirectUri({ scheme: 'wichu', path: 'auth/callback' });
 }
 
+export function getPasswordResetUrl() {
+  return makeRedirectUri({ scheme: 'wichu', path: 'reset-password' });
+}
+
 async function applyPendingGoogleBirthDate() {
   const birthDate = await AsyncStorage.getItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
   if (!birthDate) return;
@@ -50,6 +54,14 @@ async function createImplicitSession(params: URLSearchParams) {
 }
 
 export const authService = {
+  requestPasswordReset(email: string) {
+    return getSupabaseClient().auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordResetUrl(),
+    });
+  },
+  updatePassword(password: string) {
+    return getSupabaseClient().auth.updateUser({ password });
+  },
   signInWithEmail(email: string, password: string) {
     return getSupabaseClient().auth.signInWithPassword({ email, password });
   },

@@ -17,19 +17,29 @@ export function useNotificationObserver(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
-    const redirect = (notification: Notifications.Notification) => {
-      const url = notification.request.content.data?.url;
+    const redirect = (response: Notifications.NotificationResponse) => {
+      if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return false;
+      const url = response.notification.request.content.data?.url;
       if (typeof url === 'string' && SAFE_NOTIFICATION_ROUTE.test(url)) {
         router.push(url as Href);
+        return true;
       }
+      return false;
     };
 
-    const initialResponse = Notifications.getLastNotificationResponse();
-    if (initialResponse?.notification) redirect(initialResponse.notification);
+    let active = true;
+    void Notifications.getLastNotificationResponseAsync().then(async (initialResponse) => {
+      if (active && initialResponse && redirect(initialResponse)) {
+        await Notifications.clearLastNotificationResponseAsync();
+      }
+    });
 
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      redirect(response.notification);
+      redirect(response);
     });
-    return () => subscription.remove();
+    return () => {
+      active = false;
+      subscription.remove();
+    };
   }, [enabled]);
 }

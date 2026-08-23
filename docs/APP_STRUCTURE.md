@@ -30,6 +30,7 @@ Main Tabs
 
 Stack / Modal
 ├─ Profile Detail
+├─ My Profile Preview
 ├─ Chat Room
 ├─ Settings
 ├─ Ad-Free
@@ -85,6 +86,8 @@ Stack / Modal
 
 심사 중에도 Discover는 사용할 수 있지만 본인의 미승인 공개 사진은 타인에게 노출하지 않는다. Review Status 하단에는 `스와이프하러 가기`를 둔다.
 
+최초 세팅은 가입 완료에 필요한 정보만 순차적으로 묻는 온보딩이다. 가입 이후 수정은 별도 `/profile-edit` 편집기에서 기본·추가·취향·소개·사진 섹션으로 관리하며 최초 세팅 화면을 재사용하지 않는다.
+
 ### 4.3 Discover
 
 목적: 최근 7일 이내 활동한 조건 일치 후보를 네트워크 대기 없이 연속 탐색한다.
@@ -95,7 +98,8 @@ Stack / Modal
 - 왼쪽 Swipe: Pass
 - 한 번 탭: Profile Detail
 - 헤더: 되돌리기 / 필터 / 알림
-- 되돌리기는 직전 Swipe 한 건만 허용하고 Match가 생성된 Pick은 제외
+- Gold Pass는 Match가 생성되지 않은 최근 Swipe를 광고 없이 연속 되돌릴 수 있음
+- Free/Ad-Free는 사용자가 직접 선택한 보상형 광고 시청 완료로 받은 1크레딧을 사용해 직전 Swipe 한 건을 되돌림
 - 덱이 5장 미만이면 백그라운드 refill
 - 개발 샘플 5명은 개발 빌드에서만 순환
 
@@ -111,6 +115,7 @@ Stack / Modal
 - 하단 고정 행동: Pass / Pick
 - 더보기에서 신고 / 차단
 - Discover에서 진입 시 뒤로가면 동일 카드 상태를 유지
+- 사진·기본정보·라이프스타일·언어·관심사는 공통 `StandardProfileDetail` 규격만 사용
 
 ### 4.5 Matches
 
@@ -162,9 +167,12 @@ Stack / Modal
 - 대표 사진, 이름/나이/국가, 심사 상태
 - 프로필 완성도와 `프로필 수정`
 - 내 프로필 미리보기
+- 미리보기 카드를 누르면 상대 상세프로필과 동일한 표준 전체 화면으로 전환
+- 내 미리보기에서는 Pick/Pass·신고를 숨기고 프로필 수정 행동만 제공
 - Ad-Free 상태
 - 설정 진입
 - 공개 프로필과 계정 설정을 한 카드에 혼합하지 않음
+- 상세 정보를 마이페이지에 다시 펼쳐놓지 않고 표준 전체 미리보기로 연결
 
 ### 4.10 Settings
 

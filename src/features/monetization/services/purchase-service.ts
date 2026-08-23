@@ -13,6 +13,7 @@ export type PassEntitlement = {
   canSeeVisitors: boolean;
   hasGoldProfile: boolean;
   discoveryPriority: boolean;
+  unlimitedUndo: boolean;
   expiresAt: string | null;
 };
 
@@ -50,6 +51,7 @@ export const purchaseService = {
         canSeeVisitors: true,
         hasGoldProfile: true,
         discoveryPriority: true,
+        unlimitedUndo: true,
         expiresAt: gold.current_period_end,
       };
     }
@@ -62,6 +64,7 @@ export const purchaseService = {
         canSeeVisitors: false,
         hasGoldProfile: false,
         discoveryPriority: false,
+        unlimitedUndo: false,
         expiresAt: adFree.current_period_end,
       };
     }
@@ -72,6 +75,7 @@ export const purchaseService = {
       canSeeVisitors: false,
       hasGoldProfile: false,
       discoveryPriority: false,
+      unlimitedUndo: false,
       expiresAt: null,
     };
   },

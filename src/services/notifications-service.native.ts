@@ -6,9 +6,19 @@ import { Platform } from 'react-native';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export const notificationsService = {
-  async register(userId: string): Promise<string | null> {
+  async prepare() {
+    if (Platform.OS !== 'android') return;
+    await Notifications.setNotificationChannelAsync('wichu-default', {
+      name: 'WICHU 알림',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 180, 120, 180],
+      lightColor: '#FF2D6F',
+    });
+  },
+  async register(_userId: string): Promise<string | null> {
     if (!Device.isDevice) return null;
 
+    await this.prepare();
     const permission = await Notifications.getPermissionsAsync();
     if (!permission.granted) return null;
 
@@ -16,19 +26,11 @@ export const notificationsService = {
     if (!projectId) throw new Error('EAS project ID is missing');
 
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    const { error } = await getSupabaseClient()
-      .from('push_devices')
-      .upsert(
-        {
-          user_id: userId,
-          expo_push_token: token,
-          platform: Platform.OS as 'ios' | 'android',
-          device_name: Device.deviceName ?? null,
-          enabled: true,
-          last_registered_at: new Date().toISOString(),
-        },
-        { onConflict: 'expo_push_token' },
-      );
+    const { error } = await getSupabaseClient().rpc('register_my_push_device', {
+      p_expo_push_token: token,
+      p_platform: Platform.OS,
+      p_device_name: Device.deviceName ?? null,
+    });
     if (error) throw error;
     return token;
   },

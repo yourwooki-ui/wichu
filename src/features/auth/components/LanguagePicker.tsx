@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { radius, spacing } from '@/constants/theme';
 import { AppLanguage, getAppLanguage, setAppLanguage, supportedLanguages } from '@/i18n';
@@ -51,7 +52,12 @@ export function LanguagePicker({ dark = false }: LanguagePickerProps) {
         <Ionicons name="chevron-down" size={14} color={dark ? '#FFFFFF' : theme.colors.textMuted} />
       </Pressable>
 
-      <Modal animationType="fade" onRequestClose={() => setOpen(false)} transparent visible={open}>
+      <AppModal
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+        transparent
+        visible={open}
+      >
         <View style={styles.modalRoot}>
           <Pressable
             accessibilityLabel={t('auth.back')}
@@ -102,7 +108,7 @@ export function LanguagePicker({ dark = false }: LanguagePickerProps) {
             </View>
           </SafeAreaView>
         </View>
-      </Modal>
+      </AppModal>
     </>
   );
 }

@@ -2,9 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { palette, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -12,6 +13,7 @@ import {
   notificationPermissionService,
   type AppPermissionState,
 } from '../services/notification-permission-service';
+import { notificationsService } from '../services/notifications-service';
 
 type Step = 'location' | 'notifications';
 
@@ -31,10 +33,15 @@ export function AppPermissionOnboarding() {
     if (!userId || !profileCompleted) return;
     let active = true;
     void (async () => {
-      if ((await AsyncStorage.getItem(storageKey(userId))) === 'done' || !active) return;
+      const onboardingDone = (await AsyncStorage.getItem(storageKey(userId))) === 'done';
+      const currentNotificationStatus = await notificationPermissionService.getStatus();
+      if (currentNotificationStatus === 'granted') {
+        await notificationsService.register(userId).catch(() => null);
+      }
+      if (onboardingDone || !active) return;
       const [locationResult, notificationStatus] = await Promise.all([
         profileLocationService.syncCurrentLocation(),
-        notificationPermissionService.getStatus(),
+        Promise.resolve(currentNotificationStatus),
       ]);
       if (!active) return;
       if (locationResult.status === 'ready' && isSettled(notificationStatus)) {
@@ -91,7 +98,7 @@ export function AppPermissionOnboarding() {
   const isLocation = step === 'location';
 
   return (
-    <Modal animationType="fade" transparent visible>
+    <AppModal animationType="fade" transparent visible>
       <SafeAreaView style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.progressRow}>
@@ -142,7 +149,7 @@ export function AppPermissionOnboarding() {
           </Pressable>
         </View>
       </SafeAreaView>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -172,7 +179,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { backgroundColor: palette.pink, height: '100%' },
-  stepText: { color: palette.inkMuted, fontSize: 9, fontWeight: '900' },
+  stepText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
   visual: {
     alignItems: 'center',
     borderRadius: 24,
@@ -191,7 +198,7 @@ const styles = StyleSheet.create({
   iconCircleYellow: { backgroundColor: '#FFFDF7' },
   eyebrow: {
     color: palette.pink,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.3,
     marginTop: 20,
@@ -215,8 +222,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
-  trustText: { color: '#176E4D', fontSize: 9, fontWeight: '900' },
-  message: { color: palette.danger, fontSize: 9, lineHeight: 14, marginTop: 10 },
+  trustText: { color: '#176E4D', fontSize: 10, fontWeight: '900' },
+  message: { color: palette.danger, fontSize: 10, lineHeight: 15, marginTop: 10 },
   primary: {
     alignItems: 'center',
     backgroundColor: palette.pink,

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { palette, radius } from '@/constants/theme';
 import { CountryMultiSelectField } from '@/features/discover/components/CountryMultiSelectField';
 import {
@@ -32,7 +33,7 @@ export function DiscoveryFilterSheet({ visible, value, saving, onClose, onSave }
 
   return (
     <DiscoveryFilterForm
-      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}`}
+      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}-${value?.excludeSameCountry ?? false}`}
       onClose={onClose}
       onSave={onSave}
       saving={saving}
@@ -49,6 +50,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
   const [maxDistanceKm, setMaxDistanceKm] = useState(
     value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM,
   );
+  const [excludeSameCountry, setExcludeSameCountry] = useState(value?.excludeSameCountry ?? false);
   const [error, setError] = useState<string | null>(null);
 
   const toggleGender = (gender: string) => {
@@ -64,7 +66,14 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
   const save = async () => {
     setError(null);
     try {
-      await onSave({ minAge, maxAge, genders, countryCodes, maxDistanceKm });
+      await onSave({
+        minAge,
+        maxAge,
+        genders,
+        countryCodes,
+        maxDistanceKm,
+        excludeSameCountry,
+      });
       onClose();
     } catch {
       setError('탐색 조건을 저장하지 못했어요. 잠시 후 다시 시도해주세요.');
@@ -72,7 +81,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible>
+    <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
       <View style={styles.overlay}>
         <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
@@ -116,6 +125,26 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
               onChangeMin={setMinAge}
             />
             <DistanceLimitField onChange={setMaxDistanceKm} value={maxDistanceKm} />
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceIcon}>
+                <Ionicons color={palette.pinkPressed} name="flag-outline" size={19} />
+              </View>
+              <View style={styles.preferenceCopy}>
+                <Text style={styles.preferenceTitle}>같은 국적 프로필 만나지 않기</Text>
+                <Text style={styles.preferenceDescription}>
+                  내 프로필에 설정한 국가와 같은 사용자를 탐색에서 제외해요.
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="같은 국적 프로필 탐색에서 제외"
+                accessibilityRole="switch"
+                ios_backgroundColor="#DADAE0"
+                onValueChange={setExcludeSameCountry}
+                thumbColor={palette.white}
+                trackColor={{ false: '#DADAE0', true: palette.pink }}
+                value={excludeSameCountry}
+              />
+            </View>
             <CountryMultiSelectField onChange={setCountryCodes} value={countryCodes} />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </ScrollView>
@@ -130,7 +159,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
           </View>
         </SafeAreaView>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -186,6 +215,33 @@ const styles = StyleSheet.create({
   genderOptionSelected: { backgroundColor: palette.ink, borderColor: palette.ink },
   genderText: { color: palette.ink, fontSize: 11, fontWeight: '800' },
   genderTextSelected: { color: palette.white },
+  preferenceCard: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 76,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+  },
+  preferenceIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFE8F0',
+    borderRadius: 14,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  preferenceCopy: { flex: 1, marginHorizontal: 11 },
+  preferenceTitle: { color: palette.ink, fontSize: 11, fontWeight: '900' },
+  preferenceDescription: {
+    color: palette.inkMuted,
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 4,
+  },
   error: { color: palette.danger, fontSize: 11, lineHeight: 16 },
   footer: { borderTopColor: palette.line, borderTopWidth: StyleSheet.hairlineWidth, padding: 16 },
   save: {

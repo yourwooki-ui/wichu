@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
 import { getCountryOptions, type CountryOption } from '@/constants/countries';
 import { palette, radius } from '@/constants/theme';
@@ -89,7 +89,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
         <Ionicons color={palette.inkMuted} name="chevron-down" size={20} />
       </Pressable>
 
-      <Modal
+      <AppModal
         animationType="slide"
         onRequestClose={closePicker}
         presentationStyle="overFullScreen"
@@ -198,7 +198,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
             />
           </SafeAreaView>
         </KeyboardAvoidingView>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

@@ -53,7 +53,7 @@ export function OperationsScreen() {
       operationsService.reviewProfile(
         id,
         decision,
-        decision === 'rejected' ? '대표 사진 또는 공개 프로필을 수정해 주세요.' : undefined,
+        decision === 'rejected' ? '사진 기준을 확인한 뒤 해당 사진을 교체해 주세요.' : undefined,
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operations', 'profile-reviews'] }),
     onError: () => Alert.alert('처리하지 못했어요', '심사 상태를 확인하고 다시 시도해 주세요.'),
@@ -169,16 +169,17 @@ function ReviewCard({
   onApprove: () => void;
   onReject: () => void;
 }) {
-  const photo = useSignedPhoto(item.photo_paths[0]);
   return (
     <View style={styles.card}>
-      {photo.data ? (
-        <Image contentFit="cover" source={{ uri: photo.data }} style={styles.photo} />
-      ) : (
-        <View style={[styles.photo, styles.photoEmpty]}>
-          <Ionicons color={palette.inkMuted} name="person" size={32} />
-        </View>
-      )}
+      <ScrollView
+        contentContainerStyle={styles.reviewPhotos}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        {item.photo_paths.map((path, index) => (
+          <ReviewPhoto key={path} index={index} path={path} />
+        ))}
+      </ScrollView>
       <View style={styles.cardCopy}>
         <Text style={styles.cardTitle}>
           {item.display_name}, {item.age}
@@ -194,11 +195,26 @@ function ReviewCard({
             ? new Date(item.submitted_at).toLocaleString('ko-KR')
             : '제출 시간 없음'}
         </Text>
+        <Text style={styles.photoCount}>이번 심사 사진 {item.photo_paths.length}장</Text>
         <View style={styles.actions}>
           <Action disabled={busy} label="반려" onPress={onReject} />
           <Action primary disabled={busy} label="승인" onPress={onApprove} />
         </View>
       </View>
+    </View>
+  );
+}
+
+function ReviewPhoto({ index, path }: { index: number; path: string }) {
+  const photo = useSignedPhoto(path);
+  return photo.data ? (
+    <View style={styles.reviewPhotoWrap}>
+      <Image contentFit="cover" source={{ uri: photo.data }} style={styles.photo} />
+      <Text style={styles.reviewPhotoIndex}>{index + 1}</Text>
+    </View>
+  ) : (
+    <View style={[styles.photo, styles.photoEmpty]}>
+      <Ionicons color={palette.inkMuted} name="person" size={32} />
     </View>
   );
 }
@@ -306,13 +322,30 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: palette.white,
     borderRadius: 22,
-    flexDirection: 'row',
+    flexDirection: 'column',
     overflow: 'hidden',
     padding: 12,
   },
-  photo: { backgroundColor: '#E5E5E8', borderRadius: 16, height: 132, width: 98 },
+  reviewPhotos: { gap: 8 },
+  reviewPhotoWrap: { position: 'relative' },
+  reviewPhotoIndex: {
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    borderRadius: radius.pill,
+    color: palette.white,
+    fontSize: 9,
+    fontWeight: '900',
+    left: 7,
+    minWidth: 22,
+    overflow: 'hidden',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    position: 'absolute',
+    textAlign: 'center',
+    top: 7,
+  },
+  photo: { backgroundColor: '#E5E5E8', borderRadius: 16, height: 160, width: 120 },
   photoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  cardCopy: { flex: 1, marginLeft: 13, minWidth: 0 },
+  cardCopy: { marginTop: 13, minWidth: 0 },
   cardTitle: { color: palette.ink, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
   meta: { color: palette.inkMuted, fontSize: 9, fontWeight: '700', marginTop: 4 },
   reason: {
@@ -329,6 +362,7 @@ const styles = StyleSheet.create({
   },
   body: { color: palette.inkMuted, fontSize: 10, lineHeight: 14, marginTop: 7 },
   time: { color: '#A0A0A7', fontSize: 8, marginTop: 5 },
+  photoCount: { color: palette.pink, fontSize: 9, fontWeight: '900', marginTop: 5 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 9 },
   action: {
     alignItems: 'center',

@@ -1,7 +1,17 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTag } from '@/features/profile/types/profile-tag';
+import type { ProfileDetails } from '@/features/profile/types/profile-details';
 import { Json, TablesInsert, TablesUpdate } from '@/types/database';
+
+function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+    (error.code === '42P01' ||
+      error.code === 'PGRST205' ||
+      error.message?.includes('profile_details')),
+  );
+}
 
 export const profileService = {
   getInterests() {
@@ -16,17 +26,25 @@ export const profileService = {
   },
   async getMyOperationalProfile(userId: string) {
     const supabase = getSupabaseClient();
-    const [profileResult, interestSelectionResult, languageResult, tagResult, settingsResult] =
-      await Promise.all([
-        supabase.from('profiles').select('*, profile_photos(*)').eq('id', userId).single(),
-        supabase.from('profile_interests').select('interest_id').eq('profile_id', userId),
-        supabase.from('profile_languages').select('*').eq('profile_id', userId),
-        supabase.from('profile_tags').select('*').eq('profile_id', userId),
-        supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
-      ]);
+    const [
+      profileResult,
+      detailResult,
+      interestSelectionResult,
+      languageResult,
+      tagResult,
+      settingsResult,
+    ] = await Promise.all([
+      supabase.from('profiles').select('*, profile_photos(*)').eq('id', userId).single(),
+      supabase.from('profile_details').select('*').eq('profile_id', userId).maybeSingle(),
+      supabase.from('profile_interests').select('interest_id').eq('profile_id', userId),
+      supabase.from('profile_languages').select('*').eq('profile_id', userId),
+      supabase.from('profile_tags').select('*').eq('profile_id', userId),
+      supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
+    ]);
 
     const firstError = [
       profileResult.error,
+      isMissingProfileDetails(detailResult.error) ? null : detailResult.error,
       interestSelectionResult.error,
       languageResult.error,
       tagResult.error,
@@ -56,6 +74,7 @@ export const profileService = {
 
     return {
       profile: { ...profileResult.data, profile_photos: signedPhotos },
+      details: detailResult.data ?? null,
       interests: interestResult.data,
       languages: languageResult.data ?? [],
       tags: tagResult.data ?? [],
@@ -118,6 +137,26 @@ export const profileService = {
   },
   upsertMySettings(values: TablesInsert<'user_settings'>) {
     return getSupabaseClient().from('user_settings').upsert(values, { onConflict: 'user_id' });
+  },
+  upsertMyDetails(profileId: string, values: ProfileDetails) {
+    return getSupabaseClient()
+      .from('profile_details')
+      .upsert(
+        {
+          profile_id: profileId,
+          occupation: values.occupation.trim() || null,
+          education_level: values.educationLevel,
+          height_cm: values.heightCm,
+          personality_type: values.personalityType,
+          drinking: values.drinking,
+          smoking: values.smoking,
+          exercise: values.exercise,
+          pets: values.pets,
+        },
+        { onConflict: 'profile_id' },
+      )
+      .select()
+      .single();
   },
   async replaceMyInterests(profileId: string, interestIds: string[]) {
     const supabase = getSupabaseClient();

@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppViewport } from '@/components/NativePreviewFrame';
 import { useAppTheme } from '@/components/ThemeProvider';
 
 const tabIconSources = {
@@ -20,7 +21,7 @@ export default function TabLayout() {
   const theme = useAppTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { height } = useAppViewport();
   const compactWebPreview = Platform.OS === 'web' && height < 720;
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'web' ? 18 : 8);
 
@@ -28,10 +29,10 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="discover"
       screenOptions={({ route }) => ({
-        detachInactiveScreens: false,
+        detachInactiveScreens: true,
         freezeOnBlur: true,
         headerShown: false,
-        lazy: false,
+        lazy: true,
         sceneStyle: { backgroundColor: theme.colors.background },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarAllowFontScaling: false,
@@ -41,21 +42,21 @@ export default function TabLayout() {
           <Pressable {...props} style={[props.style, styles.tabBarButton]} />
         ),
         tabBarStyle: {
-          height: (compactWebPreview ? 74 : 98) + bottomInset,
-          paddingTop: compactWebPreview ? 5 : 10,
+          height: (compactWebPreview ? 70 : 90) + bottomInset,
+          paddingTop: compactWebPreview ? 4 : 8,
           paddingBottom: bottomInset,
-          paddingHorizontal: 12,
+          paddingHorizontal: 8,
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
           ...Platform.select({
-            web: { boxShadow: '0 -8px 24px rgba(17,17,17,0.06)' },
+            web: { boxShadow: '0 -6px 18px rgba(17,17,17,0.045)' },
             default: {
               elevation: 8,
               shadowColor: '#111111',
               shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.06,
-              shadowRadius: 12,
+              shadowOpacity: 0.045,
+              shadowRadius: 10,
             },
           }),
         },
@@ -104,37 +105,37 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   iconFrame: {
     alignItems: 'center',
-    height: 50,
+    height: 46,
     justifyContent: 'center',
-    width: 54,
+    width: 50,
   },
   discoverFrame: {
-    height: 56,
-    width: 58,
-  },
-  iconFrameCompact: { height: 38, width: 46 },
-  discoverFrameCompact: { height: 43, width: 48 },
-  tabIcon: {
-    height: 46,
-    width: 46,
-  },
-  discoverIcon: {
-    height: 54,
+    height: 52,
     width: 54,
   },
-  tabIconCompact: { height: 36, width: 36 },
-  discoverIconCompact: { height: 42, width: 42 },
+  iconFrameCompact: { height: 36, width: 44 },
+  discoverFrameCompact: { height: 41, width: 47 },
+  tabIcon: {
+    height: 42,
+    width: 42,
+  },
+  discoverIcon: {
+    height: 50,
+    width: 50,
+  },
+  tabIconCompact: { height: 34, width: 34 },
+  discoverIconCompact: { height: 40, width: 40 },
   tabBarItem: {
-    paddingHorizontal: 3,
+    paddingHorizontal: 1,
   },
   tabBarButton: {
     ...Platform.select({ web: { outlineWidth: 0 } }),
   },
   tabBarLabel: {
-    fontSize: 10.5,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 0.1,
     lineHeight: 13,
-    marginTop: 6,
+    marginTop: 4,
   },
 });

@@ -92,12 +92,67 @@ export type Database = {
           updated_at?: string;
         }
       >;
+      profile_details: Table<
+        {
+          profile_id: string;
+          occupation: string | null;
+          education_level: string | null;
+          height_cm: number | null;
+          personality_type: string | null;
+          drinking: string | null;
+          smoking: string | null;
+          exercise: string | null;
+          pets: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          profile_id: string;
+          occupation?: string | null;
+          education_level?: string | null;
+          height_cm?: number | null;
+          personality_type?: string | null;
+          drinking?: string | null;
+          smoking?: string | null;
+          exercise?: string | null;
+          pets?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          profile_id?: string;
+          occupation?: string | null;
+          education_level?: string | null;
+          height_cm?: number | null;
+          personality_type?: string | null;
+          drinking?: string | null;
+          smoking?: string | null;
+          exercise?: string | null;
+          pets?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        [
+          {
+            foreignKeyName: 'profile_details_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: true;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ]
+      >;
       profile_photos: Table<
         {
           id: string;
           profile_id: string;
           storage_path: string;
           position: number;
+          review_status: Database['public']['Enums']['profile_review_status'];
+          submitted_at: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          review_note: string | null;
           created_at: string;
         },
         {
@@ -105,6 +160,11 @@ export type Database = {
           profile_id: string;
           storage_path: string;
           position: number;
+          review_status?: Database['public']['Enums']['profile_review_status'];
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          review_note?: string | null;
           created_at?: string;
         },
         {
@@ -112,6 +172,11 @@ export type Database = {
           profile_id?: string;
           storage_path?: string;
           position?: number;
+          review_status?: Database['public']['Enums']['profile_review_status'];
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          review_note?: string | null;
           created_at?: string;
         },
         [
@@ -225,6 +290,7 @@ export type Database = {
           id: string;
           match_id: string;
           sender_id: string;
+          client_id: string | null;
           content: string;
           original_language: string | null;
           translated_content: Json;
@@ -234,6 +300,7 @@ export type Database = {
           id?: string;
           match_id: string;
           sender_id?: string;
+          client_id?: string | null;
           content: string;
           original_language?: string | null;
           translated_content?: Json;
@@ -243,10 +310,31 @@ export type Database = {
           id?: string;
           match_id?: string;
           sender_id?: string;
+          client_id?: string | null;
           content?: string;
           original_language?: string | null;
           translated_content?: Json;
           created_at?: string;
+        }
+      >;
+      match_read_states: Table<
+        {
+          match_id: string;
+          user_id: string;
+          last_read_at: string;
+          updated_at: string;
+        },
+        {
+          match_id: string;
+          user_id: string;
+          last_read_at?: string;
+          updated_at?: string;
+        },
+        {
+          match_id?: string;
+          user_id?: string;
+          last_read_at?: string;
+          updated_at?: string;
         }
       >;
       blocks: Table<
@@ -290,6 +378,7 @@ export type Database = {
           max_age: number;
           max_distance_km: number;
           country_codes: string[];
+          exclude_same_country: boolean;
           discovery_enabled: boolean;
           push_matches: boolean;
           push_messages: boolean;
@@ -302,6 +391,7 @@ export type Database = {
           max_age?: number;
           max_distance_km?: number;
           country_codes?: string[];
+          exclude_same_country?: boolean;
           discovery_enabled?: boolean;
           push_matches?: boolean;
           push_messages?: boolean;
@@ -314,6 +404,7 @@ export type Database = {
           max_age?: number;
           max_distance_km?: number;
           country_codes?: string[];
+          exclude_same_country?: boolean;
           discovery_enabled?: boolean;
           push_matches?: boolean;
           push_messages?: boolean;
@@ -424,6 +515,7 @@ export type Database = {
           attempts: number;
           last_error: string | null;
           sent_at: string | null;
+          processing_started_at: string | null;
           created_at: string;
         },
         {
@@ -438,6 +530,7 @@ export type Database = {
           attempts?: number;
           last_error?: string | null;
           sent_at?: string | null;
+          processing_started_at?: string | null;
           created_at?: string;
         },
         {
@@ -452,12 +545,102 @@ export type Database = {
           attempts?: number;
           last_error?: string | null;
           sent_at?: string | null;
+          processing_started_at?: string | null;
+          created_at?: string;
+        }
+      >;
+      push_delivery_receipts: Table<
+        {
+          id: string;
+          outbox_id: string;
+          push_device_id: string | null;
+          expo_ticket_id: string | null;
+          ticket_status: string;
+          delivery_status: string;
+          error_code: string | null;
+          checked_at: string | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          outbox_id: string;
+          push_device_id?: string | null;
+          expo_ticket_id?: string | null;
+          ticket_status: string;
+          delivery_status?: string;
+          error_code?: string | null;
+          checked_at?: string | null;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          outbox_id?: string;
+          push_device_id?: string | null;
+          expo_ticket_id?: string | null;
+          ticket_status?: string;
+          delivery_status?: string;
+          error_code?: string | null;
+          checked_at?: string | null;
           created_at?: string;
         }
       >;
     };
     Views: Record<never, never>;
     Functions: {
+      record_my_swipe: {
+        Args: {
+          p_target_id: string;
+          p_action: Database['public']['Enums']['swipe_action'];
+        };
+        Returns: { swipe_id: string; match_id: string | null }[];
+      };
+      undo_my_swipe: {
+        Args: { p_target_id: string };
+        Returns: { undone: boolean; unlimited: boolean; credits_remaining: number }[];
+      };
+      get_my_undo_entitlement: {
+        Args: Record<never, never>;
+        Returns: { unlimited: boolean; credits: number }[];
+      };
+      grant_rewarded_undo_credit: {
+        Args: { p_user_id: string; p_provider_event_id: string };
+        Returns: number;
+      };
+      send_my_message: {
+        Args: {
+          p_match_id: string;
+          p_client_id: string;
+          p_content: string;
+          p_original_language?: string;
+        };
+        Returns: Database['public']['Tables']['messages']['Row'];
+      };
+      mark_match_read: { Args: { p_match_id: string }; Returns: string };
+      get_my_unread_counts: {
+        Args: Record<never, never>;
+        Returns: { match_id: string; unread_count: number }[];
+      };
+      claim_my_message_translation: {
+        Args: { p_message_id: string; p_target_language: string };
+        Returns: {
+          content: string;
+          source_language: string;
+          target_language: string;
+          cached_translation: string | null;
+        }[];
+      };
+      complete_message_translation: {
+        Args: {
+          p_message_id: string;
+          p_target_language: string;
+          p_translated_text: string;
+        };
+        Returns: string;
+      };
+      fail_message_translation: {
+        Args: { p_message_id: string; p_target_language: string };
+        Returns: undefined;
+      };
       get_discovery_candidates: {
         Args: {
           p_min_age?: number;
@@ -509,6 +692,20 @@ export type Database = {
           is_gold_pass: boolean;
           last_visited_at: string;
           visit_count: number;
+          photo_path: string | null;
+        }[];
+      };
+      get_my_incoming_likes: {
+        Args: { p_limit?: number };
+        Returns: {
+          profile_id: string;
+          display_name: string;
+          birth_date: string;
+          country_code: string;
+          last_active_at: string | null;
+          distance_km: number | null;
+          is_gold_pass: boolean;
+          liked_at: string;
           photo_path: string | null;
         }[];
       };
@@ -567,6 +764,17 @@ export type Database = {
         Args: Record<never, never>;
         Returns: { role: 'master' | 'operator'; active: boolean }[];
       };
+      get_my_blocked_users: {
+        Args: Record<never, never>;
+        Returns: {
+          block_id: string;
+          profile_id: string;
+          display_name: string;
+          country_code: string;
+          photo_path: string | null;
+          blocked_at: string;
+        }[];
+      };
       get_pending_reports: {
         Args: { p_limit?: number; p_before?: string | null };
         Returns: {
@@ -591,6 +799,22 @@ export type Database = {
       end_my_match: {
         Args: { p_match_id: string };
         Returns: Database['public']['Enums']['match_status'];
+      };
+      register_my_push_device: {
+        Args: {
+          p_expo_push_token: string;
+          p_platform: string;
+          p_device_name?: string | null;
+        };
+        Returns: string;
+      };
+      claim_notification_outbox: {
+        Args: { p_outbox_id: string };
+        Returns: Database['public']['Tables']['notification_outbox']['Row'] | null;
+      };
+      complete_push_receipts: {
+        Args: { p_results: Json };
+        Returns: Json;
       };
     };
     Enums: {

@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, spacing } from '@/constants/theme';
 import { getProfileAge, getProfilePresence } from '@/features/profile/utils/profile-display';
 import { Profile } from '@/types/profile';
@@ -72,7 +74,7 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
       </View>
       {profile.isGoldPass ? (
         <View style={styles.goldBadge}>
-          <Text style={styles.goldDiamond}>◆</Text>
+          <IllustratedIcon size={24} source={illustratedIcons.goldPremium} />
           <Text style={styles.goldBadgeText}>GOLD</Text>
         </View>
       ) : null}
@@ -87,9 +89,10 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
             label={profile.countryLabel}
             style={styles.nameFlag}
           />
-          {profile.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark" size={13} color={palette.white} />
+          {profile.isPhotoReviewed && (
+            <View accessibilityLabel="운영진 사진 심사 완료" style={styles.reviewedBadge}>
+              <Ionicons name="shield-checkmark" size={12} color={palette.white} />
+              <Text style={styles.reviewedBadgeText}>사진 심사</Text>
             </View>
           )}
         </View>
@@ -195,7 +198,6 @@ const styles = StyleSheet.create({
     right: 16,
     top: 19,
   },
-  goldDiamond: { color: '#FFD35A', fontSize: 11 },
   goldBadgeText: { color: '#FFE59A', fontSize: 8, fontWeight: '900', letterSpacing: 1 },
   badge: {
     alignItems: 'center',
@@ -219,14 +221,17 @@ const styles = StyleSheet.create({
     height: 18,
     width: 26,
   },
-  verifiedBadge: {
+  reviewedBadge: {
     alignItems: 'center',
     backgroundColor: palette.pink,
-    borderRadius: 9,
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 3,
     height: 18,
     justifyContent: 'center',
-    width: 18,
+    paddingHorizontal: 6,
   },
+  reviewedBadgeText: { color: palette.white, fontSize: 7, fontWeight: '900' },
   metaRow: {
     alignItems: 'center',
     alignSelf: 'flex-start',
