@@ -306,16 +306,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: palette.ink },
   content: { gap: 12, padding: 18, paddingBottom: 40 },
   loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 6 },
-  center: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 28 },
-  errorTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
-  retry: {
-    backgroundColor: palette.ink,
-    borderRadius: radius.pill,
-    marginTop: 15,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-  },
-  retryText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   card: {
     backgroundColor: palette.white,
     borderRadius: 22,

@@ -128,15 +128,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 30 },
-  icon: {
-    width: 76,
-    height: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 38,
-    backgroundColor: 'rgba(255,45,111,0.09)',
-  },
-  rejectedIcon: { backgroundColor: 'rgba(255,90,103,0.09)' },
   eyebrow: {
     marginTop: 22,
     color: palette.pink,
