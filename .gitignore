@@ -40,6 +40,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Python asset tooling
+__pycache__/
+*.py[cod]
+
 # generated native folders
 /ios
 /android
