@@ -20,9 +20,10 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius, spacing, typography } from '@/constants/theme';
+import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
+import { hapticsService } from '@/services/haptics-service';
 import { Profile, SwipeAction } from '@/types/profile';
 
 const SWIPE_THRESHOLD = 96;
@@ -59,7 +60,8 @@ export function SwipeDeck({
   const interactionLocked = useSharedValue(false);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
-  const deckHeight = Math.min(620, Math.max(330, height - 242));
+  // 아래 Pass/Pick 액션 행(약 84px)만큼 덱이 차지할 높이를 줄인다.
+  const deckHeight = Math.min(600, Math.max(300, height - 326));
 
   useProfilePrefetch(profiles);
 
@@ -70,7 +72,10 @@ export function SwipeDeck({
 
   const commitSwipe = useCallback(
     (action: SwipeAction) => {
-      if (currentProfile) onSwipe(currentProfile, action);
+      if (currentProfile) {
+        hapticsService.swipe(action);
+        onSwipe(currentProfile, action);
+      }
     },
     [currentProfile, onSwipe],
   );
@@ -289,7 +294,21 @@ export function SwipeDeck({
         ) : null}
         <GestureDetector gesture={gesture}>
           <Animated.View style={[styles.topCard, topCardStyle]}>
-            <ProfileCard now={presenceNow} onPress={handleCardPress} profile={currentProfile} />
+            <ProfileCard
+              accessibilityActions={[
+                { label: '상세 프로필 열기', name: 'activate' },
+                { label: 'Pick', name: 'increment' },
+                { label: 'Pass', name: 'decrement' },
+              ]}
+              now={presenceNow}
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === 'activate') openProfile();
+                if (event.nativeEvent.actionName === 'increment') startSwipe('like');
+                if (event.nativeEvent.actionName === 'decrement') startSwipe('pass');
+              }}
+              onPress={handleCardPress}
+              profile={currentProfile}
+            />
             <Animated.View
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
@@ -314,7 +333,64 @@ export function SwipeDeck({
           </Animated.View>
         </GestureDetector>
       </View>
+
+      {/*
+        스와이프 외에 Pick/Pass 할 방법이 없었다. 스크린리더는 카드의
+        accessibilityActions로 처리되지만, 한 손 조작이나 운동 제약이 있는
+        사용자에게는 보이는 버튼이 필요하다. 제스처와 같은 startSwipe를
+        호출해 애니메이션과 기록 경로를 완전히 동일하게 맞춘다.
+      */}
+      <View style={styles.actions}>
+        <DeckAction
+          kind="pass"
+          onPress={() => {
+            hapticsService.selection();
+            startSwipe('pass');
+          }}
+          profileName={currentProfile.name}
+        />
+        <DeckAction
+          kind="pick"
+          onPress={() => {
+            hapticsService.selection();
+            startSwipe('like');
+          }}
+          profileName={currentProfile.name}
+        />
+      </View>
     </View>
+  );
+}
+
+function DeckAction({
+  kind,
+  onPress,
+  profileName,
+}: {
+  kind: 'pass' | 'pick';
+  onPress: () => void;
+  profileName: string;
+}) {
+  const isPick = kind === 'pick';
+
+  return (
+    <Pressable
+      accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
+      accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.action,
+        isPick ? styles.actionPick : styles.actionPass,
+        pressed && pressFeedback.control,
+      ]}
+    >
+      <Ionicons
+        color={isPick ? palette.white : palette.ink}
+        name={isPick ? 'heart' : 'close'}
+        size={isPick ? 30 : 28}
+      />
+    </Pressable>
   );
 }
 
@@ -325,6 +401,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 0,
   },
+  actions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.lg,
+    justifyContent: 'center',
+    paddingTop: spacing.xs,
+  },
+  action: {
+    alignItems: 'center',
+    borderRadius: 32,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
+    ...elevation.md,
+  },
+  actionPass: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  actionPick: { backgroundColor: palette.pink },
   errorBanner: {
     alignItems: 'center',
     backgroundColor: '#FFF0F5',
@@ -335,7 +432,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  errorText: { color: palette.ink, flex: 1, fontSize: 11, fontWeight: '700' },
+  errorText: { color: palette.ink, flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   deck: {
     alignSelf: 'center',
     flexShrink: 1,

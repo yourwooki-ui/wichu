@@ -13,6 +13,8 @@ import {
 } from '@/components/Skeleton';
 import { GoldBadge } from '@/components/GoldBadge';
 import { StateView } from '@/components/StateView';
+import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
+import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -133,6 +135,20 @@ export default function DesignQaScreen() {
           />
         </Section>
 
+        {/* Discover 덱도 인증 뒤라 열 수 없다. Pick/Pass 액션과 레이아웃을 여기서 확인한다. */}
+        <Section title="Discover deck">
+          <View style={styles.deckFrame}>
+            <SwipeDeck
+              error={null}
+              isLoading={false}
+              onAdjustFilters={() => {}}
+              onRetry={() => {}}
+              onSwipe={() => {}}
+              profiles={mockProfiles}
+            />
+          </View>
+        </Section>
+
         {/* 튜토리얼은 인증 뒤에 있어 평소 웹 프리뷰로 열 수 없다. 여기서 실제 렌더를 확인한다. */}
         <Section title="Tutorial (onboarding)">
           <View style={styles.tutorialFrame}>
@@ -195,5 +211,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.sm,
   },
+  deckFrame: { height: 620 },
   tutorialFrame: { borderRadius: radius.lg, height: 780, overflow: 'hidden' },
 });

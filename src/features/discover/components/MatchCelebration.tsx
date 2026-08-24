@@ -1,11 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
+import { hapticsService } from '@/services/haptics-service';
 import type { Profile } from '@/types/profile';
 
 type MatchCelebrationProps = {
@@ -14,7 +24,49 @@ type MatchCelebrationProps = {
   profile: Profile | null;
 };
 
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+
 export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrationProps) {
+  const visible = Boolean(profile);
+  const [enter] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!visible) {
+      enter.setValue(0);
+      return;
+    }
+
+    // 매치는 이 앱에서 가장 중요한 순간이다. 조용히 떠 있기만 하지 않게 한다.
+    hapticsService.success();
+
+    let cancelled = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (cancelled) return;
+      if (reduceMotion) {
+        enter.setValue(1);
+        return;
+      }
+      Animated.spring(enter, {
+        bounciness: 9,
+        speed: 13,
+        toValue: 1,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }).start();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enter, visible]);
+
+  const cardStyle = {
+    opacity: enter,
+    transform: [
+      { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) },
+      { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
+    ],
+  };
+
   return (
     <AppModal
       animationType="fade"
@@ -24,7 +76,7 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
     >
       <View style={styles.backdrop}>
         {profile ? (
-          <View accessibilityViewIsModal style={styles.card}>
+          <Animated.View accessibilityViewIsModal style={[styles.card, cardStyle]}>
             <LinearGradient colors={['#FFF1F6', '#FFFFFF']} style={styles.hero}>
               <View style={styles.photoRing}>
                 <Image
@@ -44,18 +96,22 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
               <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
             </View>
             <Text style={styles.body}>이제 서로 메시지를 보낼 수 있어요.</Text>
-            <Pressable accessibilityRole="button" onPress={onChat} style={styles.primaryAction}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onChat}
+              style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
+            >
               <Ionicons color={palette.white} name="chatbubble" size={17} />
               <Text style={styles.primaryActionText}>메시지 보내기</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={onContinue}
-              style={styles.secondaryAction}
+              style={({ pressed }) => [styles.secondaryAction, pressed && pressFeedback.control]}
             >
               <Text style={styles.secondaryActionText}>발견 계속하기</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
       </View>
     </AppModal>
@@ -102,7 +158,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: palette.pink,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.6,
     marginTop: 18,
@@ -112,8 +168,8 @@ const styles = StyleSheet.create({
   flag: { borderRadius: 4, height: 14, width: 21 },
   body: {
     color: palette.inkMuted,
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 7,
     textAlign: 'center',
   },
@@ -134,7 +190,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     justifyContent: 'center',
     marginTop: 7,
-    minHeight: 42,
+    minHeight: 44,
   },
-  secondaryActionText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
+  secondaryActionText: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
 });
