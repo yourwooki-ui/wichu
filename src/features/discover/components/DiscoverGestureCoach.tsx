@@ -1,32 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
-import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { palette, radius } from '@/constants/theme';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 
 const STEPS = [
   {
+    eyebrow: '빠른 기능',
     title: '상단에서 바로 조절해요',
     body: '왼쪽은 마지막 선택 되돌리기, 오른쪽은 탐색 조건과 알림이에요.',
+    icon: illustratedIcons.discoverySettings,
     target: 'header',
   },
   {
-    title: '카드가 발견의 중심이에요',
-    body: '좌우로 넘겨 선택하고, 한 번 누르면 상세 프로필을 확인할 수 있어요.',
+    eyebrow: '프로필 카드',
+    title: '보고, 누르고, 넘겨보세요',
+    body: '카드를 누르면 상세 프로필, 왼쪽은 PASS, 오른쪽이나 빠른 두 번 누르기는 PICK이에요.',
+    icon: illustratedIcons.profileEdit,
     target: 'card',
   },
   {
-    title: '하단에서 언제든 이동해요',
-    body: '매치, 채팅, 발견, 상점, 내 프로필로 바로 이동할 수 있어요.',
+    eyebrow: '하단 메뉴',
+    title: '필요한 화면으로 바로 이동해요',
+    body: '매치, 채팅, 발견, 상점, 내 프로필은 항상 같은 위치에 있어요.',
+    icon: illustratedIcons.connections,
     target: 'tabs',
   },
 ] as const;
@@ -37,13 +40,17 @@ type DiscoverGestureCoachProps = {
   userId?: string;
 };
 
+type TargetRect = { height: number; width: number; x: number; y: number };
+
 export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGestureCoachProps) {
   const insets = useSafeAreaInsets();
-  const { height, width } = useAppViewport();
+  const viewport = useAppViewport();
   const [stepIndex, setStepIndex] = useState(0);
   const step = STEPS[stepIndex];
   const isLastStep = stepIndex === STEPS.length - 1;
-  const contentWidth = Math.min(width, 620);
+  const width = Math.min(viewport.width, 620);
+  const height = viewport.height;
+  const target = getTargetRect(step.target, width, height, insets.top, insets.bottom);
 
   const finish = () => {
     setStepIndex(0);
@@ -61,40 +68,47 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
 
   if (!active) return null;
 
+  const calloutPosition =
+    step.target === 'tabs'
+      ? { bottom: height - target.y + 14 }
+      : { top: target.y + target.height + 14 };
+
   return (
     <AppModal animationType="fade" onRequestClose={finish} transparent visible>
-      <View accessibilityViewIsModal style={styles.backdrop}>
-        <View style={[styles.stage, { height, width: contentWidth }]}>
-          {step.target === 'header' ? <HeaderSpotlight top={Math.max(insets.top, 8) + 3} /> : null}
-          {step.target === 'card' ? (
-            <CardSpotlight
-              bottom={Math.max(insets.bottom, 8) + 112}
-              top={Math.max(insets.top, 8) + 74}
-            />
-          ) : null}
-          {step.target === 'tabs' ? (
-            <TabsSpotlight bottom={Math.max(insets.bottom, 8) + 8} />
-          ) : null}
-
+      <View accessibilityViewIsModal style={styles.modalRoot}>
+        <View style={[styles.stage, { height, width }]}>
+          <SpotlightMask height={height} target={target} width={width} />
           <View
+            pointerEvents="none"
             style={[
-              styles.coachCard,
-              step.target === 'header' && { top: Math.max(insets.top, 8) + 86 },
-              step.target === 'card' && { bottom: Math.max(insets.bottom, 8) + 128 },
-              step.target === 'tabs' && { bottom: Math.max(insets.bottom, 8) + 112 },
+              styles.focusRing,
+              {
+                height: target.height,
+                left: target.x,
+                top: target.y,
+                width: target.width,
+              },
             ]}
-          >
-            <View style={styles.coachTopRow}>
-              <Text style={styles.stepText}>
-                {stepIndex + 1} / {STEPS.length}
-              </Text>
-              <Pressable accessibilityRole="button" hitSlop={8} onPress={finish}>
+          />
+
+          <View style={[styles.callout, calloutPosition]}>
+            <View style={styles.calloutHeader}>
+              <View style={styles.calloutIdentity}>
+                <IllustratedIcon size={38} source={step.icon} />
+                <View>
+                  <Text style={styles.eyebrow}>{step.eyebrow}</Text>
+                  <Text style={styles.counter}>
+                    {stepIndex + 1} / {STEPS.length}
+                  </Text>
+                </View>
+              </View>
+              <Pressable accessibilityRole="button" hitSlop={10} onPress={finish}>
                 <Text style={styles.skipText}>건너뛰기</Text>
               </Pressable>
             </View>
             <Text style={styles.title}>{step.title}</Text>
             <Text style={styles.body}>{step.body}</Text>
-            <View style={styles.actionRow}>
+            <View style={styles.footer}>
               <View style={styles.dots}>
                 {STEPS.map((item, index) => (
                   <View
@@ -119,170 +133,103 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
   );
 }
 
-function HeaderSpotlight({ top }: { top: number }) {
+function SpotlightMask({
+  height,
+  target,
+  width,
+}: {
+  height: number;
+  target: TargetRect;
+  width: number;
+}) {
+  const targetBottom = target.y + target.height;
+  const targetRight = target.x + target.width;
+
   return (
-    <View style={[styles.headerSpotlight, { top }]}>
-      <IllustratedIcon size={50} source={illustratedIcons.rewind} />
-      <BrandWordmark color={palette.ink} size={20} />
-      <View style={styles.headerRight}>
-        <IllustratedIcon size={50} source={illustratedIcons.discoverySettings} />
-        <IllustratedIcon size={50} source={illustratedIcons.notification} />
-      </View>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <View style={[styles.dim, { height: target.y, left: 0, top: 0, width }]} />
+      <View
+        style={[styles.dim, { height: target.height, left: 0, top: target.y, width: target.x }]}
+      />
+      <View
+        style={[
+          styles.dim,
+          { height: target.height, left: targetRight, top: target.y, width: width - targetRight },
+        ]}
+      />
+      <View
+        style={[styles.dim, { height: height - targetBottom, left: 0, top: targetBottom, width }]}
+      />
     </View>
   );
 }
 
-function CardSpotlight({ bottom, top }: { bottom: number; top: number }) {
-  return (
-    <View style={[styles.cardSpotlight, { bottom, top }]}>
-      <View style={styles.cardGestureRow}>
-        <GestureMark icon="arrow-back" label="PASS" />
-        <GestureMark icon="hand-left-outline" label="상세 보기" />
-        <GestureMark icon="arrow-forward" label="PICK" />
-      </View>
-      <View style={styles.doubleTap}>
-        <Ionicons color={palette.pink} name="heart" size={15} />
-        <Text style={styles.doubleTapText}>빠르게 두 번 누르면 PICK</Text>
-      </View>
-    </View>
-  );
-}
+function getTargetRect(
+  target: (typeof STEPS)[number]['target'],
+  width: number,
+  height: number,
+  insetTop: number,
+  insetBottom: number,
+): TargetRect {
+  if (target === 'header') {
+    return { height: 68, width: width - 16, x: 8, y: Math.max(insetTop, 8) + 1 };
+  }
 
-function GestureMark({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
-  return (
-    <View style={styles.gestureMark}>
-      <Ionicons color={palette.ink} name={icon} size={20} />
-      <Text style={styles.gestureLabel}>{label}</Text>
-    </View>
-  );
-}
+  if (target === 'tabs') {
+    const bottom = Math.max(insetBottom, 8) + 7;
+    return { height: 92, width: width - 16, x: 8, y: height - bottom - 92 };
+  }
 
-const TAB_LABELS: Record<TabName, string> = {
-  matches: '매치',
-  chat: '채팅',
-  discover: '발견',
-  shop: '상점',
-  me: '나',
-};
-
-function TabsSpotlight({ bottom }: { bottom: number }) {
-  return (
-    <View style={[styles.tabsSpotlight, { bottom }]}>
-      {(Object.keys(tabIconSources) as TabName[]).map((name) => (
-        <View key={name} style={styles.tabItem}>
-          <Image contentFit="contain" source={tabIconSources[name]} style={styles.tabIcon} />
-          <Text style={[styles.tabLabel, name === 'discover' && styles.tabLabelActive]}>
-            {TAB_LABELS[name]}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
+  const y = Math.max(insetTop, 8) + 76;
+  return {
+    height: Math.max(250, Math.min(470, height - y - 330)),
+    width: width - 20,
+    x: 10,
+    y,
+  };
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(13,13,17,0.68)',
-    flex: 1,
-    justifyContent: 'center',
-  },
+  modalRoot: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   stage: { maxWidth: 620, position: 'relative' },
-  headerSpotlight: {
-    alignItems: 'center',
-    backgroundColor: '#FAFAFC',
-    borderColor: '#FF6B99',
-    borderRadius: 20,
+  dim: { backgroundColor: 'rgba(13,13,17,0.72)', position: 'absolute' },
+  focusRing: {
+    borderColor: '#FF4A82',
+    borderRadius: 25,
     borderWidth: 2,
-    flexDirection: 'row',
-    height: 66,
-    justifyContent: 'space-between',
-    left: 10,
-    paddingHorizontal: 7,
     position: 'absolute',
-    right: 10,
+    shadowColor: '#FF2D6F',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
   },
-  headerRight: { alignItems: 'center', flexDirection: 'row' },
-  cardSpotlight: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(250,250,252,0.97)',
-    borderColor: '#FF6B99',
-    borderRadius: 28,
-    borderWidth: 2,
-    justifyContent: 'center',
-    left: 12,
-    padding: 18,
-    position: 'absolute',
-    right: 12,
-  },
-  cardGestureRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', width: '100%' },
-  gestureMark: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: '#E2E2E7',
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
-    gap: 7,
-    maxWidth: 108,
-    paddingHorizontal: 5,
-    paddingVertical: 15,
-  },
-  gestureLabel: { color: palette.ink, fontSize: 10, fontWeight: '900' },
-  doubleTap: {
-    alignItems: 'center',
-    backgroundColor: '#FFE8EF',
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  doubleTapText: { color: palette.ink, fontSize: 10, fontWeight: '800' },
-  tabsSpotlight: {
-    alignItems: 'center',
+  callout: {
     backgroundColor: '#FAFAFC',
-    borderColor: '#FF6B99',
-    borderRadius: 22,
-    borderWidth: 2,
-    flexDirection: 'row',
-    height: 90,
-    justifyContent: 'space-around',
-    left: 10,
-    paddingHorizontal: 5,
+    borderRadius: 25,
+    left: 15,
+    padding: 19,
     position: 'absolute',
-    right: 10,
+    right: 15,
   },
-  tabItem: { alignItems: 'center', flex: 1, gap: 3 },
-  tabIcon: { height: 36, width: 36 },
-  tabLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
-  tabLabelActive: { color: palette.pink },
-  coachCard: {
-    backgroundColor: '#FAFAFC',
-    borderRadius: 26,
-    left: 18,
-    padding: 20,
-    position: 'absolute',
-    right: 18,
-  },
-  coachTopRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  stepText: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 0.9 },
+  calloutHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  calloutIdentity: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  eyebrow: { color: palette.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  counter: { color: palette.inkMuted, fontSize: 9, fontWeight: '800', marginTop: 2 },
   skipText: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   title: {
     color: palette.ink,
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '900',
     letterSpacing: -0.65,
-    lineHeight: 28,
+    lineHeight: 27,
     marginTop: 13,
   },
-  body: { color: palette.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 7 },
-  actionRow: {
+  body: { color: palette.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 6 },
+  footer: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 18,
+    marginTop: 16,
   },
   dots: { flexDirection: 'row', gap: 5 },
   dot: { backgroundColor: '#D8D8DD', borderRadius: radius.pill, height: 5, width: 5 },
