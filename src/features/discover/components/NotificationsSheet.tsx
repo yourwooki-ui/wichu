@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
@@ -29,33 +30,7 @@ export function NotificationsSheet({
     queryKey: ['matches', 'connections', session?.user.id],
     staleTime: 20_000,
   });
-  const items = (connectionsQuery.data ?? []).flatMap((connection) => {
-    if (connection.unreadCount > 0) {
-      return [
-        {
-          id: `message:${connection.matchId}`,
-          matchId: connection.matchId,
-          photo: connection.profile.photo,
-          title: `${connection.profile.display_name}님의 새 메시지`,
-          body: connection.lastMessage?.content ?? '새 메시지가 도착했어요.',
-          time: connection.lastMessage?.created_at ?? connection.matchedAt,
-        },
-      ];
-    }
-    if (!connection.lastMessage) {
-      return [
-        {
-          id: `match:${connection.matchId}`,
-          matchId: connection.matchId,
-          photo: connection.profile.photo,
-          title: `${connection.profile.display_name}님과 매치됐어요`,
-          body: '지금 첫 인사를 보내보세요.',
-          time: connection.matchedAt,
-        },
-      ];
-    }
-    return [];
-  });
+  const items = buildNotificationItems(connectionsQuery.data);
 
   return (
     <AppModal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
@@ -118,13 +93,12 @@ export function NotificationsSheet({
             </ScrollView>
           ) : (
             <View style={styles.empty}>
-              <View style={styles.icon}>
-                <IllustratedIcon size={56} source={illustratedIcons.notification} />
-              </View>
-              <Text style={styles.emptyTitle}>새로운 알림이 없어요</Text>
-              <Text style={styles.emptyText}>
-                새로운 Pick, Match와 메시지가 생기면 여기에 알려드릴게요.
-              </Text>
+              <StateView
+                body="새로운 Pick, Match와 메시지가 생기면 여기에 알려드릴게요."
+                container="plain"
+                illustration={illustratedIcons.notification}
+                title="새로운 알림이 없어요"
+              />
             </View>
           )}
         </SafeAreaView>
@@ -202,21 +176,4 @@ const styles = StyleSheet.create({
   rowTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   rowBody: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
   rowTime: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
-  icon: {
-    alignItems: 'center',
-    backgroundColor: '#FFF4CF',
-    borderRadius: 29,
-    height: 58,
-    justifyContent: 'center',
-    width: 58,
-  },
-  emptyTitle: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 15 },
-  emptyText: {
-    color: palette.inkMuted,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 6,
-    maxWidth: 250,
-    textAlign: 'center',
-  },
 });

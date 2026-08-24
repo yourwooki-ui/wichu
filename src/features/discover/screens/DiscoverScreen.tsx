@@ -15,6 +15,7 @@ import { DiscoveryFilterSheet } from '@/features/discover/components/DiscoveryFi
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { NotificationsSheet } from '@/features/discover/components/NotificationsSheet';
 import { useDiscoverDeck } from '@/features/discover/hooks/use-discover-deck';
+import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
@@ -39,9 +40,8 @@ export function DiscoverScreen() {
     queryKey: ['matches', 'connections', session?.user.id],
     staleTime: 20_000,
   });
-  const hasUnreadNotifications = (notificationsQuery.data ?? []).some(
-    (connection) => connection.unreadCount > 0,
-  );
+  // 시트와 같은 판정을 써야 배지와 내용이 어긋나지 않는다.
+  const hasUnreadNotifications = buildNotificationItems(notificationsQuery.data).length > 0;
 
   const handleUndo = () => {
     if (deck.canUndoWithoutAd) {

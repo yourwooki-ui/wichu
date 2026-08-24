@@ -50,7 +50,8 @@
         "expo-notifications",
         {
           "color": "#FF2D6F",
-          "defaultChannel": "wichu-default"
+          "defaultChannel": "wichu-default",
+          "icon": "./assets/notification-icon.png"
         }
       ],
       [
