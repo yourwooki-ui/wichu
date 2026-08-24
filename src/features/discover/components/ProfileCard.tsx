@@ -3,12 +3,12 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius, spacing } from '@/constants/theme';
+import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { getProfileAge, getProfilePresence } from '@/features/profile/utils/profile-display';
 import { Profile } from '@/types/profile';
 
@@ -139,18 +139,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 28,
     backgroundColor: '#D9D9E1',
-    ...Platform.select({
-      web: { boxShadow: '0 10px 24px rgba(21,20,25,0.12)' },
-      default: {
-        shadowColor: '#151419',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.12,
-        shadowRadius: 18,
-        elevation: 6,
-      },
-    }),
+    ...elevation.lg,
   },
-  cardPressed: { opacity: 0.98 },
+  cardPressed: pressFeedback.surface,
   goldCardBorder: { borderColor: '#E8B936', borderWidth: 3 },
   nonInteractive: { pointerEvents: 'none' },
   gradientTop: {
@@ -198,7 +189,7 @@ const styles = StyleSheet.create({
     right: 16,
     top: 19,
   },
-  goldBadgeText: { color: '#FFE59A', fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  goldBadgeText: { color: '#FFE59A', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   badge: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -214,24 +205,24 @@ const styles = StyleSheet.create({
   badgeText: { color: palette.white, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   content: { position: 'absolute', left: 22, right: 22, bottom: 24 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  name: { color: palette.white, flexShrink: 1, fontSize: 29, lineHeight: 34, fontWeight: '800' },
+  name: { ...typography.display, color: palette.white, flexShrink: 1, fontWeight: '800' },
   nameFlag: {
     borderColor: 'rgba(255,255,255,0.62)',
     borderRadius: 5,
-    height: 18,
-    width: 26,
+    height: 20,
+    width: 29,
   },
   reviewedBadge: {
     alignItems: 'center',
     backgroundColor: palette.pink,
-    borderRadius: 10,
+    borderRadius: 11,
     flexDirection: 'row',
     gap: 3,
-    height: 18,
+    height: 22,
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
-  reviewedBadgeText: { color: palette.white, fontSize: 7, fontWeight: '900' },
+  reviewedBadgeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   metaRow: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -252,7 +243,7 @@ const styles = StyleSheet.create({
     width: 7,
   },
   presenceDotOnline: { backgroundColor: palette.lime },
-  presenceText: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '700' },
+  presenceText: { ...typography.label, color: 'rgba(255,255,255,0.9)' },
   metaDivider: {
     backgroundColor: 'rgba(255,255,255,0.38)',
     borderRadius: 1,
@@ -261,8 +252,8 @@ const styles = StyleSheet.create({
     width: 3,
   },
   locationRow: { alignItems: 'center', flexDirection: 'row', gap: 3 },
-  location: { color: 'rgba(255,255,255,0.86)', fontSize: 12, fontWeight: '600' },
-  bio: { marginTop: 11, color: palette.white, fontSize: 14, lineHeight: 20 },
+  location: { ...typography.label, color: 'rgba(255,255,255,0.86)', fontWeight: '600' },
+  bio: { ...typography.body, color: palette.white, marginTop: 11 },
   interests: { marginTop: 13, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   interest: {
     paddingHorizontal: 12,

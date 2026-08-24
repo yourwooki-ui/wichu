@@ -50,3 +50,6 @@ KakaoTalk_*.png
 .vercel/
 .env*
 !.env.example
+
+# Claude Code machine-local permissions
+.claude/settings.local.json

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: palette.pink,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.6,
     marginTop: 18,

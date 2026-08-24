@@ -97,6 +97,8 @@ export default function ResetPasswordRoute() {
                 <PrimaryButton
                   label="새 변경 링크 요청"
                   onPress={() => router.replace('/forgot-password')}
+                  tone="dark"
+                  variant="outline"
                 />
               ) : null}
             </>

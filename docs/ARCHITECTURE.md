@@ -14,6 +14,58 @@ app routes
 
 라우트는 얇게 유지하고 API/DB/UI를 분리한다. 광고, 결제, 알림, 번역 provider는 서비스 인터페이스 뒤에 두어 화면 코드를 바꾸지 않고 교체할 수 있게 한다.
 
+## 디자인 토큰과 공통 UI
+
+시각 규격은 `src/constants/theme.ts` 한 곳에서만 정의한다.
+
+| 토큰                       | 용도                                                         |
+| -------------------------- | ------------------------------------------------------------ |
+| `palette`                  | 브랜드 원색                                                  |
+| `lightTheme` / `darkTheme` | 의미 기반 색 (`text`, `surface`, `border`, `primary`…)       |
+| `typography`               | `display`→`overline` 타이포 램프                             |
+| `spacing`                  | 4·8·12·16·24·32·48 간격                                      |
+| `radius`                   | 모서리 반경                                                  |
+| `elevation`                | `sm`/`md`/`lg` 그림자. **web과 native를 항상 함께 정의한다** |
+| `duration`                 | 모션 시간                                                    |
+| `pressFeedback`            | `surface`/`control`/`icon` Pressable 피드백                  |
+| `layout`                   | `maxContentWidth` 등 화면 공통 폭                            |
+| `touchSlop`                | 44pt 터치 영역을 맞추기 위한 `hitSlop` 프리셋                |
+
+화면 style에 새로운 `fontSize`·그림자·press opacity를 직접 적어 넣지 않는다. 필요한 값이 없으면 토큰을 먼저 늘린다.
+`Platform.select`로 그림자를 쓸 때 web 분기만 두면 iOS/Android에서 카드가 평평해지므로, 반드시 `elevation` 토큰을 쓴다.
+
+공통 UI는 다음 컴포넌트로 모은다.
+
+- `Screen` — safe area와 화면 배경
+- `AppTabHeader` — 탭 화면 상단 워드마크/eyebrow/액션
+- `Skeleton` — shimmer 블록과 `ConnectionGridSkeleton`·`ChatRowsSkeleton`·`ListRowsSkeleton` 프리셋
+- `StateView` — 빈 상태·오류·잠김을 한 규격으로. `EmptyState`는 이 위의 전체 화면 래퍼다
+- `PrimaryButton` — `primary`/`secondary`/`outline`/`ghost`/`danger` variant와 `tone="dark"`
+- `useRefreshControl` — 목록 화면 당겨서 새로고침 (브랜드 핑크 스피너, 여러 query 동시 새로고침)
+
+공유 프리미티브는 대부분 로그인 뒤 화면에서 쓰이므로 웹 프리뷰로 바로 확인하기 어렵다.
+개발 전용 `/design-qa` 라우트가 타이포 램프·elevation·버튼 variant·StateView·Skeleton을
+인증 밖에서 한 번에 렌더하므로, 디자인 변경 시 이 화면으로 실제 렌더 결과를 점검한다.
+프로덕션 빌드에서는 `__DEV__`가 false라 홈으로 redirect된다.
+
+로딩은 spinner 대신 실제 콘텐츠와 같은 골격의 skeleton을 우선한다. 한 화면에서 강한 핑크 CTA는 하나만 두고, 두 번째 행동은 `outline` 또는 `ghost`를 쓴다.
+
+## 접근성 기준
+
+- 본문/라벨 최소 글자 크기는 **10px**이다. 그보다 작은 값은 쓰지 않는다.
+- 터치 대상은 44pt 이상을 확보한다. 시각 크기를 키우기 어려우면 `hitSlop`으로 넓힌다.
+- 애니메이션은 OS "동작 줄이기" 설정을 따른다 (`Skeleton`의 shimmer가 그 예다).
+- 로딩 골격에는 `accessibilityRole="progressbar"`와 상태를 설명하는 라벨을 붙인다.
+
+`hitSlop`은 DOM에 반영되지 않으므로 웹 프리뷰의 크기 계측만으로는 터치 영역을 검증할 수 없다.
+계측에서 44pt 미만으로 잡히는 요소는 `touchSlop`이 적용돼 있는지 코드로 확인한다.
+
+## 색 구성(Color scheme)
+
+`app.json`의 `userInterfaceStyle: "light"`는 **네이티브에만** 적용된다. web에서 `useColorScheme()`은 브라우저 `prefers-color-scheme`을 그대로 따르므로, 그대로 두면 OS가 다크인 방문자에게 `darkTheme`(배경 `#000000`)이 적용되는 반면 대부분의 화면은 텍스트를 `palette.ink`(`#111111`)로 고정해 두어 글자가 배경에 묻힌다.
+
+그래서 `ThemeProvider`의 `COLOR_SCHEME` 상수로 모든 플랫폼에서 light를 강제한다. 다크 모드를 실제로 열려면 (1) 화면들이 `palette.*` 대신 `theme.colors.*`를 쓰도록 전환하고, (2) `COLOR_SCHEME`을 `'system'`으로, (3) `app.json`의 `userInterfaceStyle`을 함께 바꾼다.
+
 ## 인증 경로
 
 - 이메일 인증과 Google OAuth는 `auth-service`를 통해 Supabase Auth에 연결한다.

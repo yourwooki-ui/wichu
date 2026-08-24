@@ -7,7 +7,8 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { CountryFlag } from '@/components/CountryFlag';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
-import { palette, radius } from '@/constants/theme';
+import { ListRowsSkeleton } from '@/components/Skeleton';
+import { palette, radius, typography } from '@/constants/theme';
 import { safetyService } from '@/features/settings/services/safety-service';
 
 const queryKey = ['safety', 'blocked-users'] as const;
@@ -46,13 +47,20 @@ export function BlockedUsersScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {blockedQuery.isError ? (
+      {blockedQuery.isLoading ? (
+        <View style={styles.content}>
+          <ListRowsSkeleton count={4} height={76} />
+        </View>
+      ) : blockedQuery.isError ? (
         <EmptyState
+          actionLabel="다시 시도"
           description="연결 상태를 확인하고 다시 불러와 주세요."
           icon="cloud-offline-outline"
+          onAction={() => void blockedQuery.refetch()}
           title="차단 목록을 불러오지 못했어요"
+          tone="error"
         />
-      ) : !blockedQuery.isLoading && blockedQuery.data?.length === 0 ? (
+      ) : blockedQuery.data?.length === 0 ? (
         <EmptyState
           description="차단한 사용자가 없어요."
           icon="shield-checkmark-outline"
@@ -115,9 +123,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   headerButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  headerTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
+  headerTitle: { ...typography.subheading, color: palette.ink, fontWeight: '900' },
   content: { paddingBottom: 32, paddingHorizontal: 18 },
-  helper: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginBottom: 12 },
+  helper: { ...typography.caption, color: palette.inkMuted, marginBottom: 12 },
   list: { backgroundColor: palette.white, borderRadius: 22, overflow: 'hidden' },
   row: {
     alignItems: 'center',
@@ -131,7 +139,7 @@ const styles = StyleSheet.create({
   avatarFallback: { alignItems: 'center', backgroundColor: '#EFEFF2', justifyContent: 'center' },
   copy: { flex: 1, marginLeft: 11 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  name: { color: palette.ink, flexShrink: 1, fontSize: 14, fontWeight: '900' },
+  name: { ...typography.bodyStrong, color: palette.ink, flexShrink: 1, fontWeight: '900' },
   date: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
   unblock: {
     borderColor: '#D8D8DD',

@@ -4,20 +4,22 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, radius, typography } from '@/constants/theme';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
 import { getProfileAge } from '@/features/profile/utils/profile-display';
-import { useAuthSession } from '@/hooks/use-auth-session';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
+import { useAuthSession } from '@/hooks/use-auth-session';
+import { useRefreshControl } from '@/hooks/use-refresh-control';
 
 type ReviewStatus = 'approved' | 'draft' | 'pending' | 'rejected';
 
@@ -98,6 +100,13 @@ export function MeScreen() {
       };
     },
   });
+
+  const refreshControl = useRefreshControl(
+    useCallback(
+      () => Promise.all([profileQuery.refetch(), refreshProfile()]),
+      [profileQuery, refreshProfile],
+    ),
+  );
 
   if (profileQuery.isLoading) return <MeSkeleton />;
 
@@ -206,7 +215,11 @@ export function MeScreen() {
         onAction={() => router.push('/settings')}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.profileHeroHeader}>
           <View style={styles.profileHeroHeading}>
             <Text style={styles.profileHeroEyebrow}>PUBLIC PROFILE</Text>
@@ -533,12 +546,22 @@ function QuickAction({
   );
 }
 
+/** 실제 Me 화면과 같은 골격(헤더 → 미리보기 카드 → 섹션)으로 그려 로딩 후 위치가 유지된다. */
 function MeSkeleton() {
   return (
-    <Screen edges={['top', 'left', 'right']} style={styles.centered}>
-      <View style={styles.skeletonAvatar} />
-      <View style={styles.skeletonLine} />
-      <Text style={styles.loadingText}>프로필을 불러오는 중…</Text>
+    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+      <AppTabHeader actionIcon={illustratedIcons.settings} eyebrow="내 프로필" />
+      <View
+        accessibilityLabel="프로필을 불러오는 중"
+        accessibilityRole="progressbar"
+        style={styles.content}
+      >
+        <SkeletonLine height={11} width={92} />
+        <SkeletonLine height={24} style={{ marginTop: 8 }} width="58%" />
+        <SkeletonLine height={12} style={{ marginTop: 8 }} width="72%" />
+        <Skeleton style={styles.skeletonPreview} />
+        <ListRowsSkeleton count={3} height={68} />
+      </View>
     </Screen>
   );
 }
@@ -552,21 +575,8 @@ function shortReviewLabel(status: ReviewStatus) {
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 76,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
-  headerButton: {
-    alignItems: 'center',
-    height: 50,
-    justifyContent: 'center',
-    width: 50,
-  },
   content: { paddingBottom: 34, paddingHorizontal: 16 },
+  skeletonPreview: { borderRadius: 26, height: 294, marginBottom: 18, marginTop: 14 },
   profileHeroHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -575,17 +585,11 @@ const styles = StyleSheet.create({
   profileHeroHeading: { flex: 1, minWidth: 0, paddingRight: 12 },
   profileHeroEyebrow: {
     color: palette.pink,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
-  profileHeroTitle: {
-    color: palette.ink,
-    fontSize: 23,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-    marginTop: 3,
-  },
+  profileHeroTitle: { ...typography.title, color: palette.ink, marginTop: 3 },
   profileHeroAccount: { color: palette.inkMuted, fontSize: 11, marginTop: 4 },
   profileEditAction: {
     alignItems: 'center',
@@ -597,91 +601,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   profileEditActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
-  profileHub: {
-    alignItems: 'center',
-    borderColor: 'rgba(255,45,111,0.08)',
-    borderRadius: 24,
-    borderWidth: 1,
-    flexDirection: 'row',
-    padding: 14,
-  },
-  identityCopy: { flex: 1, marginLeft: 13, minWidth: 0 },
-  avatarRing: {
-    alignItems: 'center',
-    borderColor: palette.pink,
-    borderRadius: 43,
-    borderWidth: 2,
-    height: 86,
-    justifyContent: 'center',
-    width: 86,
-  },
-  avatarRingGold: { borderColor: '#DCAF2D', borderWidth: 3 },
-  goldProfileBadge: {
-    alignItems: 'center',
-    backgroundColor: '#211B0D',
-    borderColor: '#DCAF2D',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    marginTop: 9,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  goldProfileText: { color: '#FFE59A', fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
-  avatarMedia: {
-    borderRadius: 39,
-    height: 78,
-    overflow: 'hidden',
-    position: 'relative',
-    width: 78,
-  },
-  avatar: { borderRadius: 39, height: 78, width: 78 },
-  avatarReviewOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(17,17,17,0.34)',
-    bottom: 0,
-    justifyContent: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  avatarEmpty: {
-    alignItems: 'center',
-    backgroundColor: '#F0E9EC',
-    borderRadius: 39,
-    height: 78,
-    justifyContent: 'center',
-    width: 78,
-  },
-  avatarInitial: { color: palette.pinkPressed, fontSize: 29, fontWeight: '900' },
-  hubEditButton: {
-    alignItems: 'center',
-    backgroundColor: '#F1F1F4',
-    borderRadius: 18,
-    height: 36,
-    justifyContent: 'center',
-    marginLeft: 8,
-    width: 36,
-  },
-  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  name: { color: palette.ink, flexShrink: 1, fontSize: 19, fontWeight: '900', letterSpacing: -0.5 },
-  flag: { borderRadius: 4, height: 14, width: 21 },
-  accountEmail: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
-  identityBadges: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 8 },
-  reviewPill: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  reviewDot: { borderRadius: 4, height: 8, width: 8 },
-  reviewText: { color: palette.ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.3 },
   reviewNotice: {
     alignItems: 'flex-start',
     backgroundColor: '#FFF0F1',
@@ -754,10 +673,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   attentionActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
-  completionTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  completionEyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  completionTitle: { color: palette.white, fontSize: 14, fontWeight: '900', marginTop: 5 },
-  completionValue: { color: palette.lime, fontSize: 25, fontWeight: '900' },
   progressTrack: {
     backgroundColor: '#E8E8EC',
     borderRadius: 3,
@@ -862,7 +777,7 @@ const styles = StyleSheet.create({
   previewModeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   previewCopy: { bottom: 18, left: 18, position: 'absolute', right: 18 },
   previewNameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  previewName: { color: palette.white, fontSize: 25, fontWeight: '900', letterSpacing: -0.7 },
+  previewName: { ...typography.title, color: palette.white },
   previewFlag: { borderRadius: 4, height: 15, width: 22 },
   previewDiamond: { marginLeft: 3 },
   previewBio: {
@@ -903,122 +818,8 @@ const styles = StyleSheet.create({
   detailsToggleCopy: { flex: 1, marginLeft: 11 },
   detailsTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   detailsHint: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
-  detailsBody: { marginTop: 4 },
-  editAction: {
-    alignItems: 'center',
-    backgroundColor: palette.pink,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 7,
-    justifyContent: 'center',
-    marginTop: 11,
-    minHeight: 48,
-  },
-  editActionText: { color: palette.white, fontSize: 12, fontWeight: '900' },
   pressed: { opacity: 0.68 },
-  section: {
-    borderBottomColor: '#D8D8DD',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 21,
-  },
-  sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  sectionTitle: { color: palette.ink, fontSize: 17, fontWeight: '900' },
-  sectionMeta: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
-  photoRail: { gap: 9 },
-  photoWrap: {
-    borderRadius: 18,
-    height: 150,
-    overflow: 'hidden',
-    position: 'relative',
-    width: 112,
-  },
-  photo: { height: '100%', width: '100%' },
-  photoReviewOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(14,14,18,0.38)',
-    bottom: 0,
-    justifyContent: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  photoReviewText: {
-    color: palette.white,
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    marginTop: 5,
-  },
-  photoMissingBlock: { alignItems: 'flex-start', gap: 10 },
-  photoRepairAction: {
-    alignItems: 'center',
-    backgroundColor: palette.pink,
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 7,
-    paddingHorizontal: 15,
-    paddingVertical: 11,
-  },
-  photoRepairText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   photoRepairError: { color: palette.danger, fontSize: 10, lineHeight: 15 },
-  mainBadge: {
-    backgroundColor: palette.pink,
-    borderRadius: radius.pill,
-    left: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    position: 'absolute',
-    top: 8,
-  },
-  mainBadgeText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
-  bio: { color: palette.ink, fontSize: 14, lineHeight: 22 },
-  infoRow: { alignItems: 'center', flexDirection: 'row', minHeight: 48 },
-  infoIcon: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderRadius: 14,
-    height: 34,
-    justifyContent: 'center',
-    width: 34,
-  },
-  infoLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginLeft: 10 },
-  infoValue: {
-    color: palette.ink,
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '900',
-    marginLeft: 10,
-    textAlign: 'right',
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: palette.white,
-    borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  chipPink: { backgroundColor: '#FFE7EF' },
-  chipText: { color: palette.ink, fontSize: 11, fontWeight: '800' },
-  chipTextPink: { color: palette.pinkPressed },
-  languageChip: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-  },
-  languageFlag: { borderRadius: 5, height: 20, width: 28 },
-  languageName: { color: palette.ink, fontSize: 11, fontWeight: '900' },
-  languageLevel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 1 },
-  missing: { color: palette.inkMuted, fontSize: 12, fontStyle: 'italic' },
   settingsAction: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -1048,7 +849,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 64,
   },
-  emptyTitle: { color: palette.ink, fontSize: 19, fontWeight: '900', marginTop: 15 },
+  emptyTitle: { ...typography.heading, color: palette.ink, marginTop: 15 },
   emptyText: {
     color: palette.inkMuted,
     fontSize: 12,
@@ -1065,13 +866,4 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   emptyActionText: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  skeletonAvatar: { backgroundColor: '#D8D8DD', borderRadius: 50, height: 100, width: 100 },
-  skeletonLine: {
-    backgroundColor: '#D8D8DD',
-    borderRadius: 5,
-    height: 10,
-    marginTop: 16,
-    width: 140,
-  },
-  loadingText: { color: palette.inkMuted, fontSize: 11, marginTop: 12 },
 });

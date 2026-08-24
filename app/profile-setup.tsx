@@ -481,6 +481,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     accessibilityLabel="프로필 수정 뒤로가기"
                     accessibilityRole="button"
                     onPress={() => router.replace('/(tabs)/me')}
+                    hitSlop={6}
                     style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
                   >
                     <Ionicons color={palette.ink} name="chevron-back" size={22} />
@@ -490,6 +491,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     accessibilityLabel="내 공개 프로필 미리보기"
                     accessibilityRole="button"
                     onPress={() => router.push('/profile-preview')}
+                    hitSlop={6}
                     style={({ pressed }) => [styles.previewButton, pressed && styles.pressed]}
                   >
                     <Ionicons color={palette.ink} name="eye-outline" size={20} />

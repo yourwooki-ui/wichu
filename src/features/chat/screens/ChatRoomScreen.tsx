@@ -573,6 +573,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             accessibilityLabel="메시지 보내기"
             disabled={!draft.trim() || failed}
             onPress={send}
+            hitSlop={6}
             style={[styles.sendButton, (!draft.trim() || failed) && styles.sendDisabled]}
           >
             <Ionicons color={palette.white} name="arrow-up" size={20} />

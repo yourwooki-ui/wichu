@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
@@ -233,20 +233,6 @@ function CompareMark({ value, gold = false }: { value: string; gold?: boolean })
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 76,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
-  manageButton: {
-    alignItems: 'center',
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-  },
   content: { paddingBottom: 34, paddingHorizontal: 18 },
   currentPlan: {
     alignItems: 'center',
@@ -286,7 +272,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     padding: 21,
-    ...Platform.select({ web: { boxShadow: '0 10px 24px rgba(112,82,0,0.10)' } }),
+    ...elevation.lg,
   },
   goldGlow: {
     backgroundColor: '#E3B830',
@@ -347,10 +333,8 @@ const styles = StyleSheet.create({
   },
   goldActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   sectionTitle: {
+    ...typography.heading,
     color: palette.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.3,
     marginBottom: 11,
     marginTop: 23,
   },
@@ -388,7 +372,7 @@ const styles = StyleSheet.create({
     right: 11,
     top: 11,
   },
-  recommendText: { color: '#765400', fontSize: 9, fontWeight: '900' },
+  recommendText: { color: '#765400', fontSize: 10, fontWeight: '900' },
   planName: { color: palette.ink, fontSize: 15, fontWeight: '900', marginTop: 12 },
   planDescription: { color: palette.inkMuted, flex: 1, fontSize: 11, lineHeight: 16, marginTop: 5 },
   planPrice: { color: palette.ink, fontSize: 10, fontWeight: '900', marginTop: 13 },
@@ -406,7 +390,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  sectionTitleInline: { color: palette.ink, fontSize: 18, fontWeight: '900' },
+  sectionTitleInline: { ...typography.heading, color: palette.ink },
   sectionHint: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
   benefitList: { backgroundColor: palette.white, borderRadius: 23, paddingHorizontal: 14 },
   benefitItem: {
@@ -441,7 +425,7 @@ const styles = StyleSheet.create({
   compareLabel: {
     color: palette.inkMuted,
     flex: 1,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     textAlign: 'center',
   },
@@ -456,7 +440,7 @@ const styles = StyleSheet.create({
   compareRowFirst: { borderTopWidth: 0 },
   compareFeature: { color: palette.ink, flex: 1, fontSize: 10, fontWeight: '700' },
   compareMark: { alignItems: 'center', justifyContent: 'center', width: 51 },
-  compareValue: { color: palette.inkMuted, fontSize: 9, fontWeight: '800' },
+  compareValue: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   compareValueGold: { color: '#9A7000', fontWeight: '900' },
   purchaseManagement: {
     alignItems: 'center',

@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     width: 80,
   },
   markPink: { backgroundColor: '#FFE4ED', borderRadius: 31, height: 62, width: 62 },
-  eyebrow: { color: '#A2760D', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginTop: 18 },
+  eyebrow: { color: '#A2760D', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginTop: 18 },
   title: {
     color: palette.ink,
     fontSize: 28,
@@ -154,9 +154,9 @@ const styles = StyleSheet.create({
     marginTop: 27,
     padding: 18,
   },
-  priceLabel: { color: palette.inkMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  priceLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   price: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 6 },
-  priceHint: { color: palette.inkMuted, fontSize: 9, marginTop: 4 },
+  priceHint: { color: palette.inkMuted, fontSize: 10, marginTop: 4 },
   purchase: {
     alignItems: 'center',
     alignSelf: 'stretch',
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   legal: {
     color: palette.inkMuted,
-    fontSize: 8,
+    fontSize: 10,
     lineHeight: 13,
     maxWidth: 315,
     textAlign: 'center',

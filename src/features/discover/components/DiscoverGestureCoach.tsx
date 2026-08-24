@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: palette.pink,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.4,
     marginTop: 14,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   gestureValue: { color: palette.ink, fontSize: 10, fontWeight: '900', marginTop: 9 },
-  gestureLabel: { color: palette.inkMuted, fontSize: 8, fontWeight: '700', marginTop: 2 },
+  gestureLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 2 },
   doubleTapHint: {
     alignItems: 'center',
     backgroundColor: '#FFE8EF',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  doubleTapText: { color: palette.ink, flexShrink: 1, fontSize: 9, fontWeight: '800' },
+  doubleTapText: { color: palette.ink, flexShrink: 1, fontSize: 10, fontWeight: '800' },
   action: {
     alignItems: 'center',
     backgroundColor: palette.ink,

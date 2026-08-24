@@ -3,7 +3,7 @@ import { ComponentProps, forwardRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { radius, spacing } from '@/constants/theme';
+import { radius, spacing, touchSlop } from '@/constants/theme';
 
 type FormFieldProps = TextInputProps & {
   label: string;
@@ -67,7 +67,7 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={passwordHidden ? showPasswordLabel : hidePasswordLabel}
-            hitSlop={8}
+            hitSlop={touchSlop.icon}
             onPress={() => setPasswordHidden((value) => !value)}
             style={({ pressed }) => [styles.visibilityButton, pressed && styles.pressed]}
           >

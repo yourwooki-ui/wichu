@@ -48,7 +48,7 @@
 ## P0 — 화면 구조 구현
 
 - [x] 전체 정보구조와 페이지별 UX 계약 문서화 (`APP_STRUCTURE.md`)
-- [ ] 공통 App Header, skeleton, empty/error state 컴포넌트 정리
+- [x] 공통 App Header, skeleton, empty/error state 컴포넌트 정리 — `typography`/`elevation`/`duration`/`pressFeedback` 토큰, shimmer `Skeleton` 세트, 단일 `StateView`(빈 상태·오류·잠김)와 variant 지원 `PrimaryButton`으로 통합
 - [x] Matches / Chat / Shop / Me 공통 탭 헤더 규격화, 웹 네이티브 프리뷰 비율·모달 포털·고정 영역 보정
 - [x] 신규가입 프로필 설정과 일반 프로필 수정 진입/검증 분리, 콜드 스타트 프로필 상세 원격 조회
 - [x] Chat 최초 메시지 50개 제한·과거 페이지 추가 조회·번역 캐시/Realtime 병합, 온라인 대화 상대 FlashList 가상화
@@ -75,7 +75,7 @@
 
 - [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free 강제 광고 차단 entitlement 경계와 일반 사용자 선택형 보상 광고 1회당 되돌리기 1크레딧 서버 migration 작성 완료; 원격 적용과 실제 AdMob 서버 검증 연결 대기
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900, Gold 월 ₩19,900 확정; Gold DB 권한·방문자·우선 노출·무제한 되돌리기 구조 완료, 실제 Store product 대기
-- [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA
+- [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA — 최소 글자 10px 바닥 적용(42곳), 주요 터치 대상 44pt `hitSlop` 확보, skeleton `reduce motion` 대응 완료; 스크린리더 통과와 locale QA 대기
 - [ ] 단위·통합·RLS·핵심 E2E 테스트 — 18+·생년월일 포맷 단위 테스트와 `p0_rls_contract.sql` 추가, 격리 DB/CI 자동 실행 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 

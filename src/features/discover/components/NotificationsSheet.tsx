@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { palette } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -61,14 +62,18 @@ export function NotificationsSheet({
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>알림</Text>
-            <Pressable accessibilityLabel="알림 닫기" onPress={onClose} style={styles.close}>
+            <Pressable
+              accessibilityLabel="알림 닫기"
+              hitSlop={8}
+              onPress={onClose}
+              style={styles.close}
+            >
               <Ionicons color={palette.ink} name="close" size={21} />
             </Pressable>
           </View>
           {connectionsQuery.isLoading ? (
-            <View style={styles.empty}>
-              <ActivityIndicator color={palette.pink} />
-              <Text style={styles.loadingText}>알림을 불러오는 중이에요</Text>
+            <View style={styles.list}>
+              <ChatRowsSkeleton count={4} />
             </View>
           ) : items.length ? (
             <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
@@ -159,7 +164,6 @@ const styles = StyleSheet.create({
     width: 36,
   },
   empty: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 32 },
-  loadingText: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginTop: 10 },
   list: { paddingBottom: 18, paddingHorizontal: 12, paddingTop: 12 },
   row: {
     alignItems: 'center',
@@ -184,7 +188,7 @@ const styles = StyleSheet.create({
   rowCopy: { flex: 1, minWidth: 0 },
   rowTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   rowBody: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
-  rowTime: { color: palette.inkMuted, fontSize: 8, fontWeight: '700' },
+  rowTime: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
   icon: {
     alignItems: 'center',
     backgroundColor: '#FFF4CF',

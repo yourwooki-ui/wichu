@@ -12,11 +12,12 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
+import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { palette, radius, spacing } from '@/constants/theme';
+import { palette, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
 import { Profile, SwipeAction } from '@/types/profile';
@@ -213,15 +214,23 @@ export function SwipeDeck({
   }));
 
   if (isLoading) {
+    // 실제 카드와 같은 크기·정보 배치로 골격을 그려 데이터 도착 시 화면이 튀지 않게 한다.
     return (
-      <View style={styles.finished}>
-        <View style={styles.loadingCard}>
-          <View style={styles.loadingGlow}>
-            <ActivityIndicator color={theme.colors.primary} size="small" />
-          </View>
+      <View style={styles.container}>
+        <View
+          accessibilityLabel="새로운 사람을 찾는 중"
+          accessibilityRole="progressbar"
+          style={[styles.deck, { height: deckHeight }]}
+        >
+          <Skeleton style={styles.loadingCard} />
           <View style={styles.loadingCopy}>
-            <View style={[styles.loadingLine, styles.loadingLineWide]} />
-            <View style={[styles.loadingLine, styles.loadingLineShort]} />
+            <SkeletonLine height={26} width="62%" />
+            <SkeletonLine height={13} style={{ marginTop: spacing.xs }} width="42%" />
+            <View style={styles.loadingChips}>
+              <SkeletonLine height={26} width={76} />
+              <SkeletonLine height={26} width={62} />
+              <SkeletonLine height={26} width={84} />
+            </View>
           </View>
         </View>
         <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>
@@ -392,31 +401,17 @@ const styles = StyleSheet.create({
   finishedTitle: { fontSize: 23, fontWeight: '800' },
   finishedText: { marginTop: 8, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   loadingCard: {
-    backgroundColor: '#E4E4E8',
     borderRadius: 28,
-    height: 250,
-    justifyContent: 'flex-end',
-    maxWidth: 310,
-    overflow: 'hidden',
-    padding: 20,
-    width: '88%',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
-  loadingGlow: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderRadius: 22,
-    height: 48,
-    justifyContent: 'center',
-    marginBottom: 54,
-    width: 48,
-  },
-  loadingCopy: { gap: 8 },
-  loadingLine: { backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: 5, height: 10 },
-  loadingLineWide: { width: '58%' },
-  loadingLineShort: { width: '38%' },
-  loadingTitle: { fontSize: 17, fontWeight: '900', marginTop: 18 },
-  loadingText: { fontSize: 11, lineHeight: 17, marginTop: 5, textAlign: 'center' },
+  loadingCopy: { bottom: 24, left: 22, position: 'absolute', right: 22 },
+  loadingChips: { flexDirection: 'row', gap: 7, marginTop: 13 },
+  loadingTitle: { ...typography.heading, marginTop: 18 },
+  loadingText: { ...typography.caption, marginTop: 5, textAlign: 'center' },
   finishedActions: { flexDirection: 'row', gap: 8, marginTop: 22 },
   adjustButton: {
     alignItems: 'center',

@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { Screen } from '@/components/Screen';
+import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { palette, radius } from '@/constants/theme';
+import { layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { discoveryService } from '@/features/discover/services/discovery-service';
@@ -76,20 +77,28 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   }, [id, isPreview, session?.user.id]);
 
   if (!profile && remoteProfileQuery.isLoading) {
+    // 사진이 먼저 오는 화면이라 스피너 대신 실제 배치(대표 사진 → 이름 → 태그)를 미리 그린다.
     return (
-      <Screen style={styles.unavailableScreen}>
-        <ActivityIndicator color={theme.colors.primary} size="small" />
-        <Text style={[styles.unavailableTitle, { color: theme.colors.text }]}>프로필 준비 중</Text>
-        <Text style={[styles.unavailableBody, { color: theme.colors.textMuted }]}>
-          안전한 공개 정보를 불러오고 있어요.
-        </Text>
+      <Screen style={[styles.screen, styles.loadingScreen]}>
+        <View accessibilityLabel="프로필을 불러오는 중" accessibilityRole="progressbar">
+          <Skeleton style={styles.loadingPhoto} />
+          <SkeletonLine height={24} style={{ marginTop: 20 }} width="52%" />
+          <SkeletonLine height={13} style={{ marginTop: 10 }} width="34%" />
+          <View style={styles.loadingChips}>
+            <SkeletonLine height={30} width={84} />
+            <SkeletonLine height={30} width={68} />
+            <SkeletonLine height={30} width={92} />
+          </View>
+          <SkeletonLine height={13} style={{ marginTop: 22 }} width="88%" />
+          <SkeletonLine height={13} style={{ marginTop: 9 }} width="74%" />
+        </View>
       </Screen>
     );
   }
 
   if (!profile) {
     return (
-      <Screen style={styles.unavailableScreen}>
+      <Screen style={[styles.screen, styles.unavailableScreen]}>
         <View style={[styles.unavailableIcon, { backgroundColor: theme.colors.surface }]}>
           <Ionicons color={theme.colors.textMuted} name="person-outline" size={30} />
         </View>
@@ -220,7 +229,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   );
 
   return (
-    <Screen edges={['left', 'right', 'bottom']} padded={false}>
+    <Screen edges={['left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <StandardProfileDetail
         footer={footer}
         headerLeft={{
@@ -343,6 +352,7 @@ function SafetyAction({
 }
 
 const styles = StyleSheet.create({
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
   modalBackdrop: { backgroundColor: 'rgba(12,12,16,0.46)', flex: 1, justifyContent: 'flex-end' },
   safetySheet: {
     borderTopLeftRadius: 28,
@@ -352,7 +362,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   sheetHandle: { alignSelf: 'center', borderRadius: 2, height: 4, marginBottom: 20, width: 42 },
-  sheetTitle: { fontSize: 19, fontWeight: '900', marginBottom: 12 },
+  sheetTitle: { ...typography.heading, marginBottom: 12 },
   safetyAction: { alignItems: 'center', flexDirection: 'row', minHeight: 56 },
   safetyActionText: { flex: 1, fontSize: 15, fontWeight: '800', marginLeft: 12 },
   cancelButton: {
@@ -363,6 +373,9 @@ const styles = StyleSheet.create({
   },
   cancelText: { fontSize: 14, fontWeight: '800' },
   unavailableScreen: { alignItems: 'center', justifyContent: 'center' },
+  loadingScreen: { paddingTop: 12 },
+  loadingPhoto: { borderRadius: 26, height: 340 },
+  loadingChips: { flexDirection: 'row', gap: 8, marginTop: 18 },
   unavailableIcon: {
     alignItems: 'center',
     borderRadius: 26,
@@ -370,8 +383,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 64,
   },
-  unavailableTitle: { fontSize: 20, fontWeight: '900', marginTop: 16 },
-  unavailableBody: { fontSize: 12, lineHeight: 18, marginTop: 7, textAlign: 'center' },
+  unavailableTitle: { ...typography.heading, marginTop: 16 },
   unavailableButton: {
     backgroundColor: palette.pink,
     borderRadius: radius.pill,

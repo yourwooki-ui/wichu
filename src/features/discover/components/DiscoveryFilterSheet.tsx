@@ -91,7 +91,12 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
               <Text style={styles.title}>탐색 조건</Text>
               <Text style={styles.subtitle}>나에게 맞는 프로필만 발견해요.</Text>
             </View>
-            <Pressable accessibilityLabel="탐색 조건 닫기" onPress={onClose} style={styles.close}>
+            <Pressable
+              accessibilityLabel="탐색 조건 닫기"
+              hitSlop={8}
+              onPress={onClose}
+              style={styles.close}
+            >
               <Ionicons color={palette.ink} name="close" size={21} />
             </Pressable>
           </View>
@@ -238,7 +243,7 @@ const styles = StyleSheet.create({
   preferenceTitle: { color: palette.ink, fontSize: 11, fontWeight: '900' },
   preferenceDescription: {
     color: palette.inkMuted,
-    fontSize: 9,
+    fontSize: 10,
     lineHeight: 14,
     marginTop: 4,
   },

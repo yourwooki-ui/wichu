@@ -147,9 +147,9 @@ const styles = StyleSheet.create({
   headerTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
   content: { paddingBottom: 40, paddingHorizontal: 20 },
   intro: { backgroundColor: palette.ink, borderRadius: 24, marginBottom: 24, padding: 22 },
-  kicker: { color: palette.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
+  kicker: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },
   summary: { color: palette.white, fontSize: 20, fontWeight: '900', lineHeight: 28, marginTop: 8 },
-  date: { color: 'rgba(255,255,255,0.5)', fontSize: 9, marginTop: 15 },
+  date: { color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 15 },
   section: {
     borderBottomColor: '#DFDFE3',
     borderBottomWidth: StyleSheet.hairlineWidth,

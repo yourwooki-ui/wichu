@@ -3,18 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
+import { ListRowsSkeleton } from '@/components/Skeleton';
 import { palette, radius } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
@@ -105,8 +98,8 @@ export function OperationsScreen() {
       </View>
 
       {activeQuery.isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={palette.pink} size="large" />
+        <View style={styles.loadingContent}>
+          <ListRowsSkeleton count={4} height={104} />
         </View>
       ) : activeQuery.isError ? (
         <View style={styles.center}>
@@ -285,7 +278,7 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', flexDirection: 'row', minHeight: 82, paddingHorizontal: 15 },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerCopy: { flex: 1, marginLeft: 4 },
-  eyebrow: { color: palette.pink, fontSize: 8, fontWeight: '900', letterSpacing: 1.1 },
+  eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
   title: { color: palette.ink, fontSize: 23, fontWeight: '900', letterSpacing: -0.7, marginTop: 3 },
   countPill: {
     alignItems: 'center',
@@ -309,6 +302,7 @@ const styles = StyleSheet.create({
   tabText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   tabTextActive: { color: palette.ink },
   content: { gap: 12, padding: 18, paddingBottom: 40 },
+  loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 6 },
   center: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 28 },
   errorTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
   retry: {
@@ -332,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.68)',
     borderRadius: radius.pill,
     color: palette.white,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     left: 7,
     minWidth: 22,
@@ -347,13 +341,13 @@ const styles = StyleSheet.create({
   photoEmpty: { alignItems: 'center', justifyContent: 'center' },
   cardCopy: { marginTop: 13, minWidth: 0 },
   cardTitle: { color: palette.ink, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
-  meta: { color: palette.inkMuted, fontSize: 9, fontWeight: '700', marginTop: 4 },
+  meta: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4 },
   reason: {
     alignSelf: 'flex-start',
     backgroundColor: '#FFE7EF',
     borderRadius: radius.pill,
     color: palette.pink,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     marginTop: 5,
     overflow: 'hidden',
@@ -361,8 +355,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   body: { color: palette.inkMuted, fontSize: 10, lineHeight: 14, marginTop: 7 },
-  time: { color: '#A0A0A7', fontSize: 8, marginTop: 5 },
-  photoCount: { color: palette.pink, fontSize: 9, fontWeight: '900', marginTop: 5 },
+  time: { color: '#A0A0A7', fontSize: 10, marginTop: 5 },
+  photoCount: { color: palette.pink, fontSize: 10, fontWeight: '900', marginTop: 5 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 9 },
   action: {
     alignItems: 'center',
@@ -373,7 +367,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   actionPrimary: { backgroundColor: palette.ink, borderColor: palette.ink },
-  actionText: { color: palette.ink, fontSize: 9, fontWeight: '900' },
+  actionText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
   actionTextPrimary: { color: palette.white },
   disabled: { opacity: 0.45 },
 });

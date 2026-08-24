@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   value: { color: palette.pinkPressed, fontSize: 13, fontWeight: '900' },
-  qualifier: { color: palette.pinkPressed, fontSize: 9, fontWeight: '800' },
+  qualifier: { color: palette.pinkPressed, fontSize: 10, fontWeight: '800' },
   touchTrack: { height: 44, justifyContent: 'center', position: 'relative' },
   track: {
     backgroundColor: '#DADAE0',
@@ -228,5 +228,5 @@ const styles = StyleSheet.create({
   handleCore: { backgroundColor: palette.pink, borderRadius: 4, height: 8, width: 8 },
   bounds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -8 },
   bound: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
-  scaleHint: { color: '#9A9AA2', fontSize: 9, marginTop: 1 },
+  scaleHint: { color: '#9A9AA2', fontSize: 10, marginTop: 1 },
 });

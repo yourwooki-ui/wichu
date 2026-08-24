@@ -3,29 +3,24 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { ConnectionGridSkeleton } from '@/components/Skeleton';
+import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
 import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useRefreshControl } from '@/hooks/use-refresh-control';
 
 type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 
@@ -157,6 +152,18 @@ export function MatchesScreen() {
         ? matchesQuery.isError
         : !visitorsLocked && visitorsQuery.isError);
 
+  const refreshControl = useRefreshControl(
+    useCallback(
+      () =>
+        Promise.all([
+          incomingLikesQuery.refetch(),
+          matchesQuery.refetch(),
+          visitorsLocked ? Promise.resolve(null) : visitorsQuery.refetch(),
+        ]),
+      [incomingLikesQuery, matchesQuery, visitorsLocked, visitorsQuery],
+    ),
+  );
+
   const openProfile = (profileId: string) => router.push(`/profile/${profileId}`);
 
   const openChat = (profile: ConnectionProfile) => {
@@ -204,7 +211,11 @@ export function MatchesScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.titleBlock}>
           <View style={styles.titleCopy}>
             <Text style={styles.title}>{copy.title}</Text>
@@ -232,14 +243,9 @@ export function MatchesScreen() {
         ) : null}
 
         {categoryLoading ? (
-          <ConnectionState
-            body="새로운 연결을 정리하고 있어요."
-            icon="sparkles-outline"
-            loading
-            title="연결을 불러오는 중"
-          />
+          <ConnectionGridSkeleton />
         ) : categoryError ? (
-          <ConnectionState
+          <StateView
             actionLabel="다시 시도"
             body="저장된 연결은 그대로예요. 잠시 후 다시 확인해주세요."
             icon="cloud-offline-outline"
@@ -249,9 +255,10 @@ export function MatchesScreen() {
               if (category === 'visitors') void visitorsQuery.refetch();
             }}
             title="연결을 불러오지 못했어요"
+            tone="error"
           />
         ) : !profiles.length ? (
-          <ConnectionState
+          <StateView
             actionLabel="발견하러 가기"
             body={
               category === 'matched'
@@ -411,41 +418,6 @@ function ProfileTile({
   );
 }
 
-function ConnectionState({
-  actionLabel,
-  body,
-  icon,
-  loading = false,
-  onAction,
-  title,
-}: {
-  actionLabel?: string;
-  body: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  loading?: boolean;
-  onAction?: () => void;
-  title: string;
-}) {
-  return (
-    <View style={styles.stateCard}>
-      <View style={styles.stateIcon}>
-        {loading ? (
-          <ActivityIndicator color={palette.pink} />
-        ) : (
-          <Ionicons color={palette.pink} name={icon} size={25} />
-        )}
-      </View>
-      <Text style={styles.stateTitle}>{title}</Text>
-      <Text style={styles.stateBody}>{body}</Text>
-      {actionLabel && onAction ? (
-        <Pressable onPress={onAction} style={styles.stateAction}>
-          <Text style={styles.stateActionText}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 function formatVisitTime(value: string | undefined, now: number) {
   if (!value) return '최근';
   const minutes = Math.max(1, Math.floor((now - new Date(value).getTime()) / 60_000));
@@ -463,20 +435,6 @@ function prioritizeGoldProfiles(profiles: ConnectionProfile[]) {
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 76,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2.1, lineHeight: 12, marginTop: 2 },
-  headerMark: {
-    alignItems: 'center',
-    height: 50,
-    justifyContent: 'center',
-    width: 50,
-  },
   categories: {
     backgroundColor: '#E8E8EC',
     borderRadius: 18,
@@ -497,10 +455,10 @@ const styles = StyleSheet.create({
   },
   categorySelected: {
     backgroundColor: palette.white,
-    ...Platform.select({ web: { boxShadow: '0 2px 8px rgba(17,17,17,0.08)' } }),
+    ...elevation.sm,
   },
-  categoryPressed: { opacity: 0.64 },
-  categoryLabel: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
+  categoryPressed: pressFeedback.control,
+  categoryLabel: { ...typography.label, color: palette.inkMuted },
   categoryLabelSelected: { color: palette.ink, fontWeight: '900' },
   categoryCount: {
     alignItems: 'center',
@@ -512,7 +470,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   categoryCountSelected: { backgroundColor: '#FFE1EB' },
-  categoryCountText: { color: palette.inkMuted, fontSize: 9, fontWeight: '900' },
+  categoryCountText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   titleBlock: {
@@ -523,58 +481,18 @@ const styles = StyleSheet.create({
     paddingTop: 22,
   },
   titleCopy: { flex: 1 },
-  title: { color: palette.ink, fontSize: 25, fontWeight: '900', letterSpacing: -0.7 },
-  subtitle: {
-    color: palette.inkMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 16,
-    marginTop: 4,
-  },
+  title: { ...typography.title, color: palette.ink },
+  subtitle: { ...typography.caption, color: palette.inkMuted, marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  stateCard: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: '#E1E1E6',
-    borderRadius: 24,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 250,
-    paddingHorizontal: 28,
-    paddingVertical: 42,
-  },
-  stateIcon: {
-    alignItems: 'center',
-    backgroundColor: '#FFE8EF',
-    borderRadius: 23,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
-  },
-  stateTitle: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 15 },
-  stateBody: {
-    color: palette.inkMuted,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  stateAction: {
-    backgroundColor: palette.ink,
-    borderRadius: radius.pill,
-    marginTop: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-  },
-  stateActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   card: {
     aspectRatio: 0.76,
     backgroundColor: '#D8D8DE',
     borderRadius: 20,
     overflow: 'hidden',
     width: '48.6%',
-    ...Platform.select({ web: { boxShadow: '0 5px 14px rgba(17,17,17,0.07)' } }),
+    ...elevation.md,
   },
-  cardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
+  cardPressed: pressFeedback.surface,
   nonInteractive: { pointerEvents: 'none' },
   lockedVeil: {
     backgroundColor: 'rgba(17,17,17,0.22)',
@@ -603,8 +521,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
-  lockedLabel: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 10 },
-  lockedHint: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '700', marginTop: 2 },
+  lockedLabel: { ...typography.bodySm, color: palette.white, fontWeight: '900', marginTop: 10 },
+  lockedHint: {
+    ...typography.overline,
+    color: 'rgba(255,255,255,0.78)',
+    letterSpacing: 0.4,
+    marginTop: 3,
+  },
   goldCardBorder: {
     borderColor: '#D7AC43',
     borderRadius: 20,
@@ -614,7 +537,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-    ...Platform.select({ web: { boxShadow: 'inset 0 0 0 1px rgba(255,239,178,0.45)' } }),
   },
   cardTop: {
     alignItems: 'center',
@@ -635,14 +557,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   onlineDot: { backgroundColor: palette.lime, borderRadius: 3, height: 6, width: 6 },
-  onlineText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
+  onlineText: { color: palette.white, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   newPill: {
     backgroundColor: palette.lime,
     borderRadius: radius.pill,
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
-  newPillText: { color: palette.ink, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
+  newPillText: { color: palette.ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   goldBadge: {
     alignItems: 'center',
     backgroundColor: 'rgba(13,13,15,0.78)',
@@ -654,10 +576,10 @@ const styles = StyleSheet.create({
     paddingLeft: 1,
     paddingRight: 9,
   },
-  goldBadgeText: { color: '#FFE7A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
+  goldBadgeText: { color: '#FFE7A3', fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   cardContent: { bottom: 14, left: 14, position: 'absolute', right: 14 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  name: { color: palette.white, fontSize: 17, fontWeight: '900' },
+  name: { ...typography.subheading, color: palette.white, fontWeight: '900' },
   flag: { borderColor: 'rgba(255,255,255,0.48)', borderRadius: 3, height: 13, width: 19 },
   metaRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
   meta: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '700' },
@@ -699,13 +621,8 @@ const styles = StyleSheet.create({
     width: 40,
   },
   visitorLockTextBlock: { flex: 1, marginLeft: 10 },
-  visitorLockTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  visitorLockText: {
-    color: palette.inkMuted,
-    fontSize: 10,
-    lineHeight: 13,
-    marginTop: 2,
-  },
+  visitorLockTitle: { ...typography.label, color: palette.ink, fontWeight: '900' },
+  visitorLockText: { ...typography.caption, color: palette.inkMuted, marginTop: 2 },
   visitorLockAction: {
     backgroundColor: palette.ink,
     borderRadius: radius.pill,

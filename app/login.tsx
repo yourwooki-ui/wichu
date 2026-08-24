@@ -17,7 +17,7 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { ConsentRow } from '@/components/ConsentRow';
 import { FormField } from '@/components/FormField';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { palette, spacing } from '@/constants/theme';
+import { palette, spacing, touchSlop } from '@/constants/theme';
 import { AuthWelcome } from '@/features/auth/components/AuthWelcome';
 import { GoogleAuthButton } from '@/features/auth/components/GoogleAuthButton';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
@@ -167,11 +167,14 @@ export default function LoginRoute() {
                     label={t('auth.consent')}
                   />
                   <View style={styles.policyLinks}>
-                    <Pressable onPress={() => router.push('/legal/terms')}>
+                    <Pressable hitSlop={touchSlop.link} onPress={() => router.push('/legal/terms')}>
                       <Text style={styles.policyLink}>이용약관 보기</Text>
                     </Pressable>
                     <Text style={styles.policyDot}>·</Text>
-                    <Pressable onPress={() => router.push('/legal/privacy')}>
+                    <Pressable
+                      hitSlop={touchSlop.link}
+                      onPress={() => router.push('/legal/privacy')}
+                    >
                       <Text style={styles.policyLink}>개인정보처리방침 보기</Text>
                     </Pressable>
                   </View>
@@ -217,6 +220,7 @@ export default function LoginRoute() {
                 <Pressable
                   accessibilityRole="button"
                   disabled={loading}
+                  hitSlop={touchSlop.link}
                   onPress={() => router.push('/forgot-password')}
                   style={styles.forgotButton}
                 >
@@ -239,6 +243,7 @@ export default function LoginRoute() {
                 <Pressable
                   accessibilityRole="button"
                   disabled={loading}
+                  hitSlop={touchSlop.link}
                   onPress={() => openStage(isSignUp ? 'sign-in' : 'sign-up')}
                 >
                   <Text style={styles.switchAction}>

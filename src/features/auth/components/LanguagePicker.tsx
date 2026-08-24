@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { radius, spacing } from '@/constants/theme';
+import { radius, spacing, touchSlop, typography } from '@/constants/theme';
 import { AppLanguage, getAppLanguage, setAppLanguage, supportedLanguages } from '@/i18n';
 
 type LanguagePickerProps = {
@@ -35,6 +35,7 @@ export function LanguagePicker({ dark = false }: LanguagePickerProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('auth.language')}
+        hitSlop={touchSlop.pill}
         onPress={() => setOpen(true)}
         style={({ pressed }) => [
           styles.trigger,
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.pill,
   },
-  triggerLabel: { fontSize: 12, fontWeight: '800' },
+  triggerLabel: { ...typography.label, fontWeight: '800' },
   modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   backdrop: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.58)' },
   sheet: {

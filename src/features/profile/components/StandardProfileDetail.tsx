@@ -524,11 +524,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flexDirection: 'row',
     gap: 3,
-    height: 19,
+    height: 22,
     justifyContent: 'center',
     paddingHorizontal: 7,
   },
-  reviewedBadgeText: { color: palette.white, fontSize: 9, fontWeight: '900' },
+  reviewedBadgeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   goldIdentity: {
     alignItems: 'center',
     alignSelf: 'flex-start',

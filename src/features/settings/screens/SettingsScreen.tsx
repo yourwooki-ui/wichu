@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 
 import { Screen } from '@/components/Screen';
-import { palette, radius } from '@/constants/theme';
+import { ListRowsSkeleton } from '@/components/Skeleton';
+import { palette, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
 import { settingsService } from '@/features/settings/services/settings-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -132,9 +133,9 @@ export function SettingsScreen() {
       </View>
 
       {settingsQuery.isLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={palette.pink} />
-          <Text style={styles.loadingText}>설정을 불러오는 중…</Text>
+        <View style={styles.loadingContent}>
+          <ListRowsSkeleton count={2} height={148} />
+          <ListRowsSkeleton count={2} height={112} />
         </View>
       ) : settingsQuery.isError || !settingsQuery.data ? (
         <View style={styles.centered}>
@@ -344,7 +345,6 @@ const styles = StyleSheet.create({
   headerButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
   centered: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 30 },
-  loadingText: { color: palette.inkMuted, fontSize: 12, marginTop: 12 },
   stateIcon: {
     alignItems: 'center',
     backgroundColor: '#FFE7EF',
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 58,
   },
-  stateTitle: { color: palette.ink, fontSize: 18, fontWeight: '900', marginTop: 15 },
+  stateTitle: { ...typography.heading, color: palette.ink, marginTop: 15 },
   stateText: { color: palette.inkMuted, fontSize: 12, marginTop: 5, textAlign: 'center' },
   retryButton: {
     backgroundColor: palette.ink,
@@ -390,12 +390,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   editPillText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  loadingContent: { gap: 22, paddingHorizontal: 16, paddingTop: 4 },
   sectionWrap: { marginBottom: 22 },
   sectionTitle: {
+    ...typography.overline,
     color: palette.inkMuted,
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.2,
     marginBottom: 8,
     marginLeft: 4,
   },

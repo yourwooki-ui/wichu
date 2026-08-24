@@ -179,7 +179,7 @@ export function LanguagePreferencesField({
                 </Text>
                 <Text style={styles.sheetSubtitle}>{t('profileSetup.language.searchHint')}</Text>
               </View>
-              <Pressable onPress={closePicker} style={styles.closeButton}>
+              <Pressable hitSlop={8} onPress={closePicker} style={styles.closeButton}>
                 <Ionicons color={palette.ink} name="close" size={22} />
               </Pressable>
             </View>
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   levels: { flexDirection: 'row', gap: 5 },
   level: { alignItems: 'center', borderRadius: radius.pill, flex: 1, paddingVertical: 7 },
   levelSelected: { backgroundColor: '#FFF0F5' },
-  levelLabel: { color: palette.inkMuted, fontSize: 9, fontWeight: '800' },
+  levelLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   levelLabelSelected: { color: palette.pink },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(17,17,17,0.38)' },

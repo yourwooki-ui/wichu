@@ -251,7 +251,7 @@ export function ProfilePhotoPicker({
               accessibilityLabel={t('profileSetup.photos.remove', { index: index + 1 })}
               accessibilityRole="button"
               disabled={controlsDisabled}
-              hitSlop={8}
+              hitSlop={10}
               onPress={() => removePhoto(photo.draftId)}
               style={styles.removeButton}
             >
@@ -263,6 +263,7 @@ export function ProfilePhotoPicker({
                 accessibilityRole="button"
                 disabled={controlsDisabled}
                 onPress={() => setPrimaryPhoto(index)}
+                hitSlop={10}
                 style={styles.setPrimaryButton}
               >
                 <Ionicons name="star" size={12} color="#FFFFFF" />
@@ -382,6 +383,7 @@ function OrderButton({ icon, label, disabled, onPress }: OrderButtonProps) {
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
+      hitSlop={8}
       style={[styles.orderButton, disabled && styles.disabledOrderButton]}
     >
       <Ionicons name={icon} size={17} color="#FFFFFF" />
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  primaryText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.6 },
+  primaryText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   reviewBadge: {
     alignItems: 'center',
     backgroundColor: 'rgba(25,25,29,0.78)',
@@ -454,7 +456,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   reviewBadgeRejected: { backgroundColor: 'rgba(196,45,63,0.88)' },
-  reviewBadgeText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
+  reviewBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   newPhotoBadge: {
     backgroundColor: 'rgba(25,25,29,0.78)',
     borderRadius: radius.pill,
@@ -464,7 +466,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     position: 'absolute',
   },
-  newPhotoBadgeText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
+  newPhotoBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   removeButton: {
     position: 'absolute',
     top: 6,
@@ -516,7 +518,7 @@ const styles = StyleSheet.create({
   addLabel: { fontSize: 11, fontWeight: '800' },
   photoTips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   photoTip: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  photoTipText: { fontSize: 9, fontWeight: '700' },
+  photoTipText: { fontSize: 10, fontWeight: '700' },
   uploadStatus: {
     minHeight: 42,
     flexDirection: 'row',

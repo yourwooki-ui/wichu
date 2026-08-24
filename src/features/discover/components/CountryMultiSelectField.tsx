@@ -67,7 +67,12 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
                 <Text style={styles.title}>탐색 국가</Text>
                 <Text style={styles.subtitle}>여러 국가를 선택할 수 있어요.</Text>
               </View>
-              <Pressable accessibilityLabel="국가 선택 닫기" onPress={close} style={styles.close}>
+              <Pressable
+                accessibilityLabel="국가 선택 닫기"
+                hitSlop={8}
+                onPress={close}
+                style={styles.close}
+              >
                 <Ionicons color={palette.ink} name="close" size={21} />
               </Pressable>
             </View>

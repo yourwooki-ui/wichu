@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -67,14 +67,12 @@ export function AuthWelcome({ onCreateAccount, onSignIn }: AuthWelcomeProps) {
 
           <View style={styles.actions}>
             <PrimaryButton label={t('auth.createAccount')} onPress={onCreateAccount} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('auth.signIn')}
+            <PrimaryButton
+              label={t('auth.signIn')}
               onPress={onSignIn}
-              style={({ pressed }) => [styles.signInButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.signInLabel}>{t('auth.signIn')}</Text>
-            </Pressable>
+              tone="dark"
+              variant="outline"
+            />
             <Text style={styles.ageNotice}>{t('auth.ageNotice')}</Text>
           </View>
         </View>
@@ -154,17 +152,6 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   actions: { marginTop: 18, gap: 9 },
-  signInButton: {
-    minHeight: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#3A3A40',
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(17,17,17,0.84)',
-  },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
-  signInLabel: { color: palette.white, fontSize: 15, fontWeight: '900' },
   ageNotice: {
     marginTop: 2,
     color: '#7F7F88',

@@ -1,45 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { useAppTheme } from '@/components/ThemeProvider';
-import { spacing } from '@/constants/theme';
+import { StateView, type StateTone } from '@/components/StateView';
 
 type EmptyStateProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
+  actionLabel?: string;
   description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onAction?: () => void;
+  title: string;
+  tone?: StateTone;
 };
 
-export function EmptyState({ icon, title, description }: EmptyStateProps) {
-  const theme = useAppTheme();
-
+/**
+ * 화면 전체를 차지하는 빈 상태.
+ *
+ * 시각 규격은 `StateView` 하나로 모으고, 여기서는 세로 중앙 정렬만 담당한다.
+ */
+export function EmptyState({
+  actionLabel,
+  description,
+  icon,
+  onAction,
+  title,
+  tone,
+}: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      <View style={[styles.icon, { backgroundColor: `${theme.colors.primary}16` }]}>
-        <Ionicons name={icon} size={30} color={theme.colors.primary} />
-      </View>
-      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
-      <Text style={[styles.description, { color: theme.colors.textMuted }]}>{description}</Text>
+      <StateView
+        actionLabel={actionLabel}
+        body={description}
+        container="plain"
+        icon={icon}
+        onAction={onAction}
+        title={title}
+        tone={tone}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  icon: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  title: { fontSize: 22, lineHeight: 28, fontWeight: '700', textAlign: 'center' },
-  description: {
-    marginTop: spacing.xs,
-    maxWidth: 280,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
+  container: { alignItems: 'center', flex: 1, justifyContent: 'center' },
 });

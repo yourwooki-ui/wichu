@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     marginBottom: 17,
     width: 42,
   },
-  eyebrow: { color: palette.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   title: { color: palette.ink, fontSize: 21, fontWeight: '900', marginTop: 4 },
   subtitle: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 5 },
   reasonList: { marginTop: 13 },

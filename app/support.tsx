@@ -105,10 +105,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   contactText: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  email: { color: palette.inkMuted, fontSize: 9, marginTop: 9 },
+  email: { color: palette.inkMuted, fontSize: 10, marginTop: 9 },
   sectionLabel: {
     color: palette.inkMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.2,
     marginBottom: 8,
