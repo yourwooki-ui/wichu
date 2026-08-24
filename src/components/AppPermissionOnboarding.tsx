@@ -67,27 +67,25 @@ export function AppPermissionOnboarding() {
 
   const requestCurrentPermission = async () => {
     if (!step || working) return;
-    setWorking(true);
     setMessage(null);
+
+    if (step === 'location') {
+      // 위치 권한 창과 좌표 획득은 운영체제/브라우저가 완료 시점을 결정한다.
+      // 가입 흐름은 기다리지 않고 다음 단계로 진행하고, 좌표는 백그라운드에서 저장한다.
+      setStep('notifications');
+      void profileLocationService
+        .syncCurrentLocation({ requestPermission: true })
+        .catch(() => undefined);
+      return;
+    }
+
+    setWorking(true);
     try {
-      if (step === 'location') {
-        await profileLocationService.syncCurrentLocation({
-          requestPermission: true,
-        });
-        setMessage(null);
-        setStep('notifications');
-      } else {
-        const result = await notificationPermissionService.request(userId);
-        if (result !== 'granted') setMessage('알림은 나중에 기기 설정에서 허용할 수 있어요.');
-        await finish();
-      }
+      const result = await notificationPermissionService.request(userId);
+      if (result !== 'granted') setMessage('알림은 나중에 기기 설정에서 허용할 수 있어요.');
+      await finish();
     } catch {
-      if (step === 'location') {
-        setMessage(null);
-        setStep('notifications');
-      } else {
-        await finish();
-      }
+      await finish();
     } finally {
       setWorking(false);
     }
