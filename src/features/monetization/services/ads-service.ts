@@ -1,22 +1,25 @@
-export type RewardedAdResult = 'rewarded' | 'dismissed' | 'unavailable';
+import { adsProvider } from './ads-provider';
+import type { AdsProvider, RewardedAdResult } from './types';
+
+export type { RewardedAdResult } from './types';
 
 export interface AdsService {
   initialize(): Promise<void>;
   showInterstitial(placement: string, adsRemoved: boolean): Promise<void>;
-  showRewardedUndo(placement: string): Promise<RewardedAdResult>;
+  showRewardedUndo(placement: string, userId: string): Promise<RewardedAdResult>;
 }
 
-export const noopAdsService: AdsService = {
-  initialize: async () => undefined,
-  showInterstitial: async (_placement, adsRemoved) => {
-    if (adsRemoved) return;
-  },
-  showRewardedUndo: async () => 'unavailable',
-};
+export function createAdsService(provider: AdsProvider): AdsService {
+  return {
+    initialize: async () => {
+      await provider.initialize();
+    },
+    showInterstitial: async (placement, adsRemoved) => {
+      if (adsRemoved) return;
+      await provider.showInterstitial(placement);
+    },
+    showRewardedUndo: (placement, userId) => provider.showRewardedUndo(placement, userId),
+  };
+}
 
-export const developmentAdsService: AdsService = {
-  ...noopAdsService,
-  showRewardedUndo: async () => 'rewarded',
-};
-
-export const adsService: AdsService = __DEV__ ? developmentAdsService : noopAdsService;
+export const adsService = createAdsService(adsProvider);

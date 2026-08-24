@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(46);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -133,11 +133,58 @@ select is(
   'the same rewarded-ad event cannot grant duplicate credits'
 );
 
+select is(
+  public.process_revenuecat_subscription_event(
+    'p0-revenuecat-event-0001',
+    'INITIAL_PURCHASE',
+    '30000000-0000-4000-8000-000000000001',
+    'wichu_gold_monthly',
+    'android',
+    'active',
+    now() + interval '1 month',
+    'p0-provider-reference',
+    now()
+  ),
+  true,
+  'trusted billing verification activates a subscription'
+);
+select is(
+  public.process_revenuecat_subscription_event(
+    'p0-revenuecat-event-0001',
+    'INITIAL_PURCHASE',
+    '30000000-0000-4000-8000-000000000001',
+    'wichu_gold_monthly',
+    'android',
+    'active',
+    now() + interval '1 month',
+    'p0-provider-reference',
+    now()
+  ),
+  false,
+  'a repeated billing event is idempotent'
+);
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000001', false);
 select set_config('request.jwt.claim.role', 'authenticated', false);
 select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 set local role authenticated;
+select throws_ok(
+  $$select public.process_revenuecat_subscription_event(
+    'p0-revenuecat-event-0002',
+    'INITIAL_PURCHASE',
+    '30000000-0000-4000-8000-000000000001',
+    'wichu_gold_monthly',
+    'android',
+    'active',
+    now() + interval '1 month',
+    'p0-provider-reference',
+    now()
+  )$$,
+  '42501',
+  'permission denied for function process_revenuecat_subscription_event',
+  'members cannot grant their own paid entitlement'
+);
 select lives_ok(
   $$select * from public.undo_my_swipe('30000000-0000-4000-8000-000000000002')$$,
   'one rewarded-ad credit authorizes one undo'

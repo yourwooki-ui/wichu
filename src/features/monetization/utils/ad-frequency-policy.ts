@@ -1,0 +1,59 @@
+export const DISCOVER_INTERSTITIAL_POLICY = Object.freeze({
+  actionsPerAd: 12,
+  minimumIntervalMs: 10 * 60 * 1000,
+  dailyLimit: 3,
+});
+
+export type InterstitialFrequencyState = {
+  actionsSinceLastAd: number;
+  dailyCount: number;
+  dayKey: string;
+  lastShownAt: number | null;
+};
+
+export function getLocalDayKey(now: number) {
+  const date = new Date(now);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function normalizeFrequencyState(
+  state: InterstitialFrequencyState | null,
+  now: number,
+): InterstitialFrequencyState {
+  const dayKey = getLocalDayKey(now);
+  if (!state || state.dayKey !== dayKey) {
+    return {
+      actionsSinceLastAd: state?.actionsSinceLastAd ?? 0,
+      dailyCount: 0,
+      dayKey,
+      lastShownAt: state?.lastShownAt ?? null,
+    };
+  }
+  return state;
+}
+
+export function registerDiscoverAction(previous: InterstitialFrequencyState | null, now: number) {
+  const state = normalizeFrequencyState(previous, now);
+  const next = { ...state, actionsSinceLastAd: state.actionsSinceLastAd + 1 };
+  const intervalSatisfied =
+    next.lastShownAt === null ||
+    now - next.lastShownAt >= DISCOVER_INTERSTITIAL_POLICY.minimumIntervalMs;
+  const shouldShow =
+    next.actionsSinceLastAd >= DISCOVER_INTERSTITIAL_POLICY.actionsPerAd &&
+    next.dailyCount < DISCOVER_INTERSTITIAL_POLICY.dailyLimit &&
+    intervalSatisfied;
+
+  return { state: next, shouldShow };
+}
+
+export function recordInterstitialShown(state: InterstitialFrequencyState, now: number) {
+  return {
+    ...normalizeFrequencyState(state, now),
+    actionsSinceLastAd: 0,
+    dailyCount: normalizeFrequencyState(state, now).dailyCount + 1,
+    lastShownAt: now,
+  };
+}

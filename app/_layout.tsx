@@ -14,6 +14,7 @@ import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-loc
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
+import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
 import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
@@ -24,6 +25,7 @@ function RootNavigator() {
   const { session, profileCompleted, adminRole, isLoading } = useAuthSession();
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
+  useMonetizationBootstrap(session?.user.id);
 
   useEffect(() => {
     if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);

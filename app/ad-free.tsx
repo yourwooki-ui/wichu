@@ -1,6 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -10,6 +21,8 @@ import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, radius, touchSlop, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
+import { purchaseService } from '@/features/monetization/services/purchase-service';
+import { useAuthSession } from '@/hooks/use-auth-session';
 
 const GOLD_BENEFITS = [
   { label: '골드 다이아몬드 배지와 프로필 테두리', icon: illustratedIcons.goldPremium },
@@ -30,14 +43,74 @@ export default function PassDetailRoute() {
 function PassDetailScreen() {
   const router = useRouter();
   const { product } = useLocalSearchParams<{ product?: string }>();
+  const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const adFreeOnly = product === 'ad-free';
+  const [purchasePending, setPurchasePending] = useState(false);
+  const selectedProduct = adFreeOnly ? AD_FREE_PRODUCT : GOLD_PRODUCT;
+  const alreadyIncluded =
+    entitlement.data?.tier === 'gold' || (adFreeOnly && entitlement.data?.tier === 'ad_free');
+  const products = useQuery({
+    enabled: Boolean(session?.user.id),
+    queryFn: () => purchaseService.listProducts(session!.user.id),
+    queryKey: ['store-products', session?.user.id],
+    staleTime: 5 * 60_000,
+  });
+  const storeProduct = products.data?.find((item) => item.id === selectedProduct.id);
 
-  const showProviderPending = () =>
-    Alert.alert(
-      '결제 연결 준비 중',
-      '상품과 권한 구조는 준비됐어요. App Store·Google Play 상품 ID 연결 후 실제 구매가 활성화됩니다.',
-    );
+  const waitForServerEntitlement = async () => {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const refreshed = await entitlement.refetch();
+      const tier = refreshed.data?.tier;
+      if (tier === 'gold' || (adFreeOnly && tier === 'ad_free')) return true;
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    return false;
+  };
+
+  const handlePurchase = async () => {
+    if (!session?.user.id || !storeProduct || purchasePending) return;
+    setPurchasePending(true);
+    try {
+      const result = await purchaseService.purchase(session.user.id, selectedProduct.id);
+      if (result === 'cancelled') return;
+      if (result === 'unavailable') {
+        Alert.alert('결제를 시작하지 못했어요', '잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      const confirmed = await waitForServerEntitlement();
+      Alert.alert(
+        confirmed ? '이용권이 활성화됐어요' : '구매를 확인하고 있어요',
+        confirmed ? '지금부터 혜택이 적용됩니다.' : '스토어 확인이 끝나면 자동으로 적용됩니다.',
+      );
+    } finally {
+      setPurchasePending(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!session?.user.id || purchasePending) return;
+    setPurchasePending(true);
+    try {
+      const result = await purchaseService.restore(session.user.id);
+      if (result === 'unavailable') {
+        Alert.alert('구매 내역을 불러오지 못했어요', '잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      const confirmed = await waitForServerEntitlement();
+      Alert.alert(confirmed ? '구매 내역을 복원했어요' : '복원할 활성 이용권이 없어요');
+    } finally {
+      setPurchasePending(false);
+    }
+  };
+
+  const openSubscriptionManagement = () => {
+    const url =
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions?package=app.wichu.mobile';
+    void Linking.openURL(url);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -84,7 +157,7 @@ function PassDetailScreen() {
         <View style={styles.priceCard}>
           <Text style={styles.priceLabel}>월간 이용권</Text>
           <Text style={styles.price}>
-            {adFreeOnly ? AD_FREE_PRODUCT.fallbackPriceLabelKo : GOLD_PRODUCT.fallbackPriceLabelKo}
+            {storeProduct?.priceLabel ?? selectedProduct.fallbackPriceLabelKo}
           </Text>
           <Text style={styles.priceHint}>
             {adFreeOnly ? '매월 자동 갱신 · 언제든 취소 가능' : '자동 갱신 · 언제든 취소 가능'}
@@ -93,16 +166,19 @@ function PassDetailScreen() {
 
         <View style={styles.purchaseSlot}>
           <PrimaryButton
-            label={
-              entitlement.data?.tier === (adFreeOnly ? 'ad_free' : 'gold')
-                ? '이용 중'
-                : '구매 준비 중'
-            }
-            onPress={showProviderPending}
-            variant="secondary"
+            disabled={!alreadyIncluded && !storeProduct}
+            label={alreadyIncluded ? '이용권 관리' : storeProduct ? '구독하기' : '상품 확인 중'}
+            loading={purchasePending}
+            onPress={alreadyIncluded ? openSubscriptionManagement : handlePurchase}
+            variant={alreadyIncluded ? 'secondary' : 'primary'}
           />
         </View>
-        <Pressable hitSlop={touchSlop.link} onPress={showProviderPending} style={styles.restore}>
+        <Pressable
+          disabled={purchasePending}
+          hitSlop={touchSlop.link}
+          onPress={handleRestore}
+          style={styles.restore}
+        >
           <IllustratedIcon size={24} source={illustratedIcons.purchase} />
           <Text style={styles.restoreText}>구매 복원</Text>
         </Pressable>

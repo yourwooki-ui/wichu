@@ -54,7 +54,7 @@ function listFilesToInspect() {
     try {
       return execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
         .split('\0')
-        .filter(Boolean);
+        .filter((file) => file && existsSync(file));
     } catch {
       // Deployment providers may upload source without Git metadata.
     }

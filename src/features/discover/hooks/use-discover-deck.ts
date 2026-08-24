@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
+import { INTERSTITIAL_ADS_ENABLED } from '@/constants/features';
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { discoveryService } from '@/features/discover/services/discovery-service';
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
@@ -91,6 +92,11 @@ export function useDiscoverDeck() {
         setUndoStack([]);
         void queryClient.invalidateQueries({ queryKey: ['matches'] });
         void queryClient.invalidateQueries({ queryKey: ['chat-list'] });
+      } else if (INTERSTITIAL_ADS_ENABLED && passEntitlement.isSuccess) {
+        void adsService.showInterstitial(
+          'discover_swipe',
+          passEntitlement.data?.adsRemoved ?? false,
+        );
       }
     },
     onSettled: () => {
@@ -167,7 +173,7 @@ export function useDiscoverDeck() {
   const watchRewardedAdAndUndo = useCallback(async () => {
     const lastSwipe = undoStack.at(-1);
     if (!lastSwipe || !userId || lastSwipe.userId !== userId) return 'unavailable' as const;
-    const result = await adsService.showRewardedUndo('discover_undo');
+    const result = await adsService.showRewardedUndo('discover_undo', userId);
     if (result !== 'rewarded') return result;
 
     if (reviewSamplesEnabled) {
@@ -175,10 +181,15 @@ export function useDiscoverDeck() {
       return 'undone' as const;
     }
 
-    const refreshed = await undoEntitlementQuery.refetch();
-    if ((refreshed.data?.credits ?? 0) < 1) return 'pending-credit' as const;
-    undoMutation.mutate(lastSwipe);
-    return 'undone' as const;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const refreshed = await undoEntitlementQuery.refetch();
+      if ((refreshed.data?.credits ?? 0) >= 1) {
+        undoMutation.mutate(lastSwipe);
+        return 'undone' as const;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    return 'pending-credit' as const;
   }, [undoEntitlementQuery, undoMutation, undoStack, userId]);
 
   const clearLastMatch = useCallback(() => setLastMatch(null), []);

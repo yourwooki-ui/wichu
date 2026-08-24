@@ -65,9 +65,9 @@ app routes
 
 ## 색 구성(Color scheme)
 
-`app.json`의 `userInterfaceStyle: "light"`는 **네이티브에만** 적용된다. web에서 `useColorScheme()`은 브라우저 `prefers-color-scheme`을 그대로 따르므로, 그대로 두면 OS가 다크인 방문자에게 `darkTheme`(배경 `#000000`)이 적용되는 반면 대부분의 화면은 텍스트를 `palette.ink`(`#111111`)로 고정해 두어 글자가 배경에 묻힌다.
+`app.config.js`의 `userInterfaceStyle: "light"`는 **네이티브에만** 적용된다. web에서 `useColorScheme()`은 브라우저 `prefers-color-scheme`을 그대로 따르므로, 그대로 두면 OS가 다크인 방문자에게 `darkTheme`(배경 `#000000`)이 적용되는 반면 대부분의 화면은 텍스트를 `palette.ink`(`#111111`)로 고정해 두어 글자가 배경에 묻힌다.
 
-그래서 `ThemeProvider`의 `COLOR_SCHEME` 상수로 모든 플랫폼에서 light를 강제한다. 다크 모드를 실제로 열려면 (1) 화면들이 `palette.*` 대신 `theme.colors.*`를 쓰도록 전환하고, (2) `COLOR_SCHEME`을 `'system'`으로, (3) `app.json`의 `userInterfaceStyle`을 함께 바꾼다.
+그래서 `ThemeProvider`의 `COLOR_SCHEME` 상수로 모든 플랫폼에서 light를 강제한다. 다크 모드를 실제로 열려면 (1) 화면들이 `palette.*` 대신 `theme.colors.*`를 쓰도록 전환하고, (2) `COLOR_SCHEME`을 `'system'`으로, (3) `app.config.js`의 `userInterfaceStyle`을 함께 바꾼다.
 
 ## 인증 경로
 

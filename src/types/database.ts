@@ -609,6 +609,20 @@ export type Database = {
         Args: { p_user_id: string; p_provider_event_id: string };
         Returns: number;
       };
+      process_revenuecat_subscription_event: {
+        Args: {
+          p_event_id: string;
+          p_event_type: string;
+          p_user_id: string;
+          p_product_id: string;
+          p_platform: string;
+          p_status: string;
+          p_current_period_end: string | null;
+          p_provider_reference: string;
+          p_occurred_at: string;
+        };
+        Returns: boolean;
+      };
       send_my_message: {
         Args: {
           p_match_id: string;

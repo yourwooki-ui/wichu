@@ -52,6 +52,8 @@
 
 Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상태와 만료일로만 판정한다. client는 구독을 쓸 수 없고, 비공개 DB 함수는 외부에 만료일을 노출하지 않은 채 활성 여부만 반환한다. 방문자 목록 RPC는 Gold가 유효한 본인에게만 결과를 반환한다.
 
+RevenueCat webhook은 service-role 전용 `process_revenuecat_subscription_event`로만 구독을 반영한다. `private.monetization_provider_events`는 provider event ID를 중복 방지 키로 삼고, `private.subscription_provider_state`는 상품·플랫폼별 최신 event 시각을 저장해 느리게 도착한 이전 webhook이 권한을 되돌리지 못하게 한다.
+
 `touch_presence()`는 인증된 사용자가 자신의 `last_active_at`만 갱신하는 `security invoker` 함수다. 앱이 활성 상태일 때 진입 즉시와 2분 간격으로 호출하고, 백그라운드에서는 중지한다. 5분 이내는 온라인, 이후 1시간 미만은 분, 24시간 미만은 시간, 7일 이내는 일 단위로 표시한다.
 
 프로필 키워드는 `connection_goal`, `vibe`, `daily_rhythm`, `communication_style` 카테고리로 분리한다. 허용 값은 migration의 check constraint로 검증하며, 앱은 관계 목적 최대 2개, 분위기 최대 3개, 나머지 카테고리는 각 1개로 제한한다.

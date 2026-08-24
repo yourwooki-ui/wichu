@@ -3,6 +3,7 @@ import {
   GOLD_PRODUCT,
   type MonetizationProductId,
 } from '@/features/monetization/constants/products';
+import { purchaseProvider } from '@/features/monetization/services/purchase-provider';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export type PassTier = 'free' | 'ad_free' | 'gold';
@@ -17,17 +18,19 @@ export type PassEntitlement = {
   expiresAt: string | null;
 };
 
-export interface PurchaseProvider {
-  purchase(productId: MonetizationProductId): Promise<void>;
-  restore(): Promise<void>;
-}
-
-export const noopPurchaseProvider: PurchaseProvider = {
-  purchase: async () => undefined,
-  restore: async () => undefined,
-};
-
 export const purchaseService = {
+  initialize(userId: string) {
+    return purchaseProvider.initialize(userId);
+  },
+  listProducts(userId: string) {
+    return purchaseProvider.listProducts(userId);
+  },
+  purchase(userId: string, productId: MonetizationProductId) {
+    return purchaseProvider.purchase(userId, productId);
+  },
+  restore(userId: string) {
+    return purchaseProvider.restore(userId);
+  },
   async getEntitlement(userId: string): Promise<PassEntitlement> {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -80,3 +83,5 @@ export const purchaseService = {
     };
   },
 };
+
+export type { PurchaseProvider } from '@/features/monetization/services/types';

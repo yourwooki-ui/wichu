@@ -446,3 +446,13 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/translate-message/deno.json"
 entrypoint = "./functions/translate-message/index.ts"
+
+[functions.revenuecat-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/revenuecat-webhook/index.ts"
+
+[functions.admob-reward]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/admob-reward/index.ts"

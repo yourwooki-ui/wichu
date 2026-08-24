@@ -77,7 +77,7 @@ WICHU 1.0은 데모나 단순 MVP가 아니라 실제 사용자를 제한적으�
 9. Settings
 10. Ad-Free
 
-하단 탭은 **Matches / Chat / Discover / Shop / Me**이다. Discover를 중앙 기본 탭으로 강조한다. Shop은 Ad-Free 한 상품만 안내하는 얇은 랜딩이며 별도 상품 경제를 만들지 않는다. 설정 내 sheet·modal·단계형 폼은 별도 주요 화면으로 세지 않는다.
+하단 탭은 **Matches / Chat / Discover / Shop / Me**이다. Discover를 중앙 기본 탭으로 강조한다. Shop은 Ad-Free와 Gold Pass 두 월간 이용권만 안내하며 코인·선물·아이템 경제를 만들지 않는다. 설정 내 sheet·modal·단계형 폼은 별도 주요 화면으로 세지 않는다.
 
 페이지별 구조, 상태, 행동 계약은 [`APP_STRUCTURE.md`](./APP_STRUCTURE.md)를 단일 기준으로 사용한다.
 

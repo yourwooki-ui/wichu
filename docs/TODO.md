@@ -75,8 +75,8 @@
 
 ## P1 — 수익화와 품질
 
-- [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free entitlement와 일반 사용자 보상 광고 1회당 되돌리기 1크레딧 서버 migration·원격 적용 완료; 실제 AdMob 서버 검증 연결 대기
-- [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900, Gold 월 ₩19,900 확정; Gold DB 권한·방문자·우선 노출·무제한 되돌리기 구조 완료, 실제 Store product 대기
+- [ ] 광고 provider 연결 및 빈도/배치 정책 — AdMob SDK·UMP·SSV 공개키 검증, 12 Swipe/10분/3회 정책과 Gold/Ad-Free 제외까지 구현; AdMob 앱·unit 생성, app-ads.txt 승인, 실기기 callback QA 대기
+- [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — RevenueCat SDK·현지화 가격·구매/복원·인증 webhook·중복/역순 방지 구현; Play/App Store 상품·RevenueCat 프로젝트 생성과 sandbox 실기기 QA 대기
 - [ ] 접근성 및 9개 출시 locale 실기기 QA — 한국어·영어·베트남어·일본어·프랑스어·스페인어·중국어(대만)·인도네시아어·페르시아어 구조와 핵심 화면 번역, 기기 언어 자동 감지, 설정 변경, RTL 적용 완료. 스크린리더·줄바꿈·전체 잔여 화면 번역 QA 대기
 - [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB CI 자동 실행 완료, 모바일 E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
