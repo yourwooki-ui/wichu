@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useMemo, useState } from 'react';
@@ -26,6 +26,24 @@ import type { Profile } from '@/types/profile';
 
 const HERO_HEIGHT_RATIO = 1.18;
 const HERO_MAX_HEIGHT = 520;
+
+type ProfileDetailItem = {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  iconBackground: string;
+  iconColor: string;
+  label: string;
+};
+
+const DETAIL_ICON_TONES = {
+  work: { background: '#EAF0FF', foreground: '#2F6BFF' },
+  education: { background: '#F0EAFF', foreground: '#7452D6' },
+  height: { background: '#E7F8F0', foreground: '#168A5C' },
+  personality: { background: '#FDEAF2', foreground: '#D93D79' },
+  drinking: { background: '#F4EAF9', foreground: '#8B4AB8' },
+  smoking: { background: '#FCEDEA', foreground: '#C95849' },
+  exercise: { background: '#FFF0E1', foreground: '#D97524' },
+  pets: { background: '#F6EEE7', foreground: '#87603E' },
+} as const;
 
 const DETAIL_LABELS: Record<string, string> = {
   high_school: '고등학교',
@@ -130,49 +148,77 @@ export function StandardProfileDetail({
       ? (KO_INTEREST_LABELS[interest] ?? interest)
       : interest,
   );
-  const basicDetails = [
+  const basicDetails = compactProfileDetails([
     profile.details?.occupation
-      ? { icon: 'briefcase-outline' as const, label: profile.details.occupation }
+      ? {
+          icon: 'briefcase' as const,
+          iconBackground: DETAIL_ICON_TONES.work.background,
+          iconColor: DETAIL_ICON_TONES.work.foreground,
+          label: profile.details.occupation,
+        }
       : null,
     profile.details?.educationLevel
       ? {
-          icon: 'school-outline' as const,
+          icon: 'school' as const,
+          iconBackground: DETAIL_ICON_TONES.education.background,
+          iconColor: DETAIL_ICON_TONES.education.foreground,
           label: DETAIL_LABELS[profile.details.educationLevel] ?? profile.details.educationLevel,
         }
       : null,
     profile.details?.heightCm
-      ? { icon: 'resize-outline' as const, label: `${profile.details.heightCm}cm` }
+      ? {
+          icon: 'human-male-height' as const,
+          iconBackground: DETAIL_ICON_TONES.height.background,
+          iconColor: DETAIL_ICON_TONES.height.foreground,
+          label: `${profile.details.heightCm}cm`,
+        }
       : null,
-  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const lifestyleDetails = [
+  ]);
+  const lifestyleDetails = compactProfileDetails([
     profile.details?.personalityType
-      ? { icon: 'color-wand-outline' as const, label: profile.details.personalityType }
+      ? {
+          icon: 'brain' as const,
+          iconBackground: DETAIL_ICON_TONES.personality.background,
+          iconColor: DETAIL_ICON_TONES.personality.foreground,
+          label: profile.details.personalityType,
+        }
       : null,
     profile.details?.drinking
       ? {
-          icon: 'wine-outline' as const,
+          icon: 'glass-wine' as const,
+          iconBackground: DETAIL_ICON_TONES.drinking.background,
+          iconColor: DETAIL_ICON_TONES.drinking.foreground,
           label: DETAIL_LABELS[profile.details.drinking] ?? profile.details.drinking,
         }
       : null,
     profile.details?.smoking
       ? {
-          icon: 'ban-outline' as const,
+          icon:
+            profile.details.smoking === 'never' || profile.details.smoking === 'quitting'
+              ? ('smoking-off' as const)
+              : ('smoking' as const),
+          iconBackground: DETAIL_ICON_TONES.smoking.background,
+          iconColor: DETAIL_ICON_TONES.smoking.foreground,
           label: DETAIL_LABELS[profile.details.smoking] ?? profile.details.smoking,
         }
       : null,
     profile.details?.exercise
       ? {
-          icon: 'barbell-outline' as const,
+          icon: 'dumbbell' as const,
+          iconBackground: DETAIL_ICON_TONES.exercise.background,
+          iconColor: DETAIL_ICON_TONES.exercise.foreground,
           label: DETAIL_LABELS[profile.details.exercise] ?? profile.details.exercise,
         }
       : null,
     profile.details?.pets
       ? {
-          icon: 'paw-outline' as const,
+          icon: 'paw' as const,
+          iconBackground: DETAIL_ICON_TONES.pets.background,
+          iconColor: DETAIL_ICON_TONES.pets.foreground,
           label: DETAIL_LABELS[profile.details.pets] ?? profile.details.pets,
         }
       : null,
-  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+  ]);
 
   const handleHeroLayout = (event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -425,11 +471,7 @@ function DetailSection({ children, title }: { children: ReactNode; title: string
   );
 }
 
-function DetailPills({
-  items,
-}: {
-  items: { icon: keyof typeof Ionicons.glyphMap; label: string }[];
-}) {
+function DetailPills({ items }: { items: ProfileDetailItem[] }) {
   const theme = useAppTheme();
   return (
     <View style={styles.detailGrid}>
@@ -438,12 +480,18 @@ function DetailPills({
           key={`${item.icon}-${item.label}`}
           style={[styles.detailPill, { borderColor: theme.colors.border }]}
         >
-          <Ionicons color={theme.colors.textMuted} name={item.icon} size={15} />
+          <View style={[styles.detailIcon, { backgroundColor: item.iconBackground }]}>
+            <MaterialCommunityIcons color={item.iconColor} name={item.icon} size={17} />
+          </View>
           <Text style={[styles.detailPillText, { color: theme.colors.text }]}>{item.label}</Text>
         </View>
       ))}
     </View>
   );
+}
+
+function compactProfileDetails(items: (ProfileDetailItem | null)[]) {
+  return items.filter((item): item is ProfileDetailItem => item !== null);
 }
 
 function getLanguageCode(language: string) {
@@ -579,9 +627,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: 7,
+    minHeight: 40,
+    paddingLeft: 7,
+    paddingRight: 13,
+    paddingVertical: 6,
+  },
+  detailIcon: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
   },
   detailPillText: { fontSize: 12, fontWeight: '800' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
