@@ -3,9 +3,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, radius, touchSlop, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
@@ -83,14 +84,18 @@ export default function PassDetailRoute() {
           </Text>
         </View>
 
-        <Pressable onPress={showProviderPending} style={styles.purchase}>
-          <Text style={styles.purchaseText}>
-            {entitlement.data?.tier === (adFreeOnly ? 'ad_free' : 'gold')
-              ? '이용 중'
-              : '구매 준비 중'}
-          </Text>
-        </Pressable>
-        <Pressable onPress={showProviderPending} style={styles.restore}>
+        <View style={styles.purchaseSlot}>
+          <PrimaryButton
+            label={
+              entitlement.data?.tier === (adFreeOnly ? 'ad_free' : 'gold')
+                ? '이용 중'
+                : '구매 준비 중'
+            }
+            onPress={showProviderPending}
+            variant="secondary"
+          />
+        </View>
+        <Pressable hitSlop={touchSlop.link} onPress={showProviderPending} style={styles.restore}>
           <IllustratedIcon size={24} source={illustratedIcons.purchase} />
           <Text style={styles.restoreText}>구매 복원</Text>
         </Pressable>
@@ -152,23 +157,14 @@ const styles = StyleSheet.create({
   priceCard: {
     alignSelf: 'stretch',
     backgroundColor: palette.white,
-    borderRadius: 22,
+    borderRadius: radius.lg,
     marginTop: 27,
     padding: 18,
   },
-  priceLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  price: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 6 },
-  priceHint: { color: palette.inkMuted, fontSize: 10, marginTop: 4 },
-  purchase: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    backgroundColor: palette.ink,
-    borderRadius: radius.pill,
-    justifyContent: 'center',
-    marginTop: 14,
-    minHeight: 52,
-  },
-  purchaseText: { color: palette.white, fontSize: 13, fontWeight: '900' },
+  priceLabel: { ...typography.overline, color: palette.inkMuted },
+  price: { ...typography.heading, color: palette.ink, marginTop: 6 },
+  priceHint: { ...typography.caption, color: palette.inkMuted, marginTop: 4 },
+  purchaseSlot: { alignSelf: 'stretch', marginTop: 14 },
   restore: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -177,15 +173,14 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   restoreText: {
+    ...typography.caption,
     color: palette.ink,
-    fontSize: 11,
     fontWeight: '800',
     textDecorationLine: 'underline',
   },
   legal: {
+    ...typography.caption,
     color: palette.inkMuted,
-    fontSize: 10,
-    lineHeight: 13,
     maxWidth: 315,
     textAlign: 'center',
   },
