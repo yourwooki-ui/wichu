@@ -48,6 +48,27 @@ const categoryCopy: Record<MatchCategory, { title: string; description: string }
   },
 };
 
+const emptyCategoryCopy: Record<
+  MatchCategory,
+  { title: string; body: string; actionLabel: string }
+> = {
+  'picked-me': {
+    title: '아직 나를 Pick한 사람이 없어요',
+    body: '새로운 Pick을 받으면 여기에 표시됩니다.',
+    actionLabel: '발견하러 가기',
+  },
+  matched: {
+    title: '아직 매치가 없어요',
+    body: '서로 Pick하면 매치 목록에 표시됩니다.',
+    actionLabel: '발견하러 가기',
+  },
+  visitors: {
+    title: '아직 프로필 방문자가 없어요',
+    body: '누군가 내 프로필을 확인하면 여기에 표시됩니다.',
+    actionLabel: '내 프로필 보기',
+  },
+};
+
 const profilesByCategory: Record<MatchCategory, ConnectionProfile[]> = {
   'picked-me': [mockConnections[0], mockConnections[1], mockConnections[3], mockConnections[4]],
   matched: mockConnections,
@@ -137,6 +158,7 @@ export function MatchesScreen() {
         ? matchedProfiles
         : pickedProfiles;
   const copy = categoryCopy[category];
+  const emptyCopy = emptyCategoryCopy[category];
   const visitorsLocked = category === 'visitors' && entitlement.data?.tier !== 'gold';
   const categoryLoading =
     category === 'picked-me'
@@ -259,18 +281,14 @@ export function MatchesScreen() {
           />
         ) : !profiles.length ? (
           <StateView
-            actionLabel="발견하러 가기"
-            body={
-              category === 'matched'
-                ? '서로 Pick하면 매치 목록에 표시됩니다.'
-                : category === 'visitors'
-                  ? '프로필 방문 기록이 생기면 여기에 표시됩니다.'
-                  : '새로운 Pick을 받으면 여기에 표시됩니다.'
-            }
+            actionLabel={emptyCopy.actionLabel}
+            body={emptyCopy.body}
             icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
             illustration={illustratedIcons.connections}
-            onAction={() => router.push('/(tabs)/discover')}
-            title={category === 'matched' ? '아직 매치가 없어요' : '아직 새로운 연결이 없어요'}
+            onAction={() =>
+              router.push(category === 'visitors' ? '/(tabs)/me' : '/(tabs)/discover')
+            }
+            title={emptyCopy.title}
           />
         ) : (
           <View style={styles.grid}>
