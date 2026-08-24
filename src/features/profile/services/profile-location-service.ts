@@ -4,6 +4,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 
 const LAST_KNOWN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const LAST_KNOWN_REQUIRED_ACCURACY_METERS = 5_000;
+const CURRENT_POSITION_TIMEOUT_MS = 12_000;
 
 export type ProfileLocationStatus =
   | 'checking'
@@ -39,9 +40,7 @@ export const profileLocationService = {
       maxAge: LAST_KNOWN_MAX_AGE_MS,
       requiredAccuracy: LAST_KNOWN_REQUIRED_ACCURACY_METERS,
     });
-    const current =
-      lastKnown ??
-      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+    const current = lastKnown ?? (await getCurrentPosition());
 
     const { data: updatedAt, error } = await getSupabaseClient().rpc('update_my_location', {
       p_latitude: current.coords.latitude,
@@ -55,3 +54,20 @@ export const profileLocationService = {
     };
   },
 };
+
+async function getCurrentPosition() {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Location request timed out')),
+          CURRENT_POSITION_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}

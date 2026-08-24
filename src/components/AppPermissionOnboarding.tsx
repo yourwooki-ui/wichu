@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,8 @@ type Step = 'location' | 'notifications';
 
 export function AppPermissionOnboarding() {
   const { profileCompleted, session } = useAuthSession();
+  const pathname = usePathname();
+  const router = useRouter();
   const userId = session?.user.id;
   const [step, setStep] = useState<Step | null>(null);
   const [working, setWorking] = useState(false);
@@ -27,7 +30,8 @@ export function AppPermissionOnboarding() {
   const finish = useCallback(async () => {
     if (userId) await AsyncStorage.setItem(storageKey(userId), 'done');
     setStep(null);
-  }, [userId]);
+    if (pathname === '/profile-setup') router.replace('/(tabs)/discover');
+  }, [pathname, router, userId]);
 
   useEffect(() => {
     if (!userId || !profileCompleted) return;
@@ -40,22 +44,26 @@ export function AppPermissionOnboarding() {
       }
       if (onboardingDone || !active) return;
       const [locationResult, notificationStatus] = await Promise.all([
-        profileLocationService.syncCurrentLocation(),
+        profileLocationService.syncCurrentLocation().catch(() => ({ status: 'error' as const })),
         Promise.resolve(currentNotificationStatus),
       ]);
       if (!active) return;
       if (locationResult.status === 'ready' && isSettled(notificationStatus)) {
-        await AsyncStorage.setItem(storageKey(userId), 'done');
+        await finish();
         return;
       }
-      setStep(locationResult.status === 'ready' ? 'notifications' : 'location');
+      setStep(
+        locationResult.status === 'ready' || locationResult.status === 'error'
+          ? 'notifications'
+          : 'location',
+      );
     })().catch(() => {
       if (active) setStep('location');
     });
     return () => {
       active = false;
     };
-  }, [profileCompleted, userId]);
+  }, [finish, profileCompleted, userId]);
 
   const requestCurrentPermission = async () => {
     if (!step || working) return;
