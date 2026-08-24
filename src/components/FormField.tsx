@@ -3,22 +3,28 @@ import { ComponentProps, forwardRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { radius, spacing, touchSlop } from '@/constants/theme';
+import { radius, spacing, touchSlop, typography } from '@/constants/theme';
 
 type FormFieldProps = TextInputProps & {
-  label: string;
+  /** 이 필드에서 잘못된 값. 지정하면 테두리와 안내문이 오류 상태로 바뀐다. */
+  error?: string | null;
+  hidePasswordLabel?: string;
   hint?: string;
   icon?: ComponentProps<typeof Ionicons>['name'];
-  tone?: 'default' | 'dark';
+  label: string;
+  /** 값이 유효할 때 보여줄 확인 문구 (예: 만 나이). */
+  success?: string | null;
   showPasswordLabel?: string;
-  hidePasswordLabel?: string;
+  tone?: 'default' | 'dark';
 };
 
 export const FormField = forwardRef<TextInput, FormFieldProps>(function FormField(
   {
+    error,
     label,
     hint,
     icon,
+    success,
     tone = 'default',
     showPasswordLabel = 'Show password',
     hidePasswordLabel = 'Hide password',
@@ -36,8 +42,10 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
   const isDark = tone === 'dark';
   const labelColor = isDark ? '#F6F6F7' : theme.colors.text;
   const mutedColor = isDark ? '#85858F' : theme.colors.textMuted;
-  const borderColor = focused ? theme.colors.primary : isDark ? '#34343B' : theme.colors.border;
   const backgroundColor = isDark ? '#1C1C21' : theme.colors.surface;
+  const idleBorder = isDark ? '#34343B' : theme.colors.border;
+  // 오류는 포커스보다 우선한다. 입력 중에도 무엇이 잘못됐는지 계속 보이게 한다.
+  const borderColor = error ? theme.colors.danger : focused ? theme.colors.primary : idleBorder;
 
   return (
     <View style={styles.container}>
@@ -49,6 +57,7 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
         <TextInput
           ref={ref}
           accessibilityLabel={props.accessibilityLabel ?? label}
+          aria-invalid={Boolean(error)}
           onBlur={(event) => {
             setFocused(false);
             onBlur?.(event);
@@ -79,7 +88,19 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
           </Pressable>
         ) : null}
       </View>
-      {hint ? <Text style={[styles.hint, { color: mutedColor }]}>{hint}</Text> : null}
+      {error ? (
+        <View style={styles.noteRow}>
+          <Ionicons color={theme.colors.danger} name="alert-circle" size={14} />
+          <Text style={[styles.note, { color: theme.colors.danger }]}>{error}</Text>
+        </View>
+      ) : success ? (
+        <View style={styles.noteRow}>
+          <Ionicons color={theme.colors.primary} name="checkmark-circle" size={14} />
+          <Text style={[styles.note, { color: theme.colors.primary }]}>{success}</Text>
+        </View>
+      ) : hint ? (
+        <Text style={[styles.note, { color: mutedColor }]}>{hint}</Text>
+      ) : null}
     </View>
   );
 });
@@ -104,7 +125,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  hint: { fontSize: 12, lineHeight: 17 },
+  noteRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 5 },
+  note: { ...typography.caption, flex: 1, fontSize: 12, lineHeight: 17 },
   visibilityButton: { padding: 2 },
   pressed: { opacity: 0.55 },
 });

@@ -118,6 +118,8 @@ const ONBOARDING_SECTIONS = [
 ] as const;
 
 type ProfileFormMode = 'onboarding' | 'edit';
+/** 오류를 직접 표시할 수 있는 입력. 선택형 항목은 footer 안내로만 처리한다. */
+type SetupField = 'birthDate' | 'displayName';
 
 function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const { t, i18n } = useTranslation();
@@ -153,6 +155,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const [consented, setConsented] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<SetupField | null>(null);
   const [profileHydrated, setProfileHydrated] = useState(false);
 
   const {
@@ -263,52 +266,69 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   function goToStep(nextStep: SetupStep) {
     setStep(nextStep);
     setMessage(null);
+    setErrorField(null);
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       if (Platform.OS === 'web') window.scrollTo({ top: 0, behavior: 'auto' });
     });
   }
 
-  function getStepError(targetStep: SetupStep) {
+  /**
+   * 해당 단계에서 아직 채워지지 않은 항목.
+   *
+   * `field`는 문제가 된 입력을 가리키며, 그 필드에 오류를 직접 표시해
+   * 사용자가 어디를 고쳐야 하는지 찾아 헤매지 않게 한다.
+   */
+  function getStepIssue(
+    targetStep: SetupStep,
+  ): { field: SetupField | null; message: string } | null {
     const targetSection = getFormSection(targetStep, requestedEditMode);
+    const issue = (message: string, field: SetupField | null = null) => ({ field, message });
 
     if (targetSection === 'basic') {
-      if (displayName.trim().length < 2) return t('profileSetup.errors.displayName');
-      if (!isAdult(birthDate)) return t('profileSetup.errors.birthDate');
-      if (!gender) return t('profileSetup.errors.gender');
-      if (!countryCode) return t('profileSetup.errors.country');
+      if (displayName.trim().length < 2)
+        return issue(t('profileSetup.errors.displayName'), 'displayName');
+      if (!isAdult(birthDate)) return issue(t('profileSetup.errors.birthDate'), 'birthDate');
+      if (!gender) return issue(t('profileSetup.errors.gender'));
+      if (!countryCode) return issue(t('profileSetup.errors.country'));
       if (
         profileDetails.heightCm !== null &&
         (profileDetails.heightCm < 120 || profileDetails.heightCm > 220)
       ) {
-        return '키는 120~220cm 사이로 입력해주세요.';
+        return issue('키는 120~220cm 사이로 입력해주세요.');
       }
     }
 
     if (targetSection === 'preferences') {
-      if (interestedIn.length === 0) return t('profileSetup.errors.interestedIn');
-      if (minAge < 18 || maxAge > 90 || minAge > maxAge) return t('profileSetup.errors.ageRange');
-      if (interestsError) return t('profileSetup.errors.interestsLoad');
-      if (selectedInterestIds.length < 3) return t('profileSetup.errors.interests');
+      if (interestedIn.length === 0) return issue(t('profileSetup.errors.interestedIn'));
+      if (minAge < 18 || maxAge > 90 || minAge > maxAge)
+        return issue(t('profileSetup.errors.ageRange'));
+      if (interestsError) return issue(t('profileSetup.errors.interestsLoad'));
+      if (selectedInterestIds.length < 3) return issue(t('profileSetup.errors.interests'));
     }
 
     if (targetSection === 'about') {
-      if (profileTags.connection_goal.length === 0) return t('profileSetup.errors.connectionGoal');
-      if (profileTags.vibe.length === 0) return t('profileSetup.errors.vibe');
-      if (!nativeLanguage) return t('profileSetup.errors.nativeLanguage');
+      if (profileTags.connection_goal.length === 0)
+        return issue(t('profileSetup.errors.connectionGoal'));
+      if (profileTags.vibe.length === 0) return issue(t('profileSetup.errors.vibe'));
+      if (!nativeLanguage) return issue(t('profileSetup.errors.nativeLanguage'));
     }
 
     if (targetSection === 'photos') {
-      if (photos.length === 0) return t('profileSetup.errors.photos');
-      if (!requestedEditMode && !consented) return t('profileSetup.errors.consent');
+      if (photos.length === 0) return issue(t('profileSetup.errors.photos'));
+      if (!requestedEditMode && !consented) return issue(t('profileSetup.errors.consent'));
     }
 
     return null;
   }
 
   function continueSetup() {
-    const error = getStepError(step);
-    if (error) return setMessage(error);
+    const issue = getStepIssue(step);
+    if (issue) {
+      setMessage(issue.message);
+      setErrorField(issue.field);
+      return;
+    }
     goToStep((step + 1) as SetupStep);
   }
 
@@ -317,16 +337,18 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
 
     const stepsToValidate: SetupStep[] = requestedEditMode ? [0, 1, 2, 3, 4] : [0, 1, 2, 3];
     for (const targetStep of stepsToValidate) {
-      const error = getStepError(targetStep);
-      if (error) {
+      const issue = getStepIssue(targetStep);
+      if (issue) {
         goToStep(targetStep);
-        setMessage(error);
+        setMessage(issue.message);
+        setErrorField(issue.field);
         return;
       }
     }
 
     setLoading(true);
     setMessage(null);
+    setErrorField(null);
     let saveStage: 'profile' | 'details' | 'photos' | 'review' = 'profile';
     let uploadedPaths: string[] = [];
     try {
@@ -385,6 +407,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       if (uploadedPaths.length > 0) {
         await profilePhotoService.removeStorageFiles(uploadedPaths);
       }
+      setErrorField(null);
       setMessage(getProfileSaveError(error, saveStage));
     } finally {
       setUploadProgress(null);
@@ -577,7 +600,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                 <FormField
                   label={t('profileSetup.displayName')}
                   value={displayName}
-                  onChangeText={setDisplayName}
+                  onChangeText={(value) => {
+                    setDisplayName(value);
+                    if (errorField === 'displayName') setErrorField(null);
+                  }}
+                  error={errorField === 'displayName' ? message : null}
                   maxLength={50}
                   placeholder={t('profileSetup.displayNamePlaceholder')}
                   autoComplete="name"
@@ -585,7 +612,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                 <FormField
                   label={t('profileSetup.birthDate')}
                   value={birthDate}
-                  onChangeText={(value) => setBirthDate(formatBirthDateInput(value))}
+                  onChangeText={(value) => {
+                    setBirthDate(formatBirthDateInput(value));
+                    if (errorField === 'birthDate') setErrorField(null);
+                  }}
+                  error={errorField === 'birthDate' ? message : null}
                   maxLength={10}
                   inputMode="numeric"
                   keyboardType="number-pad"
@@ -680,7 +711,10 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                   photos={photos}
                   uploadProgress={uploadProgress}
                   onChange={setPhotos}
-                  onError={(value) => setMessage(value || null)}
+                  onError={(value) => {
+                    setErrorField(null);
+                    setMessage(value || null);
+                  }}
                 />
                 {!requestedEditMode ? (
                   <View style={styles.consentBlock}>
@@ -696,7 +730,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
           </ScrollView>
 
           <View style={styles.footer}>
-            {message ? (
+            {/* 필드에 직접 표시된 오류는 footer에서 되풀이하지 않는다. */}
+            {message && !errorField ? (
               <View style={styles.messageRow}>
                 <Ionicons name="information-circle" size={17} color="#FF769F" />
                 <Text style={styles.message}>{message}</Text>

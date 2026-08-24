@@ -17,16 +17,18 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { ConsentRow } from '@/components/ConsentRow';
 import { FormField } from '@/components/FormField';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { palette, spacing, touchSlop } from '@/constants/theme';
+import { palette, radius, spacing, touchSlop } from '@/constants/theme';
 import { AuthWelcome } from '@/features/auth/components/AuthWelcome';
 import { GoogleAuthButton } from '@/features/auth/components/GoogleAuthButton';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
 import { authService } from '@/features/auth/services/auth-service';
-import { isAdult } from '@/features/auth/utils/age';
+import { getAge, isAdult } from '@/features/auth/utils/age';
 import { formatBirthDateInput } from '@/features/auth/utils/format-birth-date';
 
 type AuthStage = 'welcome' | 'sign-in' | 'sign-up';
 type LoadingMethod = 'email' | 'google' | null;
+type FieldKey = 'birthDate' | 'consent' | 'email' | 'password';
+type FieldErrors = Partial<Record<FieldKey, string>>;
 
 export default function LoginRoute() {
   const router = useRouter();
@@ -39,23 +41,52 @@ export default function LoginRoute() {
   const [consented, setConsented] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<LoadingMethod>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // 실패는 message, 성공 안내는 notice로 나눈다. 같은 붉은 스타일로 섞이지 않게 한다.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const isSignUp = stage === 'sign-up';
   const loading = loadingMethod !== null;
+  const age = getAge(birthDate);
+  // 날짜가 완성되는 즉시 판정한다. 제출까지 기다렸다가 알려주지 않는다.
+  const birthDateError =
+    fieldErrors.birthDate ?? (age !== null && age < 18 ? t('auth.adultOnly') : null);
+
+  /** 사용자가 해당 필드를 고치면 그 필드 오류만 즉시 지운다. */
+  function clearFieldError(field: FieldKey) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  /** 모든 필드를 한 번에 검사해 잘못된 곳을 동시에 보여준다. */
+  function collectFieldErrors(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (!email.trim().toLowerCase().includes('@')) errors.email = t('auth.invalidEmail');
+    if (password.length < 8) errors.password = t('auth.invalidPassword');
+    if (isSignUp && !isAdult(birthDate)) errors.birthDate = t('auth.adultOnly');
+    if (isSignUp && !consented) errors.consent = t('auth.consentRequired');
+    return errors;
+  }
 
   function openStage(nextStage: Exclude<AuthStage, 'welcome'>) {
     setStage(nextStage);
     setMessage(null);
+    setNotice(null);
+    setFieldErrors({});
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: false }));
   }
 
   async function submit() {
     const normalizedEmail = email.trim().toLowerCase();
     setMessage(null);
+    setNotice(null);
 
-    if (!normalizedEmail.includes('@')) return setMessage(t('auth.invalidEmail'));
-    if (password.length < 8) return setMessage(t('auth.invalidPassword'));
-    if (isSignUp && !isAdult(birthDate)) return setMessage(t('auth.adultOnly'));
-    if (isSignUp && !consented) return setMessage(t('auth.consentRequired'));
+    const errors = collectFieldErrors();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setLoadingMethod('email');
     try {
@@ -66,7 +97,7 @@ export default function LoginRoute() {
           birthDate,
         );
         if (error) throw error;
-        if (!data.session) setMessage(t('auth.checkInbox'));
+        if (!data.session) setNotice(t('auth.checkInbox'));
       } else {
         const { error } = await authService.signInWithEmail(normalizedEmail, password);
         if (error) throw error;
@@ -80,8 +111,15 @@ export default function LoginRoute() {
 
   async function submitGoogle() {
     setMessage(null);
-    if (isSignUp && !isAdult(birthDate)) return setMessage(t('auth.adultOnly'));
-    if (isSignUp && !consented) return setMessage(t('auth.consentRequired'));
+    setNotice(null);
+
+    if (isSignUp) {
+      const errors: FieldErrors = {};
+      if (!isAdult(birthDate)) errors.birthDate = t('auth.adultOnly');
+      if (!consented) errors.consent = t('auth.consentRequired');
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+    }
 
     setLoadingMethod('google');
     try {
@@ -153,17 +191,26 @@ export default function LoginRoute() {
                     tone="dark"
                     label={t('auth.birthDate')}
                     value={birthDate}
-                    onChangeText={(value) => setBirthDate(formatBirthDateInput(value))}
+                    onChangeText={(value) => {
+                      setBirthDate(formatBirthDateInput(value));
+                      clearFieldError('birthDate');
+                    }}
                     placeholder={t('auth.birthDatePlaceholder')}
                     inputMode="numeric"
                     keyboardType="number-pad"
                     maxLength={10}
+                    error={birthDateError}
+                    success={age !== null && age >= 18 ? t('auth.ageConfirmed', { age }) : null}
                     hint={t('auth.birthDateHint')}
                   />
                   <ConsentRow
                     dark
                     checked={consented}
-                    onPress={() => setConsented((value) => !value)}
+                    error={fieldErrors.consent}
+                    onPress={() => {
+                      setConsented((value) => !value);
+                      clearFieldError('consent');
+                    }}
                     label={t('auth.consent')}
                   />
                   <View style={styles.policyLinks}>
@@ -197,7 +244,11 @@ export default function LoginRoute() {
                 tone="dark"
                 label={t('auth.email')}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  clearFieldError('email');
+                }}
+                error={fieldErrors.email}
                 placeholder={t('auth.emailPlaceholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -207,7 +258,12 @@ export default function LoginRoute() {
                 tone="dark"
                 label={t('auth.password')}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  clearFieldError('password');
+                }}
+                error={fieldErrors.password}
+                hint={isSignUp ? t('auth.passwordHint') : undefined}
                 placeholder={t('auth.passwordPlaceholder')}
                 secureTextEntry
                 autoCapitalize="none"
@@ -228,7 +284,18 @@ export default function LoginRoute() {
                 </Pressable>
               ) : null}
 
-              {message ? <Text style={styles.message}>{message}</Text> : null}
+              {message ? (
+                <View style={styles.messageRow}>
+                  <Ionicons color="#FF769F" name="alert-circle" size={15} />
+                  <Text style={styles.message}>{message}</Text>
+                </View>
+              ) : null}
+              {notice ? (
+                <View style={styles.noticeRow}>
+                  <Ionicons color={palette.lime} name="mail-unread-outline" size={15} />
+                  <Text style={styles.notice}>{notice}</Text>
+                </View>
+              ) : null}
               <PrimaryButton
                 label={t(isSignUp ? 'auth.createAccount' : 'auth.signIn')}
                 disabled={loading}
@@ -327,7 +394,19 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#2A2A30' },
   dividerLabel: { color: '#74747D', fontSize: 10, fontWeight: '800' },
-  message: { color: '#FF769F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  messageRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 6 },
+  message: { color: '#FF769F', flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  noticeRow: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(201,255,46,0.09)',
+    borderColor: 'rgba(201,255,46,0.32)',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 7,
+    padding: spacing.sm,
+  },
+  notice: { color: '#DCFF87', flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   switchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

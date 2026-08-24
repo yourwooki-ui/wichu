@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { palette, radius, spacing } from '@/constants/theme';
+import { palette, radius, spacing, typography } from '@/constants/theme';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
 
 const WELCOME_PROFILE_IMAGE =
@@ -20,15 +21,36 @@ type AuthWelcomeProps = {
 
 export function AuthWelcome({ onCreateAccount, onSignIn }: AuthWelcomeProps) {
   const { t } = useTranslation();
+  // 사진 속 인물을 가리키는 미리보기 카드는 사진이 실제로 보일 때만 띄운다.
+  // 실패 판정에 onError를 쓸 수 없다. 느린 네트워크에서는 요청이 에러 없이 멈춰 있어
+  // onError가 끝내 불리지 않기 때문에, "로드 완료"를 기준으로 삼는다.
+  const [heroReady, setHeroReady] = useState(false);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
+        {/*
+          첫 화면이 외부 CDN 한 장에 좌우되지 않도록 브랜드 배경을 항상 먼저 깐다.
+          네트워크가 느리거나 끊겨도 검정 여백 대신 의도된 화면이 보인다.
+        */}
+        <LinearGradient
+          colors={['#17171C', '#0B0B0F', palette.trueBlack]}
+          locations={[0, 0.55, 1]}
+          style={styles.brandBed}
+        />
+        <LinearGradient
+          colors={['rgba(255,45,111,0.22)', 'rgba(255,45,111,0)']}
+          end={{ x: 0.5, y: 1 }}
+          start={{ x: 0.5, y: 0 }}
+          style={styles.brandGlow}
+        />
         <Image
           source={{ uri: WELCOME_PROFILE_IMAGE }}
           cachePolicy="memory-disk"
           contentFit="cover"
           contentPosition="center"
+          onError={() => setHeroReady(false)}
+          onLoad={() => setHeroReady(true)}
           transition={250}
           style={styles.profileImage}
         />
@@ -44,7 +66,7 @@ export function AuthWelcome({ onCreateAccount, onSignIn }: AuthWelcomeProps) {
         </View>
 
         <View style={styles.content}>
-          <View style={styles.profilePreview}>
+          <View style={[styles.profilePreview, !heroReady && styles.hidden]}>
             <View style={styles.nameRow}>
               <Text style={styles.profileName}>Lina, 23</Text>
               <Ionicons name="checkmark-circle" size={20} color={palette.pink} />
@@ -99,8 +121,11 @@ const styles = StyleSheet.create({
     borderColor: '#242429',
     backgroundColor: palette.trueBlack,
   },
+  brandBed: { position: 'absolute', inset: 0 },
+  brandGlow: { position: 'absolute', height: '46%', left: 0, right: 0, top: 0 },
   profileImage: { position: 'absolute', inset: 0 },
   gradient: { position: 'absolute', inset: 0 },
+  hidden: { display: 'none' },
   topRow: {
     zIndex: 2,
     minHeight: 64,
@@ -118,7 +143,7 @@ const styles = StyleSheet.create({
   },
   profilePreview: { marginBottom: 18 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  profileName: { color: palette.white, fontSize: 25, lineHeight: 30, fontWeight: '900' },
+  profileName: { ...typography.title, color: palette.white },
   tags: { marginTop: spacing.sm, flexDirection: 'row', gap: 7 },
   tag: {
     paddingHorizontal: 10,
@@ -128,13 +153,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: 'rgba(0,0,0,0.28)',
   },
-  tagText: { color: palette.white, fontSize: 11, fontWeight: '800' },
+  tagText: { ...typography.caption, color: palette.white, fontWeight: '800' },
   pitch: {
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: '#333338',
   },
-  kicker: { color: palette.lime, fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
+  kicker: { ...typography.overline, color: palette.lime },
   title: {
     maxWidth: 390,
     marginTop: spacing.xs,
@@ -144,13 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -1,
   },
-  subtitle: {
-    maxWidth: 390,
-    marginTop: 6,
-    color: palette.darkMuted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
+  subtitle: { ...typography.bodySm, color: palette.darkMuted, marginTop: 6, maxWidth: 390 },
   actions: { marginTop: 18, gap: 9 },
   ageNotice: {
     marginTop: 2,
