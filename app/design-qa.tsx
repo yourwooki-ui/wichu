@@ -1,4 +1,5 @@
 import { Redirect } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
@@ -14,7 +15,9 @@ import {
 import { GoldBadge } from '@/components/GoldBadge';
 import { StateView } from '@/components/StateView';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
+import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
+import { MatchesScreen } from '@/features/matches/screens/MatchesScreen';
 import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -29,6 +32,8 @@ import { elevation, layout, radius, spacing, typography } from '@/constants/them
  */
 export default function DesignQaScreen() {
   const theme = useAppTheme();
+  const [qaProfiles, setQaProfiles] = useState(mockProfiles);
+  const [matchPreviewOpen, setMatchPreviewOpen] = useState(false);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -135,17 +140,36 @@ export default function DesignQaScreen() {
           />
         </Section>
 
-        {/* Discover 덱도 인증 뒤라 열 수 없다. Pick/Pass 액션과 레이아웃을 여기서 확인한다. */}
+        {/* Discover 덱도 인증 뒤라 열 수 없다. 스와이프 전환과 레이아웃을 여기서 확인한다. */}
         <Section title="Discover deck">
           <View style={styles.deckFrame}>
             <SwipeDeck
               error={null}
               isLoading={false}
               onAdjustFilters={() => {}}
-              onRetry={() => {}}
-              onSwipe={() => {}}
-              profiles={mockProfiles}
+              onRetry={() => setQaProfiles(mockProfiles)}
+              onSwipe={() =>
+                setQaProfiles((current) =>
+                  current.length > 1 ? [...current.slice(1), current[0]] : current,
+                )
+              }
+              profiles={qaProfiles}
             />
+          </View>
+        </Section>
+
+        <Section title="Match moment">
+          <PrimaryButton label="매치 이펙트 보기" onPress={() => setMatchPreviewOpen(true)} />
+          <MatchCelebration
+            onChat={() => setMatchPreviewOpen(false)}
+            onContinue={() => setMatchPreviewOpen(false)}
+            profile={matchPreviewOpen ? mockProfiles[0] : null}
+          />
+        </Section>
+
+        <Section title="Matches screen">
+          <View style={styles.matchesFrame}>
+            <MatchesScreen />
           </View>
         </Section>
 
@@ -212,5 +236,6 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   deckFrame: { height: 620 },
+  matchesFrame: { borderRadius: radius.lg, height: 760, overflow: 'hidden' },
   tutorialFrame: { borderRadius: radius.lg, height: 780, overflow: 'hidden' },
 });

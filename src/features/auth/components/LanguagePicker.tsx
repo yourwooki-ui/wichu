@@ -1,13 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { CountryFlag } from '@/components/CountryFlag';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { radius, spacing, touchSlop, typography } from '@/constants/theme';
-import { AppLanguage, getAppLanguage, setAppLanguage, supportedLanguages } from '@/i18n';
+import {
+  type AppLanguage,
+  getAppLanguage,
+  getAppTextDirection,
+  setAppLanguage,
+  supportedLanguages,
+} from '@/i18n';
 
 type LanguagePickerProps = {
   dark?: boolean;
@@ -15,20 +22,10 @@ type LanguagePickerProps = {
 
 export function LanguagePicker({ dark = false }: LanguagePickerProps) {
   const theme = useAppTheme();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const currentLanguage = getAppLanguage();
   const currentLabel = supportedLanguages.find(({ code }) => code === currentLanguage)?.label;
-  const sheetBackground = dark ? '#111114' : theme.colors.surface;
-  const sheetText = dark ? '#FFFFFF' : theme.colors.text;
-  const sheetMuted = dark ? '#A8A8B0' : theme.colors.textMuted;
-  const sheetBorder = dark ? '#303036' : theme.colors.border;
-  const optionBackground = dark ? '#19191D' : theme.colors.background;
-
-  async function chooseLanguage(language: AppLanguage) {
-    setOpen(false);
-    await setAppLanguage(language);
-  }
 
   return (
     <>
@@ -53,64 +50,101 @@ export function LanguagePicker({ dark = false }: LanguagePickerProps) {
         <Ionicons name="chevron-down" size={14} color={dark ? '#FFFFFF' : theme.colors.textMuted} />
       </Pressable>
 
-      <AppModal
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-        transparent
-        visible={open}
-      >
-        <View style={styles.modalRoot}>
-          <Pressable
-            accessibilityLabel={t('auth.back')}
-            onPress={() => setOpen(false)}
-            style={styles.backdrop}
-          />
-          <SafeAreaView
-            edges={['bottom']}
-            style={[styles.sheet, { backgroundColor: sheetBackground }]}
-          >
-            <View style={[styles.handle, { backgroundColor: sheetBorder }]} />
-            <Text style={[styles.title, { color: sheetText }]}>{t('auth.chooseLanguage')}</Text>
-            <Text style={[styles.hint, { color: sheetMuted }]}>{t('auth.languageHint')}</Text>
+      <LanguagePickerModal dark={dark} onClose={() => setOpen(false)} visible={open} />
+    </>
+  );
+}
 
-            <View style={styles.options}>
-              {supportedLanguages.map((language) => {
-                const selected = i18n.resolvedLanguage === language.code;
-                return (
-                  <Pressable
-                    key={language.code}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    onPress={() => chooseLanguage(language.code)}
-                    style={[
-                      styles.option,
-                      {
-                        borderColor: selected ? theme.colors.primary : sheetBorder,
-                        backgroundColor: selected ? `${theme.colors.primary}14` : optionBackground,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.optionLabel, { color: sheetText }]}>{language.label}</Text>
-                    <View
+export function LanguagePickerModal({
+  dark = false,
+  onClose,
+  visible,
+}: {
+  dark?: boolean;
+  onClose: () => void;
+  visible: boolean;
+}) {
+  const theme = useAppTheme();
+  const { t } = useTranslation();
+  const currentLanguage = getAppLanguage();
+  const sheetBackground = dark ? '#111114' : theme.colors.surface;
+  const sheetText = dark ? '#FFFFFF' : theme.colors.text;
+  const sheetMuted = dark ? '#A8A8B0' : theme.colors.textMuted;
+  const sheetBorder = dark ? '#303036' : theme.colors.border;
+  const optionBackground = dark ? '#19191D' : theme.colors.background;
+
+  async function chooseLanguage(language: AppLanguage) {
+    onClose();
+    await setAppLanguage(language);
+  }
+
+  return (
+    <AppModal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View style={styles.modalRoot}>
+        <Pressable accessibilityLabel={t('auth.back')} onPress={onClose} style={styles.backdrop} />
+        <SafeAreaView
+          edges={['bottom']}
+          style={[styles.sheet, { backgroundColor: sheetBackground }]}
+        >
+          <View style={[styles.handle, { backgroundColor: sheetBorder }]} />
+          <Text style={[styles.title, { color: sheetText }]}>{t('auth.chooseLanguage')}</Text>
+          <Text style={[styles.hint, { color: sheetMuted }]}>{t('auth.languageHint')}</Text>
+
+          <FlatList
+            contentContainerStyle={styles.options}
+            data={supportedLanguages}
+            keyExtractor={({ code }) => code}
+            renderItem={({ item: language }) => {
+              const selected = currentLanguage === language.code;
+              const direction = getAppTextDirection(language.code);
+              return (
+                <Pressable
+                  accessibilityLabel={`${language.label}, ${language.englishLabel}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => chooseLanguage(language.code)}
+                  style={[
+                    styles.option,
+                    {
+                      borderColor: selected ? theme.colors.primary : sheetBorder,
+                      backgroundColor: selected ? `${theme.colors.primary}14` : optionBackground,
+                    },
+                  ]}
+                >
+                  <CountryFlag countryCode={language.countryCode} label={language.englishLabel} />
+                  <View style={styles.optionCopy}>
+                    <Text
                       style={[
-                        styles.radio,
-                        { borderColor: selected ? theme.colors.primary : sheetBorder },
+                        styles.optionLabel,
+                        { color: sheetText, writingDirection: direction },
                       ]}
                     >
-                      {selected ? (
-                        <View
-                          style={[styles.radioDot, { backgroundColor: theme.colors.primary }]}
-                        />
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </SafeAreaView>
-        </View>
-      </AppModal>
-    </>
+                      {language.label}
+                    </Text>
+                    {language.label !== language.englishLabel ? (
+                      <Text style={[styles.optionHint, { color: sheetMuted }]}>
+                        {language.englishLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View
+                    style={[
+                      styles.radio,
+                      { borderColor: selected ? theme.colors.primary : sheetBorder },
+                    ]}
+                  >
+                    {selected ? (
+                      <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            }}
+            showsVerticalScrollIndicator={false}
+          />
+        </SafeAreaView>
+      </View>
+    </AppModal>
   );
 }
 
@@ -130,6 +164,7 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 460,
+    maxHeight: '82%',
     paddingTop: spacing.sm,
     paddingHorizontal: 22,
     paddingBottom: spacing.lg,
@@ -139,17 +174,19 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 4, alignSelf: 'center', borderRadius: 2 },
   title: { marginTop: spacing.lg, fontSize: 22, lineHeight: 28, fontWeight: '900' },
   hint: { marginTop: spacing.xs, fontSize: 13, lineHeight: 19 },
-  options: { marginTop: spacing.lg, gap: spacing.sm },
+  options: { gap: spacing.sm, paddingBottom: spacing.sm, paddingTop: spacing.lg },
   option: {
     minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderRadius: radius.md,
   },
-  optionLabel: { fontSize: 16, fontWeight: '800' },
+  optionCopy: { flex: 1 },
+  optionLabel: { fontSize: 15, fontWeight: '800' },
+  optionHint: { fontSize: 11, marginTop: 2 },
   radio: {
     width: 22,
     height: 22,

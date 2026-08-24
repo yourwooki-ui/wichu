@@ -133,7 +133,7 @@ export function ChatListScreen() {
               value={query}
             />
             {query ? (
-              <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
+              <Pressable accessibilityLabel="검색어 지우기" onPress={() => setQuery('')}>
                 <Ionicons color={palette.inkMuted} name="close-circle" size={20} />
               </Pressable>
             ) : null}
@@ -167,7 +167,7 @@ export function ChatListScreen() {
           {!matchesQuery.isLoading && !listError
             ? conversations.map((conversation) => (
                 <Pressable
-                  accessibilityLabel={`Open chat with ${conversation.profile.name}`}
+                  accessibilityLabel={`${conversation.profile.name}님과의 대화 열기`}
                   key={conversation.matchId}
                   onPress={() => router.push(`/chat/${conversation.matchId}`)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  unreadPillText: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+  unreadPillText: { color: palette.pink, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   list: { marginTop: 7, paddingBottom: 25, paddingHorizontal: 12 },
   row: {
     alignItems: 'center',
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     paddingHorizontal: 5,
   },
-  unreadCountText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  unreadCountText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   translatedRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
-  translatedText: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
+  translatedText: { color: palette.inkMuted, fontSize: 11, fontWeight: '700' },
 });

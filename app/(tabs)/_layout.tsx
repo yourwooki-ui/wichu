@@ -27,7 +27,7 @@ export default function TabLayout() {
         lazy: true,
         sceneStyle: { backgroundColor: theme.colors.background },
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarAllowFontScaling: false,
+        tabBarAllowFontScaling: true,
         tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: theme.colors.tabInactive,
         tabBarButton: ({ ref: _ref, ...props }) => (
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { outlineWidth: 0 } }),
   },
   tabBarLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     letterSpacing: 0.1,
-    lineHeight: 13,
-    marginTop: 4,
+    lineHeight: 15,
+    marginTop: 5,
   },
 });

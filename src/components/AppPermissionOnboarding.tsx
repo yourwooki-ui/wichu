@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { backgroundColor: palette.pink, height: '100%' },
-  stepText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
+  stepText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
   visual: {
     alignItems: 'center',
     borderRadius: 24,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   iconCircleYellow: { backgroundColor: '#FFFDF7' },
   eyebrow: {
     color: palette.pink,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.3,
     marginTop: 20,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     marginTop: 7,
   },
-  description: { color: palette.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 10 },
+  description: { color: palette.inkMuted, fontSize: 13, lineHeight: 20, marginTop: 10 },
   trustRow: {
     alignItems: 'center',
     backgroundColor: '#EDF8E8',
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
-  trustText: { color: '#176E4D', fontSize: 10, fontWeight: '900' },
-  message: { color: palette.danger, fontSize: 10, lineHeight: 15, marginTop: 10 },
+  trustText: { color: '#176E4D', fontSize: 11, fontWeight: '900' },
+  message: { color: palette.danger, fontSize: 11, lineHeight: 16, marginTop: 10 },
   primary: {
     alignItems: 'center',
     backgroundColor: palette.pink,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   primaryText: { color: palette.white, fontSize: 13, fontWeight: '900' },
-  secondary: { alignItems: 'center', justifyContent: 'center', minHeight: 43 },
-  secondaryText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
+  secondary: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  secondaryText: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
   pressed: { opacity: 0.68 },
 });

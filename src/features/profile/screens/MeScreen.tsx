@@ -605,12 +605,12 @@ const styles = StyleSheet.create({
   profileHeroHeading: { flex: 1, minWidth: 0, paddingRight: 12 },
   profileHeroEyebrow: {
     color: palette.pink,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
   profileHeroTitle: { ...typography.title, color: palette.ink, marginTop: 3 },
-  profileHeroAccount: { color: palette.inkMuted, fontSize: 11, marginTop: 4 },
+  profileHeroAccount: { color: palette.inkMuted, fontSize: 12, marginTop: 4 },
   profileEditAction: {
     alignItems: 'center',
     backgroundColor: palette.ink,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 10,
   },
-  profileEditActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  profileEditActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   reviewNotice: {
     alignItems: 'flex-start',
     backgroundColor: '#FFF0F1',
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
   },
   reviewNoticeCopy: { flex: 1 },
   reviewNoticeTitle: { color: palette.danger, fontSize: 12, fontWeight: '900' },
-  reviewNoticeText: { color: palette.ink, fontSize: 11, lineHeight: 16, marginTop: 3 },
+  reviewNoticeText: { color: palette.ink, fontSize: 12, lineHeight: 18, marginTop: 3 },
   pendingNotice: {
     alignItems: 'flex-start',
     backgroundColor: palette.white,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   },
   pendingNoticeCopy: { flex: 1 },
   pendingNoticeTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  pendingNoticeText: { color: palette.inkMuted, fontSize: 10, lineHeight: 15, marginTop: 3 },
+  pendingNoticeText: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   statusStrip: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -666,8 +666,8 @@ const styles = StyleSheet.create({
   },
   statusCell: { alignItems: 'center', flex: 1, minWidth: 0 },
   statusDivider: { backgroundColor: '#E5E5E9', height: 31, width: StyleSheet.hairlineWidth },
-  statusLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4 },
-  statusValue: { fontSize: 10, fontWeight: '900', marginTop: 1, maxWidth: '92%' },
+  statusLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  statusValue: { fontSize: 11, fontWeight: '900', marginTop: 1, maxWidth: '92%' },
   attentionCard: {
     backgroundColor: palette.white,
     borderColor: '#E5E5E9',
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  attentionActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  attentionActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   missingList: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 14 },
   missingChip: {
     alignItems: 'center',
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -0.2,
   },
-  groupHint: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
+  groupHint: { color: palette.inkMuted, fontSize: 12, marginTop: 3 },
   managementHeading: { marginTop: 20, paddingHorizontal: 2 },
   quickGrid: {
     backgroundColor: '#DCDCE1',
@@ -745,8 +745,8 @@ const styles = StyleSheet.create({
     width: 58,
   },
   quickCopy: { flex: 1, marginLeft: 9, minWidth: 0 },
-  quickLabel: { color: palette.ink, fontSize: 11, fontWeight: '900' },
-  quickDetail: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
+  quickLabel: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  quickDetail: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   profilePreview: {
     backgroundColor: '#D8D8DE',
     borderRadius: 26,
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   previewPlaceholderTitle: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 11 },
   previewPlaceholderText: {
     color: 'rgba(255,255,255,0.78)',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     marginTop: 4,
   },
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 13,
   },
-  previewReviewText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  previewReviewText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   previewModeBadge: {
     alignItems: 'center',
     backgroundColor: 'rgba(17,17,19,0.46)',
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     right: 13,
     top: 13,
   },
-  previewModeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  previewModeText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   previewCopy: { bottom: 18, left: 18, position: 'absolute', right: 18 },
   previewNameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   previewName: { ...typography.title, color: palette.white },
@@ -815,8 +815,8 @@ const styles = StyleSheet.create({
   previewDiamond: { marginLeft: 3 },
   previewBio: {
     color: 'rgba(255,255,255,0.84)',
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 18,
     marginTop: 5,
     maxWidth: '90%',
   },
@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: radius.pill,
     color: palette.white,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     overflow: 'hidden',
     paddingHorizontal: 9,

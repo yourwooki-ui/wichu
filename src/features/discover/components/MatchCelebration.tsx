@@ -29,35 +29,66 @@ const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrationProps) {
   const visible = Boolean(profile);
   const [enter] = useState(() => new Animated.Value(0));
+  const [contentEnter] = useState(() => new Animated.Value(0));
+  const [markEnter] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (!visible) {
       enter.setValue(0);
+      contentEnter.setValue(0);
+      markEnter.setValue(0);
       return;
     }
 
-    // 매치는 이 앱에서 가장 중요한 순간이다. 조용히 떠 있기만 하지 않게 한다.
+    // 매치 순간은 한 번만 울리고, 카드 → 인증 마크 → 안내 순서로 시선이 흐르게 한다.
     hapticsService.success();
+    if (profile) {
+      AccessibilityInfo.announceForAccessibility(`${profile.name}님과 매치됐어요`);
+    }
 
     let cancelled = false;
     void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
       if (cancelled) return;
       if (reduceMotion) {
         enter.setValue(1);
+        contentEnter.setValue(1);
+        markEnter.setValue(1);
         return;
       }
-      Animated.spring(enter, {
-        bounciness: 9,
-        speed: 13,
-        toValue: 1,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
+      Animated.parallel([
+        Animated.spring(enter, {
+          bounciness: 8,
+          speed: 14,
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+        Animated.sequence([
+          Animated.delay(90),
+          Animated.spring(markEnter, {
+            bounciness: 11,
+            speed: 16,
+            toValue: 1,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.delay(120),
+          Animated.timing(contentEnter, {
+            duration: 180,
+            toValue: 1,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+        ]),
+      ]).start();
     });
 
     return () => {
       cancelled = true;
+      enter.stopAnimation();
+      contentEnter.stopAnimation();
+      markEnter.stopAnimation();
     };
-  }, [enter, visible]);
+  }, [contentEnter, enter, markEnter, profile, visible]);
 
   const cardStyle = {
     opacity: enter,
@@ -66,51 +97,81 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
       { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
     ],
   };
+  const contentStyle = {
+    opacity: contentEnter,
+    transform: [
+      { translateY: contentEnter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+    ],
+  };
+  const markStyle = {
+    opacity: markEnter,
+    transform: [{ scale: markEnter.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }],
+  };
+
+  const handleChat = () => {
+    hapticsService.selection();
+    onChat();
+  };
+
+  const handleContinue = () => {
+    hapticsService.selection();
+    onContinue();
+  };
 
   return (
     <AppModal
       animationType="fade"
-      onRequestClose={onContinue}
+      onRequestClose={handleContinue}
       transparent
       visible={Boolean(profile)}
     >
       <View style={styles.backdrop}>
         {profile ? (
-          <Animated.View accessibilityViewIsModal style={[styles.card, cardStyle]}>
+          <Animated.View
+            accessibilityLabel={`${profile.name}님과 매치됐어요. 이제 서로 메시지를 보낼 수 있어요.`}
+            accessibilityViewIsModal
+            style={[styles.card, cardStyle]}
+          >
             <LinearGradient colors={['#FFF1F6', '#FFFFFF']} style={styles.hero}>
-              <View style={styles.photoRing}>
-                <Image
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                  source={{ uri: profile.photos[0] }}
-                  style={styles.photo}
-                />
-              </View>
-              <View style={styles.matchMark}>
-                <Ionicons color={palette.white} name="checkmark" size={22} />
+              <View style={styles.profileCluster}>
+                <View style={styles.haloOuter} />
+                <View style={styles.haloInner} />
+                <View style={styles.photoRing}>
+                  <Image
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    source={{ uri: profile.photos[0] }}
+                    style={styles.photo}
+                  />
+                </View>
+                <Animated.View style={[styles.matchMark, markStyle]}>
+                  <Ionicons color={palette.white} name="checkmark" size={22} />
+                </Animated.View>
               </View>
             </LinearGradient>
-            <Text style={styles.eyebrow}>MATCH</Text>
-            <View style={styles.nameRow}>
-              <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
-              <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
-            </View>
-            <Text style={styles.body}>이제 서로 메시지를 보낼 수 있어요.</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onChat}
-              style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
-            >
-              <Ionicons color={palette.white} name="chatbubble" size={17} />
-              <Text style={styles.primaryActionText}>메시지 보내기</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onContinue}
-              style={({ pressed }) => [styles.secondaryAction, pressed && pressFeedback.control]}
-            >
-              <Text style={styles.secondaryActionText}>발견 계속하기</Text>
-            </Pressable>
+            <Animated.View style={[styles.content, contentStyle]}>
+              <Text style={styles.eyebrow}>IT&apos;S A MATCH</Text>
+              <View style={styles.nameRow}>
+                <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
+                <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
+              </View>
+              <Text style={styles.body}>서로의 선택이 닿았어요. 지금 가볍게 인사해보세요.</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleChat}
+                style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
+              >
+                <Ionicons color={palette.white} name="chatbubble" size={17} />
+                <Text style={styles.primaryActionText}>메시지 보내기</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleContinue}
+                style={({ pressed }) => [styles.secondaryAction, pressed && pressFeedback.control]}
+              >
+                <Text style={styles.secondaryActionText}>발견 계속하기</Text>
+              </Pressable>
+            </Animated.View>
           </Animated.View>
         ) : null}
       </View>
@@ -132,11 +193,25 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     maxWidth: 380,
     overflow: 'hidden',
-    paddingBottom: 20,
-    paddingHorizontal: 22,
+    paddingBottom: 18,
     width: '100%',
   },
-  hero: { alignItems: 'center', alignSelf: 'stretch', paddingBottom: 23, paddingTop: 28 },
+  hero: { alignItems: 'center', alignSelf: 'stretch', paddingBottom: 18, paddingTop: 24 },
+  profileCluster: { alignItems: 'center', height: 128, justifyContent: 'center', width: 150 },
+  haloOuter: {
+    backgroundColor: 'rgba(255,45,111,0.08)',
+    borderRadius: 69,
+    height: 138,
+    position: 'absolute',
+    width: 138,
+  },
+  haloInner: {
+    backgroundColor: 'rgba(255,45,111,0.11)',
+    borderRadius: 57,
+    height: 114,
+    position: 'absolute',
+    width: 114,
+  },
   photoRing: {
     borderColor: palette.pink,
     borderRadius: 55,
@@ -150,12 +225,14 @@ const styles = StyleSheet.create({
     borderColor: palette.white,
     borderRadius: 22,
     borderWidth: 3,
-    bottom: 12,
+    bottom: 0,
     height: 44,
     justifyContent: 'center',
     position: 'absolute',
+    right: 16,
     width: 44,
   },
+  content: { alignItems: 'center', paddingHorizontal: 22, width: '100%' },
   eyebrow: {
     color: palette.pink,
     fontSize: 11,

@@ -91,8 +91,8 @@ export const typography = {
   bodyStrong: { fontSize: 15, fontWeight: '700', letterSpacing: 0, lineHeight: 21 },
   bodySm: { fontSize: 13, fontWeight: '500', letterSpacing: 0, lineHeight: 19 },
   label: { fontSize: 12, fontWeight: '700', letterSpacing: 0, lineHeight: 16 },
-  caption: { fontSize: 11, fontWeight: '600', letterSpacing: 0, lineHeight: 15 },
-  overline: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6, lineHeight: 13 },
+  caption: { fontSize: 12, fontWeight: '600', letterSpacing: 0, lineHeight: 17 },
+  overline: { fontSize: 11, fontWeight: '900', letterSpacing: 1.35, lineHeight: 15 },
 } as const;
 
 export type TypographyToken = keyof typeof typography;

@@ -93,7 +93,13 @@ const styles = StyleSheet.create({
     width: 56,
   },
   heroTitle: { color: palette.ink, fontSize: 21, fontWeight: '900', marginTop: 15 },
-  heroBody: { color: palette.inkMuted, fontSize: 11, marginTop: 5, textAlign: 'center' },
+  heroBody: {
+    color: palette.inkMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 5,
+    textAlign: 'center',
+  },
   contactButton: {
     alignItems: 'center',
     backgroundColor: palette.ink,
@@ -105,10 +111,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   contactText: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  email: { color: palette.inkMuted, fontSize: 10, marginTop: 9 },
+  email: { color: palette.inkMuted, fontSize: 12, marginTop: 9 },
   sectionLabel: {
     color: palette.inkMuted,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
     marginBottom: 8,
@@ -118,5 +124,5 @@ const styles = StyleSheet.create({
   faqList: { backgroundColor: palette.white, borderRadius: 22, overflow: 'hidden' },
   faq: { borderBottomColor: '#ECECEF', borderBottomWidth: StyleSheet.hairlineWidth, padding: 17 },
   faqTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
-  faqBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
+  faqBody: { color: palette.inkMuted, fontSize: 13, lineHeight: 20, marginTop: 6 },
 });

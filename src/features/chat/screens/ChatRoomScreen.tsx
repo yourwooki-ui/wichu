@@ -47,6 +47,7 @@ import {
   type ReportReason,
 } from '@/features/settings/components/ReportReasonSheet';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { hapticsService } from '@/services/haptics-service';
 
 type ChatRoomScreenProps = { matchId: string };
 
@@ -198,6 +199,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     };
     setDraft('');
     setMessages((current) => [...current, optimisticMessage]);
+    hapticsService.selection();
     if (isMock) return;
     void deliver(optimisticMessage);
   };
@@ -313,12 +315,12 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       return;
     }
     Alert.alert(
-      `${profile.name}님과의 매치를 종료할까요?`,
-      '대화가 즉시 종료되고 서로 메시지를 주고받을 수 없게 됩니다. 차단과 신고는 별도로 할 수 있어요.',
+      '대화방에서 나갈까요?',
+      `나가면 ${profile.name}님과의 매치가 종료되고, 대화 내용은 양쪽에서 더 이상 볼 수 없습니다. 차단과 신고는 별도로 할 수 있어요.`,
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '매치 종료',
+          text: '대화방 나가기',
           style: 'destructive',
           onPress: async () => {
             setSafetyBusy(true);
@@ -331,7 +333,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               setSafetyOpen(false);
               router.replace('/(tabs)/chat');
             } catch {
-              Alert.alert('매치를 종료하지 못했어요', '이미 종료됐거나 연결이 불안정해요.');
+              Alert.alert('대화방에서 나가지 못했어요', '이미 종료됐거나 연결이 불안정해요.');
             } finally {
               setSafetyBusy(false);
             }
@@ -619,8 +621,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             <SafetyAction
               danger
               disabled={safetyBusy}
-              icon="heart-dislike-outline"
-              label="매치 종료"
+              icon="exit-outline"
+              label="대화방 나가기"
               onPress={confirmEndMatch}
             />
             <SafetyAction
@@ -705,7 +707,7 @@ function SafetyAction({
 }: {
   danger?: boolean;
   disabled: boolean;
-  icon: 'person-outline' | 'flag-outline' | 'heart-dislike-outline' | 'ban-outline';
+  icon: 'person-outline' | 'flag-outline' | 'exit-outline' | 'ban-outline';
   label: string;
   onPress: () => void;
 }) {

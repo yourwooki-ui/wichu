@@ -22,7 +22,7 @@ export function ConnectionAvatar({
 
   return (
     <Pressable
-      accessibilityLabel={`Open ${profile.name}'s profile`}
+      accessibilityLabel={`${profile.name} 프로필 열기`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.root, large && styles.rootLarge, pressed && styles.pressed]}

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo } from 'react';
+import { memo, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,12 +13,20 @@ import { getProfilePresence } from '@/features/profile/utils/profile-display';
 import { Profile } from '@/types/profile';
 
 type ProfileCardProps = {
+  accessibilityActions?: ComponentProps<typeof Pressable>['accessibilityActions'];
   profile: Profile;
   now: number;
+  onAccessibilityAction?: ComponentProps<typeof Pressable>['onAccessibilityAction'];
   onPress?: () => void;
 };
 
-function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
+function ProfileCardComponent({
+  accessibilityActions,
+  profile,
+  now,
+  onAccessibilityAction,
+  onPress,
+}: ProfileCardProps) {
   const { t } = useTranslation();
   const age = profile.age;
   const distanceLabel = profile.distanceKm != null ? `${profile.distanceKm}km 거리` : null;
@@ -29,14 +37,16 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
 
   return (
     <Pressable
+      accessibilityActions={accessibilityActions}
       accessibilityLabel={`${profile.name}, ${age}. ${presenceLabel ?? ''}. ${distanceLabel ?? ''}`}
       accessibilityRole="button"
+      onAccessibilityAction={onAccessibilityAction}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.card,
         profile.isGoldPass && styles.goldCardBorder,
         pressed && styles.cardPressed,
       ]}
-      onPress={onPress}
     >
       <Image
         source={{ uri: profile.photos[0] }}

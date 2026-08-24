@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
@@ -198,10 +198,16 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 2,
     position: 'absolute',
-    shadowColor: '#FF2D6F',
-    shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
+    ...Platform.select({
+      web: { boxShadow: '0 0 10px rgba(255,45,111,0.28)' },
+      default: {
+        elevation: 4,
+        shadowColor: '#FF2D6F',
+        shadowOffset: { height: 0, width: 0 },
+        shadowOpacity: 0.28,
+        shadowRadius: 10,
+      },
+    }),
   },
   callout: {
     backgroundColor: '#FAFAFC',

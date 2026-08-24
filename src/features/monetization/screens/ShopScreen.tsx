@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     width: 38,
   },
   currentPlanCopy: { flex: 1, marginLeft: 10 },
-  currentPlanLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700' },
+  currentPlanLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '700' },
   currentPlanName: { color: palette.ink, fontSize: 14, fontWeight: '900', marginTop: 2 },
   activePill: {
     alignItems: 'center',
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   activePillGold: { backgroundColor: '#FFF5CF' },
   activeDot: { backgroundColor: palette.lime, borderRadius: 4, height: 7, width: 7 },
   activeDotGold: { backgroundColor: '#D2A20C' },
-  activeText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
+  activeText: { color: palette.ink, fontSize: 11, fontWeight: '900' },
   goldHero: {
     borderColor: '#E4CA73',
     borderRadius: radius.lg,
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 52,
   },
-  goldPassLabel: { color: '#6E4D00', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  goldMicrocopy: { color: '#8A7235', fontSize: 10, marginTop: 2 },
+  goldPassLabel: { color: '#6E4D00', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
+  goldMicrocopy: { color: '#765F28', fontSize: 11, marginTop: 2 },
   goldTitle: {
     color: palette.ink,
     fontSize: 31,
@@ -319,8 +319,8 @@ const styles = StyleSheet.create({
   },
   goldDescription: {
     color: '#6F623D',
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 20,
     marginTop: 9,
     maxWidth: 310,
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 7,
   },
-  highlightText: { color: '#5F4A14', fontSize: 10, fontWeight: '800' },
+  highlightText: { color: '#5F4A14', fontSize: 11, fontWeight: '800' },
   goldAction: {
     alignItems: 'center',
     backgroundColor: palette.ink,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     marginTop: 19,
     minHeight: 48,
   },
-  goldActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
+  goldActionText: { color: palette.white, fontSize: 13, fontWeight: '900' },
   sectionTitle: {
     ...typography.heading,
     color: palette.ink,
@@ -388,10 +388,10 @@ const styles = StyleSheet.create({
     right: 11,
     top: 11,
   },
-  recommendText: { color: '#765400', fontSize: 10, fontWeight: '900' },
+  recommendText: { color: '#765400', fontSize: 11, fontWeight: '900' },
   planName: { color: palette.ink, fontSize: 15, fontWeight: '900', marginTop: 12 },
-  planDescription: { color: palette.inkMuted, flex: 1, fontSize: 11, lineHeight: 16, marginTop: 5 },
-  planPrice: { color: palette.ink, fontSize: 10, fontWeight: '900', marginTop: 13 },
+  planDescription: { color: palette.inkMuted, flex: 1, fontSize: 12, lineHeight: 17, marginTop: 5 },
+  planPrice: { color: palette.ink, fontSize: 12, fontWeight: '900', marginTop: 13 },
   planLink: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   compareLabel: {
     color: palette.inkMuted,
     flex: 1,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     textAlign: 'center',
   },
@@ -454,9 +454,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   compareRowFirst: { borderTopWidth: 0 },
-  compareFeature: { color: palette.ink, flex: 1, fontSize: 10, fontWeight: '700' },
+  compareFeature: { color: palette.ink, flex: 1, fontSize: 11, fontWeight: '700' },
   compareMark: { alignItems: 'center', justifyContent: 'center', width: 51 },
-  compareValue: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
+  compareValue: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   compareValueGold: { color: '#9A7000', fontWeight: '900' },
   purchaseManagement: {
     alignItems: 'center',
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   purchaseCopy: { flex: 1, marginLeft: 10 },
   purchaseTitle: { color: palette.ink, fontSize: 11, fontWeight: '900' },
-  purchaseText: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
+  purchaseText: { color: palette.inkMuted, fontSize: 11, marginTop: 3 },
   notice: {
     alignItems: 'flex-start',
     flexDirection: 'row',
@@ -484,6 +484,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 3,
   },
-  noticeText: { color: palette.inkMuted, flex: 1, fontSize: 10, lineHeight: 15 },
+  noticeText: { color: palette.inkMuted, flex: 1, fontSize: 12, lineHeight: 18 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
 });

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ImageSource } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -20,18 +21,22 @@ import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
+import { LanguagePickerModal } from '@/features/auth/components/LanguagePicker';
 import { settingsService } from '@/features/settings/services/settings-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { getAppLanguage, getAppLanguageMetadata } from '@/i18n';
 
 type BooleanSetting = 'discovery_enabled' | 'push_matches' | 'push_messages';
 
 export function SettingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { session, adminRole } = useAuthSession();
   const userId = session?.user.id;
   const [signingOut, setSigningOut] = useState(false);
   const [accountBusy, setAccountBusy] = useState(false);
+  const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const queryKey = ['settings', userId];
   const settingsQuery = useQuery({
     enabled: Boolean(userId),
@@ -51,87 +56,79 @@ export function SettingsScreen() {
     },
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(queryKey, context?.previous);
-      Alert.alert('설정을 저장하지 못했어요', '연결 상태를 확인하고 다시 시도해 주세요.');
+      Alert.alert(t('settings.saveFailed'), t('settings.checkConnection'));
     },
     onSuccess: (data) => queryClient.setQueryData(queryKey, data),
   });
 
   const signOut = () => {
-    Alert.alert('로그아웃할까요?', '이 기기에서 WICHU 계정 연결을 종료합니다.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('settings.signOutTitle'), t('settings.signOutBody'), [
+      { text: t('settings.cancel'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
           setSigningOut(true);
           const { error } = await authService.signOut();
           setSigningOut(false);
-          if (error) Alert.alert('로그아웃하지 못했어요', error.message);
+          if (error) Alert.alert(t('settings.saveFailed'), error.message);
         },
       },
     ]);
   };
 
   const confirmDeactivation = () =>
-    Alert.alert(
-      '계정을 비활성화할까요?',
-      '내 프로필 노출과 새로운 연결이 즉시 중지되며 현재 매치도 종료됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '비활성화',
-          style: 'destructive',
-          onPress: async () => {
-            setAccountBusy(true);
-            try {
-              await settingsService.deactivateMyAccount();
-              await authService.signOut();
-            } catch {
-              Alert.alert('비활성화하지 못했어요', '잠시 후 다시 시도해주세요.');
-            } finally {
-              setAccountBusy(false);
-            }
-          },
+    Alert.alert(t('settings.deactivateTitle'), t('settings.deactivateBody'), [
+      { text: t('settings.cancel'), style: 'cancel' },
+      {
+        text: t('settings.deactivate'),
+        style: 'destructive',
+        onPress: async () => {
+          setAccountBusy(true);
+          try {
+            await settingsService.deactivateMyAccount();
+            await authService.signOut();
+          } catch {
+            Alert.alert(t('settings.deactivateFailed'), t('settings.checkConnection'));
+          } finally {
+            setAccountBusy(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
 
   const confirmDeletion = () =>
-    Alert.alert(
-      '계정 삭제를 요청할까요?',
-      '프로필은 즉시 비공개 처리되고 운영 삭제 작업이 시작됩니다. 이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제 요청',
-          style: 'destructive',
-          onPress: async () => {
-            setAccountBusy(true);
-            try {
-              await settingsService.requestAccountDeletion();
-              await authService.clearLocalSession();
-            } catch {
-              Alert.alert('삭제를 요청하지 못했어요', '잠시 후 다시 시도해주세요.');
-            } finally {
-              setAccountBusy(false);
-            }
-          },
+    Alert.alert(t('settings.deleteTitle'), t('settings.deleteBody'), [
+      { text: t('settings.cancel'), style: 'cancel' },
+      {
+        text: t('settings.deleteRequest'),
+        style: 'destructive',
+        onPress: async () => {
+          setAccountBusy(true);
+          try {
+            await settingsService.requestAccountDeletion();
+            await authService.clearLocalSession();
+          } catch {
+            Alert.alert(t('settings.deleteFailed'), t('settings.checkConnection'));
+          } finally {
+            setAccountBusy(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('settings.back')}
           accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.headerButton}
         >
           <Ionicons color={palette.ink} name="chevron-back" size={24} />
         </Pressable>
-        <Text style={styles.headerTitle}>설정</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
@@ -145,10 +142,10 @@ export function SettingsScreen() {
           <View style={styles.stateIcon}>
             <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
           </View>
-          <Text style={styles.stateTitle}>설정을 불러오지 못했어요.</Text>
-          <Text style={styles.stateText}>연결 상태를 확인하고 다시 시도해 주세요.</Text>
+          <Text style={styles.stateTitle}>{t('settings.loadFailed')}</Text>
+          <Text style={styles.stateText}>{t('settings.checkConnection')}</Text>
           <Pressable onPress={() => settingsQuery.refetch()} style={styles.retryButton}>
-            <Text style={styles.retryText}>다시 시도</Text>
+            <Text style={styles.retryText}>{t('settings.retry')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -158,105 +155,111 @@ export function SettingsScreen() {
               <IllustratedIcon size={38} source={illustratedIcons.profileEdit} />
             </View>
             <View style={styles.accountCopy}>
-              <Text style={styles.accountLabel}>WICHU 계정</Text>
+              <Text style={styles.accountLabel}>{t('settings.account')}</Text>
               <Text numberOfLines={1} style={styles.accountEmail}>
-                {session?.user.email ?? '로그인된 계정'}
+                {session?.user.email ?? t('settings.signedInAccount')}
               </Text>
             </View>
             <Pressable onPress={() => router.push('/profile-edit')} style={styles.editPill}>
-              <Text style={styles.editPillText}>프로필 수정</Text>
+              <Text style={styles.editPillText}>{t('settings.editProfile')}</Text>
             </Pressable>
           </View>
 
-          <SettingSection title="탐색">
+          <SettingSection title={t('settings.sections.discovery')}>
             <SettingToggle
-              description="끄면 내 프로필이 다른 사람의 Discover에 표시되지 않아요."
+              description={t('settings.discoveryVisibleHint')}
               icon="sparkles-outline"
               illustration={illustratedIcons.discoveryVisible}
-              label="내 프로필 노출"
+              label={t('settings.discoveryVisible')}
               onValueChange={(value) => updateSetting.mutate({ key: 'discovery_enabled', value })}
               value={settingsQuery.data.discovery_enabled}
             />
           </SettingSection>
 
-          <SettingSection title="알림">
+          <SettingSection title={t('settings.sections.notifications')}>
             <SettingToggle
-              description="서로 Pick해 매치가 성사되면 알려드려요."
+              description={t('settings.newMatchesHint')}
               icon="people-outline"
               illustration={illustratedIcons.notification}
-              label="새로운 매치"
+              label={t('settings.newMatches')}
               onValueChange={(value) => updateSetting.mutate({ key: 'push_matches', value })}
               value={settingsQuery.data.push_matches}
             />
             <SettingToggle
-              description="새로운 채팅 메시지를 놓치지 않도록 알려드려요."
+              description={t('settings.newMessagesHint')}
               icon="chatbubble-outline"
               illustration={illustratedIcons.notification}
-              label="새 메시지"
+              label={t('settings.newMessages')}
               onValueChange={(value) => updateSetting.mutate({ key: 'push_messages', value })}
               value={settingsQuery.data.push_messages}
             />
           </SettingSection>
 
-          <SettingSection title="개인정보 및 안전">
+          <SettingSection title={t('settings.sections.privacy')}>
             <SettingLink
               icon="ban-outline"
               illustration={illustratedIcons.safety}
-              label="차단한 사용자"
+              label={t('settings.blockedUsers')}
               onPress={() => router.push('/blocked-users')}
-              value="관리"
+              value={t('settings.manage')}
             />
             <SettingLink
               icon="shield-checkmark-outline"
               illustration={illustratedIcons.safety}
-              label="커뮤니티 가이드"
+              label={t('settings.communityGuide')}
               onPress={() => router.push('/legal/community')}
             />
             <SettingLink
               icon="document-text-outline"
-              label="개인정보처리방침"
+              label={t('settings.privacyPolicy')}
               onPress={() => router.push('/legal/privacy')}
             />
           </SettingSection>
 
           {adminRole ? (
-            <SettingSection title="운영">
+            <SettingSection title={t('settings.sections.operations')}>
               <SettingLink
                 icon="shield-checkmark"
                 illustration={illustratedIcons.safety}
-                label="운영 센터"
+                label={t('settings.operationsCenter')}
                 onPress={() => router.push('/operations')}
-                value={adminRole === 'master' ? '마스터' : '운영자'}
+                value={adminRole === 'master' ? t('settings.master') : t('settings.operator')}
               />
             </SettingSection>
           ) : null}
 
-          <SettingSection title="계정">
+          <SettingSection title={t('settings.sections.account')}>
             <SettingLink
               icon="compass-outline"
               illustration={illustratedIcons.discoverySettings}
-              label="앱 사용법 다시 보기"
+              label={t('settings.tutorial')}
               onPress={() => router.push('/tutorial')}
             />
             <SettingLink
+              description={t('settings.appLanguageHint')}
               icon="language-outline"
               illustration={illustratedIcons.translation}
-              label="앱 언어"
-              onPress={() => Alert.alert('앱 언어', '현재 운영 언어는 한국어예요.')}
-              value="한국어"
+              label={t('settings.appLanguage')}
+              onPress={() => setLanguagePickerOpen(true)}
+              value={getAppLanguageMetadata(getAppLanguage()).label}
             />
             <SettingLink
               icon="help-circle-outline"
-              label="도움말 및 문의"
+              label={t('settings.support')}
               onPress={() => router.push('/support')}
             />
             <SettingLink
               danger
               icon="pause-circle-outline"
-              label="계정 비활성화"
+              label={t('settings.deactivate')}
               onPress={confirmDeactivation}
             />
-            <SettingLink danger icon="trash-outline" label="계정 삭제" onPress={confirmDeletion} />
+            <SettingLink
+              danger
+              icon="trash-outline"
+              label={t('settings.delete')}
+              onPress={confirmDeletion}
+            />
           </SettingSection>
 
           <Pressable
@@ -267,12 +270,16 @@ export function SettingsScreen() {
             {signingOut ? (
               <ActivityIndicator color={palette.danger} />
             ) : (
-              <Text style={styles.signOutText}>로그아웃</Text>
+              <Text style={styles.signOutText}>{t('settings.signOut')}</Text>
             )}
           </Pressable>
-          <Text style={styles.version}>WICHU 1.0 · 운영 준비 버전</Text>
+          <Text style={styles.version}>{t('settings.version')}</Text>
         </ScrollView>
       )}
+      <LanguagePickerModal
+        onClose={() => setLanguagePickerOpen(false)}
+        visible={languagePickerOpen}
+      />
     </Screen>
   );
 }
@@ -327,6 +334,7 @@ function SettingToggle({
 
 function SettingLink({
   danger = false,
+  description,
   icon,
   illustration,
   label,
@@ -334,6 +342,7 @@ function SettingLink({
   value,
 }: {
   danger?: boolean;
+  description?: string;
   icon: keyof typeof Ionicons.glyphMap;
   illustration?: ImageSource;
   label: string;
@@ -354,7 +363,10 @@ function SettingLink({
           <Ionicons color={color} name={icon} size={19} />
         )}
       </View>
-      <Text style={[styles.rowLabel, styles.rowLinkLabel, { color }]}>{label}</Text>
+      <View style={styles.rowLinkCopy}>
+        <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+        {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
+      </View>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       <Ionicons color={palette.inkMuted} name="chevron-forward" size={17} />
     </Pressable>
@@ -410,14 +422,14 @@ const styles = StyleSheet.create({
   },
   accountCopy: { flex: 1, marginLeft: 11 },
   accountLabel: { color: palette.white, fontSize: 13, fontWeight: '900' },
-  accountEmail: { color: 'rgba(255,255,255,0.58)', fontSize: 10, marginTop: 3 },
+  accountEmail: { color: 'rgba(255,255,255,0.68)', fontSize: 11, marginTop: 3 },
   editPill: {
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: radius.pill,
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
-  editPillText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  editPillText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   loadingContent: { gap: 22, paddingHorizontal: 16, paddingTop: 4 },
   sectionWrap: { marginBottom: 22 },
   sectionTitle: {
@@ -447,9 +459,9 @@ const styles = StyleSheet.create({
   rowIconDanger: { backgroundColor: '#FFF0F2' },
   rowCopy: { flex: 1, marginHorizontal: 11 },
   rowLabel: { color: palette.ink, fontSize: 13, fontWeight: '800' },
-  rowLinkLabel: { flex: 1, marginLeft: 11 },
-  rowDescription: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
-  rowValue: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginRight: 5 },
+  rowLinkCopy: { flex: 1, marginLeft: 11 },
+  rowDescription: { color: palette.inkMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  rowValue: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginRight: 5 },
   signOutButton: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -458,6 +470,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   signOutText: { color: palette.danger, fontSize: 12, fontWeight: '900' },
-  version: { color: '#A2A2A9', fontSize: 10, marginTop: 18, textAlign: 'center' },
+  version: { color: '#92929A', fontSize: 11, marginTop: 18, textAlign: 'center' },
   pressed: { opacity: 0.62 },
 });

@@ -23,6 +23,7 @@ import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entit
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
+import { hapticsService } from '@/services/haptics-service';
 
 type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 
@@ -37,13 +38,13 @@ const categories: {
 
 const categoryCopy: Record<MatchCategory, { description: string }> = {
   'picked-me': {
-    description: '회원님을 Pick한 사용자입니다.',
+    description: '나를 Pick한 사람들이에요.',
   },
   matched: {
-    description: '서로 Pick해 매치된 사용자입니다.',
+    description: '서로 Pick해 연결된 사람들이에요.',
   },
   visitors: {
-    description: '최근 프로필을 본 사용자입니다.',
+    description: '최근 내 프로필을 본 사람들이에요.',
   },
 };
 
@@ -203,6 +204,12 @@ export function MatchesScreen() {
     router.push(`/chat/${realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`);
   };
 
+  const selectCategory = (nextCategory: MatchCategory) => {
+    if (nextCategory === category) return;
+    hapticsService.selection();
+    setCategory(nextCategory);
+  };
+
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader actionIcon={illustratedIcons.matches} eyebrow="연결" />
@@ -221,7 +228,7 @@ export function MatchesScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               key={item.key}
-              onPress={() => setCategory(item.key)}
+              onPress={() => selectCategory(item.key)}
               style={({ pressed }) => [
                 styles.category,
                 selected && styles.categorySelected,
@@ -312,9 +319,9 @@ export function MatchesScreen() {
                         now,
                       )
                     : category === 'picked-me'
-                      ? formatVisitTime(
+                      ? formatRemainingPickTime(
                           incomingLikesQuery.data?.find((like) => like.profileId === profile.id)
-                            ?.likedAt,
+                            ?.expiresAt,
                           now,
                         )
                       : visitorTimes[profile.id]
@@ -359,90 +366,100 @@ function ProfileTile({
 }: ProfileTileProps) {
   const isMatched = category === 'matched';
 
+  const handleProfilePress = () => {
+    hapticsService.selection();
+    onPress();
+  };
+
+  const handleChatPress = () => {
+    hapticsService.selection();
+    onChat();
+  };
+
   return (
-    <Pressable
-      accessibilityLabel={locked ? 'Gold Pass로 방문자 확인' : `${profile.name} 프로필 열기`}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-    >
-      <Image
-        blurRadius={locked ? 28 : 0}
-        cachePolicy="memory-disk"
-        contentFit="cover"
-        source={{ uri: profile.photo }}
-        style={StyleSheet.absoluteFill}
-        transition={160}
-      />
-      {locked ? <View style={[styles.lockedVeil, styles.nonInteractive]} /> : null}
-      {!locked && profile.isGoldPass ? (
-        <View style={[styles.goldCardBorder, styles.nonInteractive]} />
+    <View style={styles.card}>
+      <Pressable
+        accessibilityLabel={locked ? 'Gold Pass로 방문자 확인' : `${profile.name} 프로필 열기`}
+        accessibilityRole="button"
+        onPress={handleProfilePress}
+        style={({ pressed }) => [styles.cardSurface, pressed && styles.cardPressed]}
+      >
+        <Image
+          blurRadius={locked ? 28 : 0}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          source={{ uri: profile.photo }}
+          style={StyleSheet.absoluteFill}
+          transition={160}
+        />
+        {locked ? <View style={[styles.lockedVeil, styles.nonInteractive]} /> : null}
+        {!locked && profile.isGoldPass ? (
+          <View style={[styles.goldCardBorder, styles.nonInteractive]} />
+        ) : null}
+        <LinearGradient
+          colors={['transparent', 'rgba(5,5,8,0.86)']}
+          locations={[0.42, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {!locked ? (
+          <View style={styles.cardTop}>
+            <View style={styles.statusSlot}>
+              {profile.isOnline ? (
+                <View style={styles.onlinePill}>
+                  <View style={styles.onlineDot} />
+                  <Text style={styles.onlineText}>온라인</Text>
+                </View>
+              ) : profile.isNew ? (
+                <View style={styles.newPill}>
+                  <Text style={styles.newPillText}>NEW</Text>
+                </View>
+              ) : null}
+            </View>
+            {profile.isGoldPass ? <GoldBadge /> : null}
+          </View>
+        ) : null}
+
+        {locked ? (
+          <View style={styles.lockedContent}>
+            <View style={styles.lockedIcon}>
+              <Ionicons color={palette.white} name="lock-closed" size={17} />
+            </View>
+            <Text style={styles.lockedLabel}>방문자 확인</Text>
+            <Text style={styles.lockedHint}>Gold Pass 전용</Text>
+          </View>
+        ) : (
+          <View style={[styles.cardContent, isMatched && styles.cardContentWithAction]}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>
+                {profile.name}, {profile.age}
+              </Text>
+              <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
+            </View>
+            <View style={styles.metaRow}>
+              <Ionicons color="rgba(255,255,255,0.78)" name="navigate" size={11} />
+              <Text style={styles.meta}>
+                {profile.distanceKm}km 거리
+                {category === 'visitors' ? ` · ${activityTime} 방문` : ''}
+                {category === 'picked-me' ? ` · Pick ${activityTime ?? '24시간 남음'}` : ''}
+              </Text>
+            </View>
+          </View>
+        )}
+      </Pressable>
+
+      {isMatched && !locked ? (
+        <Pressable
+          accessibilityLabel={`${profile.name}님에게 메시지 보내기`}
+          accessibilityRole="button"
+          onPress={handleChatPress}
+          style={({ pressed }) => [styles.cardAction, pressed && pressFeedback.control]}
+        >
+          <Ionicons color={palette.ink} name="chatbubble" size={14} />
+          <Text style={styles.cardActionText}>메시지</Text>
+        </Pressable>
       ) : null}
-      <LinearGradient
-        colors={['transparent', 'rgba(5,5,8,0.86)']}
-        locations={[0.42, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {!locked ? (
-        <View style={styles.cardTop}>
-          <View style={styles.statusSlot}>
-            {profile.isOnline ? (
-              <View style={styles.onlinePill}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>온라인</Text>
-              </View>
-            ) : profile.isNew ? (
-              <View style={styles.newPill}>
-                <Text style={styles.newPillText}>NEW</Text>
-              </View>
-            ) : null}
-          </View>
-          {profile.isGoldPass ? <GoldBadge /> : null}
-        </View>
-      ) : null}
-
-      {locked ? (
-        <View style={styles.lockedContent}>
-          <View style={styles.lockedIcon}>
-            <Ionicons color={palette.white} name="lock-closed" size={17} />
-          </View>
-          <Text style={styles.lockedLabel}>방문자 확인</Text>
-          <Text style={styles.lockedHint}>Gold Pass 전용</Text>
-        </View>
-      ) : (
-        <View style={styles.cardContent}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>
-              {profile.name}, {profile.age}
-            </Text>
-            <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
-          </View>
-          <View style={styles.metaRow}>
-            <Ionicons color="rgba(255,255,255,0.78)" name="navigate" size={11} />
-            <Text style={styles.meta}>
-              {profile.distanceKm}km 거리
-              {category === 'visitors' ? ` · ${activityTime} 방문` : ''}
-              {category === 'picked-me' ? ` · ${activityTime ?? '최근'} Pick` : ''}
-            </Text>
-          </View>
-
-          {isMatched ? (
-            <Pressable
-              accessibilityLabel={`Message ${profile.name}`}
-              onPress={(event) => {
-                event.stopPropagation();
-                onChat();
-              }}
-              style={styles.cardAction}
-            >
-              <Ionicons color={palette.ink} name="chatbubble" size={14} />
-              <Text style={styles.cardActionText}>메시지</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -453,6 +470,15 @@ function formatVisitTime(value: string | undefined, now: number) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}시간 전`;
   return `${Math.floor(hours / 24)}일 전`;
+}
+
+function formatRemainingPickTime(value: string | undefined, now: number) {
+  if (!value) return '24시간 남음';
+  const remainingMs = new Date(value).getTime() - now;
+  if (remainingMs <= 0) return '만료';
+  const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60_000));
+  if (remainingMinutes < 60) return `${remainingMinutes}분 남음`;
+  return `${Math.ceil(remainingMinutes / 60)}시간 남음`;
 }
 
 function prioritizeGoldProfiles(profiles: ConnectionProfile[]) {
@@ -478,7 +504,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 5,
     justifyContent: 'center',
-    minHeight: 42,
+    minHeight: 44,
     paddingHorizontal: 3,
   },
   categorySelected: {
@@ -498,7 +524,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   categoryCountSelected: { backgroundColor: '#FFE1EB' },
-  categoryCountText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
+  categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   subtitle: {
@@ -507,15 +533,21 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 18,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 10,
+  },
   card: {
     aspectRatio: 0.76,
     backgroundColor: '#D8D8DE',
     borderRadius: 20,
     overflow: 'hidden',
-    width: '48.6%',
+    width: '48.5%',
     ...elevation.md,
   },
+  cardSurface: { flex: 1 },
   cardPressed: pressFeedback.surface,
   nonInteractive: { pointerEvents: 'none' },
   lockedVeil: {
@@ -581,20 +613,21 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   onlineDot: { backgroundColor: palette.lime, borderRadius: 3, height: 6, width: 6 },
-  onlineText: { color: palette.white, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
+  onlineText: { color: palette.white, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   newPill: {
     backgroundColor: palette.lime,
     borderRadius: radius.pill,
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
-  newPillText: { color: palette.ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
+  newPillText: { color: palette.ink, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   cardContent: { bottom: 14, left: 14, position: 'absolute', right: 14 },
+  cardContentWithAction: { bottom: 58 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   name: { ...typography.subheading, color: palette.white, fontWeight: '900' },
   flag: { borderColor: 'rgba(255,255,255,0.48)', borderRadius: 3, height: 13, width: 19 },
   metaRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
-  meta: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '700' },
+  meta: { color: 'rgba(255,255,255,0.84)', fontSize: 11, fontWeight: '700' },
   cardAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -602,13 +635,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 5,
-    marginTop: 10,
+    bottom: 14,
+    left: 14,
     paddingHorizontal: 11,
     paddingVertical: 7,
+    position: 'absolute',
+    zIndex: 4,
   },
   cardActionText: {
     color: palette.ink,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -642,5 +678,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 10,
   },
-  visitorLockActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  visitorLockActionText: { color: palette.white, fontSize: 11, fontWeight: '900' },
 });

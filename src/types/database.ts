@@ -246,6 +246,7 @@ export type Database = {
           target_id: string;
           action: Database['public']['Enums']['swipe_action'];
           created_at: string;
+          expires_at: string;
         },
         {
           id?: string;
@@ -253,6 +254,7 @@ export type Database = {
           target_id: string;
           action: Database['public']['Enums']['swipe_action'];
           created_at?: string;
+          expires_at?: string;
         },
         {
           id?: string;
@@ -260,6 +262,7 @@ export type Database = {
           target_id?: string;
           action?: Database['public']['Enums']['swipe_action'];
           created_at?: string;
+          expires_at?: string;
         }
       >;
       matches: Table<
@@ -742,6 +745,7 @@ export type Database = {
           distance_km: number | null;
           is_gold_pass: boolean;
           liked_at: string;
+          expires_at: string;
           photo_path: string | null;
         }[];
       };

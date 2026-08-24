@@ -9,6 +9,7 @@ import { useDiscoverStore } from '@/features/discover/stores/discover-store';
 import { adsService } from '@/features/monetization/services/ads-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { hapticsService } from '@/services/haptics-service';
 import type { Profile, SwipeAction } from '@/types/profile';
 
 type UndoableSwipe = { profile: Profile; action: SwipeAction; userId: string };
@@ -108,6 +109,7 @@ export function useDiscoverDeck() {
     mutationFn: ({ profile, userId: swipeUserId }: UndoableSwipe) =>
       discoveryService.undoSwipe(swipeUserId, profile.id),
     onMutate: ({ profile }) => {
+      hapticsService.selection();
       setSwipeError(null);
       restoreSwipe(profile);
       setUndoStack((current) => current.slice(0, -1));

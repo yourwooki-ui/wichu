@@ -56,10 +56,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   eyebrow: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.8,
-    lineHeight: 13,
+    lineHeight: 15,
     marginTop: 2,
   },
   action: {

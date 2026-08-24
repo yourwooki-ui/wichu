@@ -42,6 +42,8 @@
 
 메시지는 클라이언트가 생성한 UUID를 `client_id`로 `send_my_message` RPC에 전달한다. `(sender_id,client_id)` unique constraint로 응답 유실 뒤 같은 요청을 재시도해도 한 행만 유지한다. 대화방 진입 및 상대 메시지 수신 시 `mark_match_read`가 사용자별 읽음 시각을 저장한다. Match 목록은 `get_my_match_connections`가 Match마다 lateral query로 최신 메시지 한 건과 unread를 함께 반환한다. 전 대화에 하나의 전역 message limit을 적용하지 않는다. `swipes`와 `messages`의 클라이언트 직접 쓰기 권한은 제거한다.
 
+상호작용 수명은 서버의 `swipes.expires_at`으로 강제한다. Pick은 보낸 기록과 받은 기록 모두 생성 후 24시간 동안만 활성이고, Pass는 3일 동안 후보 재노출을 막은 뒤 같은 프로필이 Discover에 다시 들어올 수 있다. Discover 후보는 `last_active_at`이 최근 7일 이내인 활성 사용자로 한정한다. Match와 메시지는 자동 만료하지 않으며, 참여자가 명시적으로 `end_my_match`를 실행할 때만 대화가 종료되고 양쪽 목록에서 숨겨진다.
+
 번역은 활성 Match 참여자가 메시지별로 요청할 때만 `translate-message` Edge Function이 실행된다. 서버는 참여자·차단 상태를 다시 확인하고 사용자당 하루 100회의 cache-miss 제한을 적용한다. 동일 메시지·동일 대상 언어의 동시 요청은 private job lock으로 하나만 공급자에 전달하며 결과는 원문과 분리된 `translated_content`에 언어 코드별로 캐시한다. 번역 공급자 키는 Supabase secret에만 저장하고 클라이언트나 일반 로그에 원문을 복제하지 않는다.
 
 ## Discovery

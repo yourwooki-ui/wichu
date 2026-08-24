@@ -20,7 +20,7 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
+import { palette, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
 import { hapticsService } from '@/services/haptics-service';
@@ -30,6 +30,7 @@ const SWIPE_THRESHOLD = 96;
 const SWIPE_VELOCITY_THRESHOLD = 0.65;
 const SWIPE_MIN_DISTANCE = 28;
 const DOUBLE_TAP_DELAY = 260;
+const SWIPE_EXIT_DURATION = 220;
 
 type SwipeDeckProps = {
   profiles: Profile[];
@@ -60,8 +61,8 @@ export function SwipeDeck({
   const interactionLocked = useSharedValue(false);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
-  // 아래 Pass/Pick 액션 행(약 84px)만큼 덱이 차지할 높이를 줄인다.
-  const deckHeight = Math.min(600, Math.max(300, height - 326));
+  // 헤더와 하단 탭은 또렷하게 남기되, 그 사이의 세로 공간은 카드가 충분히 채운다.
+  const deckHeight = Math.min(600, Math.max(340, height - 276));
 
   useProfilePrefetch(profiles);
 
@@ -88,11 +89,11 @@ export function SwipeDeck({
     (action: SwipeAction) => {
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
-      translateY.set(withTiming(12, { duration: 210 }));
+      translateY.set(withTiming(10, { duration: SWIPE_EXIT_DURATION }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: 210 },
+          { duration: SWIPE_EXIT_DURATION },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
@@ -144,11 +145,11 @@ export function SwipeDeck({
       'worklet';
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
-      translateY.set(withTiming(12, { duration: 210 }));
+      translateY.set(withTiming(10, { duration: SWIPE_EXIT_DURATION }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: 210 },
+          { duration: SWIPE_EXIT_DURATION },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
@@ -185,6 +186,12 @@ export function SwipeDeck({
   }, [commitSwipe, interactionLocked, translateX, translateY, width]);
 
   const topCardStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      Math.abs(translateX.get()),
+      [0, width * 1.25],
+      [1, 0.92],
+      Extrapolation.CLAMP,
+    ),
     transform: [
       { translateX: translateX.get() },
       { translateY: translateY.get() },
@@ -198,18 +205,24 @@ export function SwipeDeck({
       },
     ],
   }));
-  const nextCardStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateX: interpolate(
-          translateX.get(),
-          [-width, 0, width],
-          [0, width * 1.05, 0],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
-  }));
+  const nextCardStyle = useAnimatedStyle(() => {
+    const progress = interpolate(
+      Math.abs(translateX.get()),
+      [0, SWIPE_THRESHOLD, width * 1.1],
+      [0, 0.46, 1],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      opacity: interpolate(progress, [0, 1], [0.82, 1]),
+      transform: [
+        {
+          translateX: interpolate(progress, [0, 1], [width * 1.04, 0], Extrapolation.CLAMP),
+        },
+        { scale: interpolate(progress, [0, 1], [0.975, 1]) },
+      ],
+    };
+  });
   const pickPulseStyle = useAnimatedStyle(() => ({
     opacity: pickPulse.get(),
     transform: [{ scale: interpolate(pickPulse.get(), [0, 1], [0.72, 1]) }],
@@ -333,64 +346,7 @@ export function SwipeDeck({
           </Animated.View>
         </GestureDetector>
       </View>
-
-      {/*
-        스와이프 외에 Pick/Pass 할 방법이 없었다. 스크린리더는 카드의
-        accessibilityActions로 처리되지만, 한 손 조작이나 운동 제약이 있는
-        사용자에게는 보이는 버튼이 필요하다. 제스처와 같은 startSwipe를
-        호출해 애니메이션과 기록 경로를 완전히 동일하게 맞춘다.
-      */}
-      <View style={styles.actions}>
-        <DeckAction
-          kind="pass"
-          onPress={() => {
-            hapticsService.selection();
-            startSwipe('pass');
-          }}
-          profileName={currentProfile.name}
-        />
-        <DeckAction
-          kind="pick"
-          onPress={() => {
-            hapticsService.selection();
-            startSwipe('like');
-          }}
-          profileName={currentProfile.name}
-        />
-      </View>
     </View>
-  );
-}
-
-function DeckAction({
-  kind,
-  onPress,
-  profileName,
-}: {
-  kind: 'pass' | 'pick';
-  onPress: () => void;
-  profileName: string;
-}) {
-  const isPick = kind === 'pick';
-
-  return (
-    <Pressable
-      accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
-      accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.action,
-        isPick ? styles.actionPick : styles.actionPass,
-        pressed && pressFeedback.control,
-      ]}
-    >
-      <Ionicons
-        color={isPick ? palette.white : palette.ink}
-        name={isPick ? 'heart' : 'close'}
-        size={isPick ? 30 : 28}
-      />
-    </Pressable>
   );
 }
 
@@ -401,27 +357,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 0,
   },
-  actions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.lg,
-    justifyContent: 'center',
-    paddingTop: spacing.xs,
-  },
-  action: {
-    alignItems: 'center',
-    borderRadius: 32,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-    ...elevation.md,
-  },
-  actionPass: {
-    backgroundColor: palette.white,
-    borderColor: palette.line,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  actionPick: { backgroundColor: palette.pink },
   errorBanner: {
     alignItems: 'center',
     backgroundColor: '#FFF0F5',
@@ -436,7 +371,7 @@ const styles = StyleSheet.create({
   deck: {
     alignSelf: 'center',
     flexShrink: 1,
-    marginBottom: 16,
+    marginBottom: 10,
     maxWidth: 520,
     minHeight: 0,
     width: '100%',

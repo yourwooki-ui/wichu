@@ -1,17 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { Platform } from 'react-native';
 
-const LANGUAGE_STORAGE_KEY = 'wichu.language';
+import { additionalResources } from './additional-resources';
+import {
+  type AppLanguage,
+  getAppTextDirection,
+  isAppLanguage,
+  resolveAppLanguage,
+  supportedLanguages,
+} from './languages';
 
-export const supportedLanguages = [
-  { code: 'en', label: 'English' },
-  { code: 'ko', label: '한국어' },
-] as const;
+export {
+  type AppLanguage,
+  getAppLanguageMetadata,
+  getAppTextDirection,
+  isRtlAppLanguage,
+  supportedLanguages,
+} from './languages';
 
-export type AppLanguage = (typeof supportedLanguages)[number]['code'];
+const LANGUAGE_STORAGE_KEY = 'wichu.app-language.v2';
+const LEGACY_LANGUAGE_STORAGE_KEY = 'wichu.language';
 
-const resources = {
+const baseResources = {
   en: {
     translation: {
       profileDetail: {
@@ -575,38 +588,76 @@ const resources = {
   },
 } as const;
 
-function isAppLanguage(value: string | null): value is AppLanguage {
-  return supportedLanguages.some((language) => language.code === value);
-}
+const resources = {
+  en: {
+    translation: {
+      ...baseResources.en.translation,
+      ...additionalResources.en.translation,
+    },
+  },
+  ko: {
+    translation: {
+      ...baseResources.ko.translation,
+      ...additionalResources.ko.translation,
+    },
+  },
+  vi: additionalResources.vi,
+  ja: additionalResources.ja,
+  fr: additionalResources.fr,
+  es: additionalResources.es,
+  'zh-TW': additionalResources['zh-TW'],
+  id: additionalResources.id,
+  fa: additionalResources.fa,
+} as const;
 
-const initialLanguage: AppLanguage = 'ko';
+const deviceLanguage = resolveAppLanguage(getLocales()[0]?.languageTag) ?? 'en';
+let activeLanguage: AppLanguage = deviceLanguage;
 const i18n = createInstance();
 
-void i18n
-  .use(initReactI18next)
-  .init({
+function applyDocumentLanguage(language: AppLanguage) {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  document.documentElement.lang = language;
+  document.documentElement.dir = getAppTextDirection(language);
+}
+
+async function readStoredLanguage() {
+  const storedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (isAppLanguage(storedLanguage)) return storedLanguage;
+
+  const legacyLanguage = await AsyncStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
+  return isAppLanguage(legacyLanguage) ? legacyLanguage : null;
+}
+
+export const i18nReady = (async () => {
+  const storedLanguage = await readStoredLanguage().catch(() => null);
+  activeLanguage = storedLanguage ?? deviceLanguage;
+
+  await i18n.use(initReactI18next).init({
     resources,
-    lng: initialLanguage,
-    fallbackLng: 'ko',
+    lng: activeLanguage,
+    fallbackLng: 'en',
+    supportedLngs: supportedLanguages.map(({ code }) => code),
+    load: 'currentOnly',
     interpolation: { escapeValue: false },
-  })
-  .then(async () => {
-    const storedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (storedLanguage !== 'ko' || i18n.language !== 'ko') {
-      await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, 'ko');
-      await i18n.changeLanguage('ko');
-    }
-  })
-  .catch(() => undefined);
+  });
+
+  applyDocumentLanguage(activeLanguage);
+  if (!storedLanguage) {
+    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage).catch(() => undefined);
+  }
+})();
 
 export async function setAppLanguage(language: AppLanguage) {
+  await i18nReady;
+  activeLanguage = language;
   await i18n.changeLanguage(language);
+  applyDocumentLanguage(language);
   await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
 }
 
 export function getAppLanguage(): AppLanguage {
   const resolvedLanguage = i18n.resolvedLanguage ?? null;
-  return isAppLanguage(resolvedLanguage) ? resolvedLanguage : initialLanguage;
+  return isAppLanguage(resolvedLanguage) ? resolvedLanguage : activeLanguage;
 }
 
 export default i18n;
