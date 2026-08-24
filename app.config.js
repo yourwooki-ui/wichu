@@ -19,7 +19,6 @@ const baseConfig = {
     predictiveBackGestureEnabled: false,
     permissions: ['android.permission.ACCESS_COARSE_LOCATION'],
     blockedPermissions: ['android.permission.ACCESS_FINE_LOCATION'],
-    versionCode: 3,
   },
   web: {
     favicon: './assets/brand/wichu-app-icon.png',

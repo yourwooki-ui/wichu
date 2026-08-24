@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AdEventType,
   AdsConsent,
-  AgeRestrictedTreatment,
   InterstitialAd,
   MaxAdContentRating,
   RewardedAd,
@@ -37,8 +36,9 @@ async function initializeMobileAds() {
     if (!consent.canRequestAds) return false;
 
     await mobileAds().setRequestConfiguration({
-      ageRestrictedTreatment: AgeRestrictedTreatment.UNSPECIFIED,
       maxAdContentRating: MaxAdContentRating.T,
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false,
       testDeviceIdentifiers: __DEV__ ? ['EMULATOR'] : [],
     });
     await mobileAds().initialize();
