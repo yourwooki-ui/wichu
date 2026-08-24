@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(38);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -14,13 +14,14 @@ values
 
 insert into public.profiles (
   id, display_name, birth_date, gender, interested_in, country_code, native_language,
-  languages, bio, terms_accepted_at, privacy_accepted_at, review_status, profile_completed
+  languages, bio, terms_accepted_at, privacy_accepted_at, last_active_at, review_status,
+  profile_completed
 )
 values
-  ('30000000-0000-4000-8000-000000000001', 'P0 A', '2000-01-01', 'man', array['woman'], 'KR', 'ko', array['ko'], repeat('a', 24), now(), now(), 'approved', true),
-  ('30000000-0000-4000-8000-000000000002', 'P0 B', '2000-01-01', 'woman', array['man'], 'US', 'en', array['en'], repeat('b', 24), now(), now(), 'approved', true),
-  ('30000000-0000-4000-8000-000000000003', 'P0 C', '2000-01-01', 'woman', array['man'], 'JP', 'ja', array['ja'], repeat('c', 24), now(), now(), 'pending', true),
-  ('30000000-0000-4000-8000-000000000004', 'P0 D', '2000-01-01', 'woman', array['man'], 'KR', 'ko', array['ko'], repeat('d', 24), now(), now(), 'approved', true);
+  ('30000000-0000-4000-8000-000000000001', 'P0 A', '2000-01-01', 'man', array['woman'], 'KR', 'ko', array['ko'], repeat('a', 24), now(), now(), now(), 'approved', true),
+  ('30000000-0000-4000-8000-000000000002', 'P0 B', '2000-01-01', 'woman', array['man'], 'US', 'en', array['en'], repeat('b', 24), now(), now(), now(), 'approved', true),
+  ('30000000-0000-4000-8000-000000000003', 'P0 C', '2000-01-01', 'woman', array['man'], 'JP', 'ja', array['ja'], repeat('c', 24), now(), now(), now(), 'pending', true),
+  ('30000000-0000-4000-8000-000000000004', 'P0 D', '2000-01-01', 'woman', array['man'], 'KR', 'ko', array['ko'], repeat('d', 24), now(), now(), now(), 'approved', true);
 
 insert into private.admin_users (user_id, role, active)
 values ('30000000-0000-4000-8000-000000000003', 'master', true);
@@ -140,6 +141,16 @@ select lives_ok(
   'retrying the same message is safe'
 );
 select is((select count(*) from public.messages), 1::bigint, 'message retry does not duplicate the row');
+select is(
+  (select count(*) from public.get_my_match_connections()),
+  1::bigint,
+  'match read model returns one active connection'
+);
+select is(
+  (select last_message_content from public.get_my_match_connections() limit 1),
+  'hello',
+  'match read model returns the latest message per match'
+);
 
 select set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000002', false);
 select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000002","role":"authenticated"}', false);

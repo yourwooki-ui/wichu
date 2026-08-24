@@ -8,8 +8,8 @@
 - [x] development Supabase에 앱 스키마와 P0 migration 적용 및 RLS/advisor 재검증 — 2026-08-13 Security Advisor 오류 0건, 의도된 사용자 범위 `SECURITY DEFINER` RPC 경고와 유출 비밀번호 보호 경고만 잔존
 - [x] 프로젝트 Data API 노출 설정과 migration의 명시적 grants 대조 — 새 public 객체 자동 노출 중지, 기존 19개 테이블 RLS·`anon` 차단·`authenticated` 최소 권한 원격 재검증 완료
 - [x] 적용 스키마와 일치하는 typed Supabase client 정의
-- [ ] CLI 계정 연결 후 타입 자동 생성과 migration CI 추가
-- [ ] SQL Editor 적용분을 Supabase CLI migration history에 repair
+- [ ] Supabase 타입 자동 생성과 migration/RLS CI 추가 — CLI 프로젝트 연결과 원격 타입 대조는 완료
+- [x] SQL Editor 적용분을 Supabase CLI migration history에 repair — 원격 객체 표식 확인 후 35개 기존 history 복구, 실제 누락된 rewarded undo migration만 별도 적용
 - [ ] development / preview / production 환경 분리
 - [ ] Expo 57 Metro 도구 체인의 `image-size`/`uuid` upstream advisory 추적 — 현재 강제 수정은 Expo 53으로 역다운그레이드하므로 적용 금지, 앱 사용자 업로드 런타임 경로와는 분리됨
 
@@ -20,7 +20,7 @@
 - [ ] 비밀번호 재설정 redirect allowlist와 운영 SMTP 발송 도메인 검증
 - [x] Google 로그인/회원가입 UI, Expo OAuth callback, session 교환 구조
 - [ ] Google Cloud Web OAuth credentials와 Supabase Google provider/redirect allowlist 활성화
-- [ ] Google 신규 Auth 계정의 18+ 가입 정책 변경 승인 및 migration 적용
+- [ ] Google/Apple Auth 운영 설정 — 18+ DB hook은 적용 완료, Dashboard의 Google provider와 iOS 동등 로그인 자격 증명 설정 대기
 - [x] 정확한 생년월일을 재검증하는 18+ core profile 저장
 - [x] 대표 사진 필수, 6장 사진 업로드/순서 변경, 운영진 최초 프로필 심사
 - [x] 심사 대기 중 앱 탐색 허용, 미승인 프로필/공개 사진 노출 차단
@@ -69,15 +69,15 @@
 - [x] 최초 프로필 저장 후 권한 안내 → 3단계 제품 튜토리얼 → 발견 헤더·카드·하단 탭 코치마크 연결, 계정별 기기 저장과 설정 재실행 경로 구성
 - [x] 경쟁 앱 UX benchmark와 WICHU 적용 원칙 문서화 (`UX_BENCHMARK.md`)
 - [x] Discover 최초 1회 제스처 안내, 브랜드형 Match 전환, 후보 소진·오류·필터 조정 상태
-- [ ] `나를 픽함` 운영 조회 — 최소 RLS policy, security-invoker RPC, 앱 서비스·상태 UI 완료; WICHU 원격 migration 적용 대기
+- [x] `나를 픽함` 운영 조회 — 최소 RLS policy, security-invoker RPC, 앱 서비스·상태 UI와 원격 migration 적용 완료
 - [x] Chat 빈 상태·오류·재시도, 첫 메시지 제안, 개인정보 안전 안내, dead action 제거
 
 ## P1 — 수익화와 품질
 
-- [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free 강제 광고 차단 entitlement 경계와 일반 사용자 선택형 보상 광고 1회당 되돌리기 1크레딧 서버 migration 작성 완료; 원격 적용과 실제 AdMob 서버 검증 연결 대기
+- [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free entitlement와 일반 사용자 보상 광고 1회당 되돌리기 1크레딧 서버 migration·원격 적용 완료; 실제 AdMob 서버 검증 연결 대기
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900, Gold 월 ₩19,900 확정; Gold DB 권한·방문자·우선 노출·무제한 되돌리기 구조 완료, 실제 Store product 대기
 - [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA — 최소 글자 10px 바닥 적용(42곳), 주요 터치 대상 44pt `hitSlop` 확보, skeleton `reduce motion` 대응 완료; 스크린리더 통과와 locale QA 대기
-- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 18+·생년월일 포맷 단위 테스트와 `p0_rls_contract.sql` 추가, 격리 DB/CI 자동 실행 대기
+- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB/CI 자동 실행 및 모바일 E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 
 ## 출시 게이트

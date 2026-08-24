@@ -4,28 +4,28 @@
 
 ## 핵심 테이블
 
-| Table                       | 역할                     | 필수 불변조건                                 |
-| --------------------------- | ------------------------ | --------------------------------------------- |
-| `profiles`                  | 공개 발견 프로필         | auth user PK, 18+ 검증, 운영 심사 상태        |
+| Table                       | 역할                     | 필수 불변조건                                  |
+| --------------------------- | ------------------------ | ---------------------------------------------- |
+| `profiles`                  | 공개 발견 프로필         | auth user PK, 18+ 검증, 운영 심사 상태         |
 | `profile_photos`            | 순서가 있는 Storage 경로 | 사용자당 position 1~6 unique, 사진별 심사 상태 |
-| `interests`                 | 관심사 카탈로그          | unique slug                                   |
-| `profile_interests`         | 프로필/관심사 연결       | composite PK                                  |
-| `profile_languages`         | 추가 구사 언어/수준      | 사용자·언어 unique, owner-only                |
-| `profile_tags`              | 관계 목적/분위기 메타    | 허용 category/value 조합, composite PK        |
-| `profile_details`           | 선택형 추가 프로필 정보  | 프로필과 1:1, 허용 값·키·신장 범위 검증       |
-| `swipes`                    | like/pass 선택           | `(swiper_id,target_id)` unique, self 금지     |
-| `matches`                   | 상호 선택 관계           | canonical user pair unique                    |
-| `messages`                  | Match 대화               | 활성 Match 참여자만 작성                      |
-| `match_read_states`         | Match별 사용자 읽음 상태 | `(match_id,user_id)` PK, RPC 전용 접근        |
-| `blocks`                    | 방향성 차단              | pair unique, 즉시 접근 차단                   |
-| `reports`                   | 안전 신고                | 신고자 소유, 운영 검토 상태                   |
-| `user_settings`             | 필터/환경설정            | owner-only, 선호 연령 18~90세, 같은 국적 제외 |
-| `subscriptions`             | Ad-Free 상태             | client read-only, server write                |
-| `profile_visits`            | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read              |
-| `push_devices`              | Expo Push 기기 토큰      | owner-only, token unique                      |
-| `account_deletion_requests` | 삭제 작업 queue          | client 직접 접근 차단, user unique            |
-| `notification_outbox`       | Match/메시지 Push 작업   | client 접근 차단, source별 idempotent         |
-| `push_delivery_receipts`    | 기기별 Expo 전송 결과    | client 접근 차단, ticket/receipt unique       |
+| `interests`                 | 관심사 카탈로그          | unique slug                                    |
+| `profile_interests`         | 프로필/관심사 연결       | composite PK                                   |
+| `profile_languages`         | 추가 구사 언어/수준      | 사용자·언어 unique, owner-only                 |
+| `profile_tags`              | 관계 목적/분위기 메타    | 허용 category/value 조합, composite PK         |
+| `profile_details`           | 선택형 추가 프로필 정보  | 프로필과 1:1, 허용 값·키·신장 범위 검증        |
+| `swipes`                    | like/pass 선택           | `(swiper_id,target_id)` unique, self 금지      |
+| `matches`                   | 상호 선택 관계           | canonical user pair unique                     |
+| `messages`                  | Match 대화               | 활성 Match 참여자만 작성                       |
+| `match_read_states`         | Match별 사용자 읽음 상태 | `(match_id,user_id)` PK, RPC 전용 접근         |
+| `blocks`                    | 방향성 차단              | pair unique, 즉시 접근 차단                    |
+| `reports`                   | 안전 신고                | 신고자 소유, 운영 검토 상태                    |
+| `user_settings`             | 필터/환경설정            | owner-only, 선호 연령 18~90세, 같은 국적 제외  |
+| `subscriptions`             | Ad-Free 상태             | client read-only, server write                 |
+| `profile_visits`            | 프로필 방문 기록         | 검증 RPC write, Gold 소유자 read               |
+| `push_devices`              | Expo Push 기기 토큰      | owner-only, token unique                       |
+| `account_deletion_requests` | 삭제 작업 queue          | client 직접 접근 차단, user unique             |
+| `notification_outbox`       | Match/메시지 Push 작업   | client 접근 차단, source별 idempotent          |
+| `push_delivery_receipts`    | 기기별 Expo 전송 결과    | client 접근 차단, ticket/receipt unique        |
 
 ## Swipe와 Match
 
@@ -40,7 +40,7 @@
 
 되돌리기는 `undo_my_swipe`가 서버에서 가장 최근 Swipe인지와 활성 Match 발생 여부를 다시 확인한다. Gold Pass는 크레딧 없이 연속 사용하고, 그 외 사용자는 private 크레딧 계정에서 1회를 원자 차감한다. 보상 크레딧 지급 RPC는 `service_role` 전용이며 광고 공급자의 검증된 고유 event ID를 중복 방지 키로 사용한다.
 
-메시지는 클라이언트가 생성한 UUID를 `client_id`로 `send_my_message` RPC에 전달한다. `(sender_id,client_id)` unique constraint로 응답 유실 뒤 같은 요청을 재시도해도 한 행만 유지한다. 대화방 진입 및 상대 메시지 수신 시 `mark_match_read`가 사용자별 읽음 시각을 저장하고 `get_my_unread_counts`가 Match 목록 배지를 계산한다. `swipes`와 `messages`의 클라이언트 직접 쓰기 권한은 제거한다.
+메시지는 클라이언트가 생성한 UUID를 `client_id`로 `send_my_message` RPC에 전달한다. `(sender_id,client_id)` unique constraint로 응답 유실 뒤 같은 요청을 재시도해도 한 행만 유지한다. 대화방 진입 및 상대 메시지 수신 시 `mark_match_read`가 사용자별 읽음 시각을 저장한다. Match 목록은 `get_my_match_connections`가 Match마다 lateral query로 최신 메시지 한 건과 unread를 함께 반환한다. 전 대화에 하나의 전역 message limit을 적용하지 않는다. `swipes`와 `messages`의 클라이언트 직접 쓰기 권한은 제거한다.
 
 번역은 활성 Match 참여자가 메시지별로 요청할 때만 `translate-message` Edge Function이 실행된다. 서버는 참여자·차단 상태를 다시 확인하고 사용자당 하루 100회의 cache-miss 제한을 적용한다. 동일 메시지·동일 대상 언어의 동시 요청은 private job lock으로 하나만 공급자에 전달하며 결과는 원문과 분리된 `translated_content`에 언어 코드별로 캐시한다. 번역 공급자 키는 Supabase secret에만 저장하고 클라이언트나 일반 로그에 원문을 복제하지 않는다.
 
@@ -68,7 +68,7 @@ Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상�
 - privileged function은 비노출 schema, 고정 search path, 최소 권한 사용
 - `raw_user_meta_data`는 권한 판단에 사용하지 않고 운영 권한은 server-managed app metadata 또는 DB role table에서 판단
 - 운영 권한은 `private.admin_users`와 좁은 범위 RPC로만 확인한다. 프로필 심사와 신고 triage는 원본 테이블에 대한 관리자 직접 권한 없이 각각 전용 queue/action RPC를 사용한다.
-- `supabase/tests/p0_rls_contract.sql`은 일반 사용자·운영자 경계, 중복 Swipe, 상호 Match, 메시지 idempotency, unread/read, Chat 참여자 제한을 롤백 트랜잭션으로 회귀 검증한다.
+- `supabase/tests/p0_rls_contract.sql`은 일반 사용자·운영자 경계, 중복 Swipe, 상호 Match, Match read model, 메시지 idempotency, unread/read, Chat 참여자 제한을 롤백 트랜잭션으로 회귀 검증한다.
 
 ## 최초 프로필 심사
 

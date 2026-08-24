@@ -35,6 +35,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Validate Expo SDK compatibility
+        run: npx --yes expo-doctor
+
       - name: Verify application
         run: npm run verify
 

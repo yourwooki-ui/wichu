@@ -38,6 +38,10 @@ export const profilePhotoService = {
   async createSignedPhotoUrl(storagePath: string, expiresIn = 3600) {
     return getSupabaseClient().storage.from(PHOTO_BUCKET).createSignedUrl(storagePath, expiresIn);
   },
+  async createSignedPhotoUrls(storagePaths: string[], expiresIn = 3600) {
+    if (storagePaths.length === 0) return { data: [], error: null };
+    return getSupabaseClient().storage.from(PHOTO_BUCKET).createSignedUrls(storagePaths, expiresIn);
+  },
   async listMyStoredPhotos(profileId: string) {
     const { data, error } = await getSupabaseClient()
       .storage.from(PHOTO_BUCKET)

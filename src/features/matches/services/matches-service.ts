@@ -33,21 +33,20 @@ export const matchesService = {
     const { data, error } = await supabase.rpc('get_my_incoming_likes', { p_limit: 50 });
     if (error) throw error;
 
-    const signedPhotos = new Map<string, string>();
-    await Promise.all(
-      (data ?? []).flatMap((like) =>
-        like.photo_path
-          ? [
-              profilePhotoService.createSignedPhotoUrl(like.photo_path, 3600).then(({ data }) => {
-                if (data?.signedUrl) signedPhotos.set(like.profile_id, data.signedUrl);
-              }),
-            ]
-          : [],
+    const photoPaths = [
+      ...new Set((data ?? []).flatMap((like) => (like.photo_path ? [like.photo_path] : []))),
+    ];
+    const { data: signedPhotoRows, error: signedPhotoError } =
+      await profilePhotoService.createSignedPhotoUrls(photoPaths, 3600);
+    if (signedPhotoError) throw signedPhotoError;
+    const signedPhotos = new Map(
+      signedPhotoRows.flatMap((photo) =>
+        photo.path && photo.signedUrl ? [[photo.path, photo.signedUrl] as const] : [],
       ),
     );
 
     return (data ?? []).flatMap((like) => {
-      const photo = signedPhotos.get(like.profile_id);
+      const photo = like.photo_path ? signedPhotos.get(like.photo_path) : undefined;
       if (!photo) return [];
       return [
         {
@@ -71,88 +70,44 @@ export const matchesService = {
     if (error) throw error;
     return data;
   },
-  async listConnections(userId: string): Promise<MatchConnection[]> {
+  async listConnections(_userId?: string): Promise<MatchConnection[]> {
     const supabase = getSupabaseClient();
-    const { data: matches, error: matchesError } = await supabase
-      .from('matches')
-      .select('id, user_a, user_b, matched_at')
-      .eq('status', 'active')
-      .order('matched_at', { ascending: false });
-    if (matchesError) throw matchesError;
-    if (!matches?.length) return [];
+    const { data, error } = await supabase.rpc('get_my_match_connections', { p_limit: 100 });
+    if (error) throw error;
+    if (!data?.length) return [];
 
-    const profileIds = matches.map((match) =>
-      match.user_a === userId ? match.user_b : match.user_a,
-    );
-    const [
-      { data: profiles, error: profilesError },
-      { data: photos, error: photosError },
-      { data: messages, error: messagesError },
-      { data: unreadCounts, error: unreadCountsError },
-    ] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, display_name, birth_date, country_code, last_active_at')
-        .in('id', profileIds),
-      supabase
-        .from('profile_photos')
-        .select('profile_id, storage_path, position')
-        .in('profile_id', profileIds)
-        .order('position'),
-      supabase
-        .from('messages')
-        .select('match_id, sender_id, content, created_at')
-        .in(
-          'match_id',
-          matches.map((match) => match.id),
-        )
-        .order('created_at', { ascending: false })
-        .limit(100),
-      supabase.rpc('get_my_unread_counts'),
-    ]);
-    if (profilesError) throw profilesError;
-    if (photosError) throw photosError;
-    if (messagesError) throw messagesError;
-    if (unreadCountsError) throw unreadCountsError;
-
-    const firstPhotoByProfile = new Map<string, string>();
-    for (const photo of photos ?? []) {
-      if (!firstPhotoByProfile.has(photo.profile_id)) {
-        firstPhotoByProfile.set(photo.profile_id, photo.storage_path);
-      }
-    }
-
-    const signedPhotos = new Map<string, string>();
-    await Promise.all(
-      [...firstPhotoByProfile].map(async ([profileId, path]) => {
-        const { data } = await profilePhotoService.createSignedPhotoUrl(path, 3600);
-        if (data?.signedUrl) signedPhotos.set(profileId, data.signedUrl);
-      }),
+    const photoPaths = [
+      ...new Set(data.flatMap((row) => (row.photo_path ? [row.photo_path] : []))),
+    ];
+    const { data: signedPhotoRows, error: signedPhotoError } =
+      await profilePhotoService.createSignedPhotoUrls(photoPaths, 3600);
+    if (signedPhotoError) throw signedPhotoError;
+    const signedPhotos = new Map(
+      signedPhotoRows.flatMap((photo) =>
+        photo.path && photo.signedUrl ? [[photo.path, photo.signedUrl] as const] : [],
+      ),
     );
 
-    const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
-    const unreadCountByMatch = new Map(
-      (unreadCounts ?? []).map((item) => [item.match_id, Number(item.unread_count)]),
-    );
-    const lastMessageByMatch = new Map<string, (typeof messages)[number]>();
-    for (const message of messages ?? []) {
-      if (!lastMessageByMatch.has(message.match_id)) {
-        lastMessageByMatch.set(message.match_id, message);
-      }
-    }
-    return matches.flatMap((match) => {
-      const profileId = match.user_a === userId ? match.user_b : match.user_a;
-      const profile = profileById.get(profileId);
-      if (!profile) return [];
-      return [
-        {
-          matchId: match.id,
-          matchedAt: match.matched_at,
-          unreadCount: unreadCountByMatch.get(match.id) ?? 0,
-          lastMessage: lastMessageByMatch.get(match.id) ?? null,
-          profile: { ...profile, photo: signedPhotos.get(profileId) ?? null },
-        },
-      ];
-    });
+    return data.map((row) => ({
+      matchId: row.match_id,
+      matchedAt: row.matched_at,
+      unreadCount: Number(row.unread_count),
+      lastMessage:
+        row.last_message_content && row.last_message_created_at && row.last_message_sender_id
+          ? {
+              content: row.last_message_content,
+              created_at: row.last_message_created_at,
+              sender_id: row.last_message_sender_id,
+            }
+          : null,
+      profile: {
+        id: row.profile_id,
+        display_name: row.display_name,
+        birth_date: row.birth_date,
+        country_code: row.country_code,
+        last_active_at: row.last_active_at,
+        photo: row.photo_path ? (signedPhotos.get(row.photo_path) ?? null) : null,
+      },
+    }));
   },
 };

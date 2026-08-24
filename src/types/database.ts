@@ -620,6 +620,23 @@ export type Database = {
         Args: Record<never, never>;
         Returns: { match_id: string; unread_count: number }[];
       };
+      get_my_match_connections: {
+        Args: { p_limit?: number };
+        Returns: {
+          match_id: string;
+          matched_at: string;
+          profile_id: string;
+          display_name: string;
+          birth_date: string;
+          country_code: string;
+          last_active_at: string | null;
+          photo_path: string | null;
+          last_message_content: string | null;
+          last_message_created_at: string | null;
+          last_message_sender_id: string | null;
+          unread_count: number;
+        }[];
+      };
       claim_my_message_translation: {
         Args: { p_message_id: string; p_target_language: string };
         Returns: {

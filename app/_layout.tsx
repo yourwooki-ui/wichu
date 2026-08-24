@@ -4,26 +4,31 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
-import { AppPermissionOnboarding } from '@/components/AppPermissionOnboarding';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
-import { ProductTutorialGate } from '@/features/onboarding/components/ProductTutorialGate';
+import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootNavigator() {
   const theme = useAppTheme();
   const { session, profileCompleted, adminRole, isLoading } = useAuthSession();
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
+
+  useEffect(() => {
+    if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [isLoading]);
 
   if (isLoading) return null;
 
@@ -64,8 +69,11 @@ function RootNavigator() {
           <Stack.Screen name="operations" />
         </Stack.Protected>
       </Stack>
-      <ProductTutorialGate profileCompleted={profileCompleted} userId={session?.user.id} />
-      {session && profileCompleted ? <AppPermissionOnboarding /> : null}
+      <PostProfileOnboardingCoordinator
+        key={session?.user.id ?? 'signed-out'}
+        profileCompleted={profileCompleted}
+        userId={session?.user.id}
+      />
     </>
   );
 }
