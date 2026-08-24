@@ -49,9 +49,7 @@ export default function LegalDocumentRoute() {
             </View>
           </View>
         ))}
-        <Text style={styles.notice}>
-          정식 출시 전 관할 지역과 스토어 정책에 맞춰 법률 검토 후 확정합니다.
-        </Text>
+        <Text style={styles.notice}>정책 문의 · support@wichu.app</Text>
       </ScrollView>
     </Screen>
   );

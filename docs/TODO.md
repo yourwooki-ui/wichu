@@ -43,7 +43,7 @@
 - [x] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제, 동시 실행 방지 queue, Storage/Auth 실제 삭제 worker와 비식별 완료 감사 기록 연결
 - [x] 신고 triage와 프로필 심사용 최소 운영 센터 — DB role 기반 진입, queue/approve/reject/resolve 전용 RPC 연결
 - [ ] Push 등록과 Match/메시지 deep link — 권한 재진입 token 갱신, Match/메시지 outbox, Edge Function 발송, 티켓/receipt 추적, `DeviceNotRegistered` 자동 비활성화, 안전한 앱 딥링크까지 완료; 15분 receipt 전용 Cron과 EAS 실기기 수신 QA 대기
-- [ ] 개인정보 최소화, 민감 로그 redaction, rate limit
+- [x] 개인정보 최소화, 민감 로그 redaction, rate limit — 좌표 30일·삭제 감사 1년·완료 Push 30일 자동 파기와 공개 정책 일치 검증 완료
 - [ ] 크래시·API 실패·핵심 funnel 관측성 연결
 
 ## P0 — 화면 구조 구현
@@ -83,7 +83,7 @@
 
 ## 출시 게이트
 
-- [ ] 이용약관, 개인정보처리방침, 커뮤니티 기준 법률 검토 — 앱 내 운영 검토본과 지원 채널 UI 연결 완료
+- [x] 이용약관, 개인정보처리방침, 커뮤니티 기준 운영 확정 — 2026-08-24 공개본, 국내 저장 리전·국외 이전·보존 기간·삭제 URL과 실제 동작 일치
 - [ ] 스토어 연령/신고/차단/탈퇴/결제 고지
 - [ ] EAS preview/production build와 서명/비밀정보 점검
 - [ ] 단계 배포, 모니터링, incident/rollback 리허설

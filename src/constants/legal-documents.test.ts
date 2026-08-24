@@ -36,6 +36,20 @@ describe('정책 문서', () => {
     expect(body).toContain('support@wichu.app');
   });
 
+  it('운영 보존 기간과 국내 저장 리전을 명시한다', () => {
+    const body = LEGAL_DOCUMENTS.privacy.sections.map((s) => s.body).join('\n');
+    expect(body).toContain('서울 리전(ap-northeast-2)');
+    expect(body).toContain('30일 동안 갱신되지 않은 좌표');
+    expect(body).toContain('1년 보관');
+    expect(body).toContain('전송 영수증은 24시간');
+  });
+
+  it('공개 정책에는 내부 검토 문구가 없다', () => {
+    expect(POLICY_STATUS).toBe('effective');
+    expect(pending).toHaveLength(0);
+    expect(allBodies.join('\n')).not.toContain('내부 검토');
+  });
+
   it('모든 문서에 제목과 본문이 있다', () => {
     for (const doc of documents) {
       expect(doc.title.length).toBeGreaterThan(0);
