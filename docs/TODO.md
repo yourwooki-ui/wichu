@@ -8,7 +8,8 @@
 - [x] development Supabase에 앱 스키마와 P0 migration 적용 및 RLS/advisor 재검증 — 2026-08-13 Security Advisor 오류 0건, 의도된 사용자 범위 `SECURITY DEFINER` RPC 경고와 유출 비밀번호 보호 경고만 잔존
 - [x] 프로젝트 Data API 노출 설정과 migration의 명시적 grants 대조 — 새 public 객체 자동 노출 중지, 기존 19개 테이블 RLS·`anon` 차단·`authenticated` 최소 권한 원격 재검증 완료
 - [x] 적용 스키마와 일치하는 typed Supabase client 정의
-- [ ] Supabase 타입 자동 생성과 migration/RLS CI 추가 — CLI 프로젝트 연결과 원격 타입 대조는 완료
+- [ ] Supabase 타입 자동 생성 — CLI 프로젝트 연결과 원격 타입 대조는 완료
+- [x] migration/RLS CI — Supabase CLI 2.115.0을 고정하고 main 배포 전에 격리 DB migration 재생, 함수 lint, pgTAP 38개 계약 테스트를 강제
 - [x] SQL Editor 적용분을 Supabase CLI migration history에 repair — 원격 객체 표식 확인 후 35개 기존 history 복구, 실제 누락된 rewarded undo migration만 별도 적용
 - [ ] development / preview / production 환경 분리
 - [ ] Expo 57 Metro 도구 체인의 `image-size`/`uuid` upstream advisory 추적 — 현재 강제 수정은 Expo 53으로 역다운그레이드하므로 적용 금지, 앱 사용자 업로드 런타임 경로와는 분리됨
@@ -77,7 +78,7 @@
 - [ ] 광고 provider 연결 및 빈도/배치 정책 — Gold/Ad-Free entitlement와 일반 사용자 보상 광고 1회당 되돌리기 1크레딧 서버 migration·원격 적용 완료; 실제 AdMob 서버 검증 연결 대기
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — Ad-Free 한국 기준 월 ₩9,900, Gold 월 ₩19,900 확정; Gold DB 권한·방문자·우선 노출·무제한 되돌리기 구조 완료, 실제 Store product 대기
 - [ ] 접근성, 영문/한국어 및 핵심 출시 locale QA — 최소 글자 10px 바닥 적용(42곳), 주요 터치 대상 44pt `hitSlop` 확보, skeleton `reduce motion` 대응 완료; 스크린리더 통과와 locale QA 대기
-- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB/CI 자동 실행 및 모바일 E2E 대기
+- [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB CI 자동 실행 완료, 모바일 E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 
 ## 출시 게이트

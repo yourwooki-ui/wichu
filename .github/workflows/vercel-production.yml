@@ -13,8 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database-contracts:
+    name: Verify Supabase migrations and RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+
+      - name: Start isolated Supabase stack
+        run: supabase start
+
+      - name: Lint database functions
+        run: supabase db lint --local --schema public --level warning --fail-on error
+
+      - name: Run migration and RLS contracts
+        run: supabase test db
+
+      - name: Stop isolated Supabase stack
+        if: always()
+        run: supabase stop --no-backup
+
   verify-and-deploy:
     name: Verify and deploy to Vercel
+    needs: database-contracts
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
