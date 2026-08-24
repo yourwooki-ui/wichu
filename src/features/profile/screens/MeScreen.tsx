@@ -13,9 +13,10 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius, typography } from '@/constants/theme';
+import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
+import { getProfileCompletion } from '@/features/profile/utils/profile-completion';
 import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -141,6 +142,8 @@ export function MeScreen() {
   }
 
   const { details, interests, photos, profile, settings, tags: profileTags } = profileQuery.data;
+  // 서버는 점수만 주고 무엇이 비었는지는 알려주지 않는다. 같은 규칙으로 다시 판정한다.
+  const completion = getProfileCompletion(profile);
   const reviewStatus = profileReviewStatus ?? profile.review_status;
   const primaryPhoto = photos[0];
   const photosUnderReview = photos.filter((photo) => photo.reviewStatus === 'pending').length;
@@ -388,7 +391,11 @@ export function MeScreen() {
               <View style={styles.attentionCopy}>
                 <Text style={styles.attentionEyebrow}>프로필 완성도</Text>
                 <Text style={styles.attentionTitle}>
-                  {!photos.length ? '대표 사진을 다시 등록해주세요' : '미입력 프로필 항목이 있어요'}
+                  {!photos.length
+                    ? '대표 사진을 다시 등록해주세요'
+                    : completion.missing.length
+                      ? `${completion.missing.length}개 항목만 채우면 완성돼요`
+                      : '미입력 프로필 항목이 있어요'}
                 </Text>
               </View>
               <Text style={styles.attentionValue}>{profile.profile_completeness}%</Text>
@@ -396,6 +403,24 @@ export function MeScreen() {
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${profile.profile_completeness}%` }]} />
             </View>
+            {completion.missing.length ? (
+              <View style={styles.missingList}>
+                {completion.missing.map((item) => (
+                  <Pressable
+                    accessibilityHint="프로필 수정 화면의 해당 항목으로 이동합니다"
+                    accessibilityLabel={`${item.label} 입력하기`}
+                    accessibilityRole="button"
+                    key={item.key}
+                    onPress={() => router.push(`/profile-edit?section=${item.section}`)}
+                    style={({ pressed }) => [styles.missingChip, pressed && pressFeedback.control]}
+                  >
+                    <Ionicons color={palette.pink} name="add-circle" size={15} />
+                    <Text style={styles.missingLabel}>{item.label}</Text>
+                    <Text style={styles.missingPoints}>+{item.points}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
             {!photos.length ? (
               <Pressable
                 disabled={photoRepairing}
@@ -665,6 +690,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   attentionActionText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  missingList: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 14 },
+  missingChip: {
+    alignItems: 'center',
+    backgroundColor: '#FFF1F5',
+    borderColor: '#FFD3E0',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 5,
+    minHeight: 36,
+    paddingHorizontal: 11,
+  },
+  missingLabel: { ...typography.caption, color: palette.ink, fontWeight: '800' },
+  missingPoints: { ...typography.overline, color: palette.pink, letterSpacing: 0.3 },
   progressTrack: {
     backgroundColor: '#E8E8EC',
     borderRadius: 3,

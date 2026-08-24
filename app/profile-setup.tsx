@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -121,14 +122,25 @@ type ProfileFormMode = 'onboarding' | 'edit';
 /** 오류를 직접 표시할 수 있는 입력. 선택형 항목은 footer 안내로만 처리한다. */
 type SetupField = 'birthDate' | 'displayName';
 
+const EDIT_SECTION_BY_NAME: Record<string, SetupStep> = {
+  basic: 0,
+  additional: 1,
+  preferences: 2,
+  about: 3,
+  photos: 4,
+};
+
 function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const requestedEditMode = mode === 'edit';
+  const { section: requestedSection } = useLocalSearchParams<{ section?: string }>();
   const { session, refreshProfile, profileReviewStatus, profileReviewNote } = useAuthSession();
   const scrollRef = useRef<ScrollView>(null);
   const suggestedBirthDate = session?.user.user_metadata.birth_date;
-  const [step, setStep] = useState<SetupStep>(0);
+  const [step, setStep] = useState<SetupStep>(() =>
+    requestedEditMode ? (EDIT_SECTION_BY_NAME[String(requestedSection)] ?? 0) : 0,
+  );
   const [displayName, setDisplayName] = useState('');
   const [birthDate, setBirthDate] = useState(
     typeof suggestedBirthDate === 'string' && isValidBirthDate(suggestedBirthDate)
@@ -243,6 +255,83 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       setProfileHydrated(true);
     });
   }, [existingProfileQuery.data, profileHydrated]);
+
+  const formFingerprint = JSON.stringify({
+    bio,
+    birthDate,
+    countryCode,
+    displayName,
+    gender,
+    interestedIn,
+    maxAge,
+    minAge,
+    nativeLanguage,
+    photos: photos.map((photo) => photo.draftId),
+    profileDetails,
+    profileTags,
+    selectedInterestIds,
+    spokenLanguages,
+  });
+  // 편집 시작 시점의 지문을 서버 데이터에서 직접 만든다.
+  // 폼 state 스냅샷을 따로 보관하지 않아 effect 연쇄나 시점 문제가 없다.
+  // 아래 필드 구성은 위 formFingerprint와 정확히 같아야 한다.
+  const pristineFingerprint = useMemo(() => {
+    const existing = existingProfileQuery.data;
+    if (!existing) return null;
+    const { details, profile, interests, languages, settings, tags } = existing;
+    return JSON.stringify({
+      bio: profile.bio,
+      birthDate: profile.birth_date,
+      countryCode: profile.country_code,
+      displayName: profile.display_name,
+      gender: profile.gender,
+      interestedIn: profile.interested_in,
+      maxAge: settings?.max_age ?? 29,
+      minAge: settings?.min_age ?? 18,
+      nativeLanguage: profile.native_language ?? '',
+      photos: profile.profile_photos.map((photo) => `stored:${photo.id}`),
+      profileDetails: {
+        occupation: details?.occupation ?? '',
+        educationLevel: details?.education_level ?? null,
+        heightCm: details?.height_cm ?? null,
+        personalityType: details?.personality_type ?? null,
+        drinking: details?.drinking ?? null,
+        smoking: details?.smoking ?? null,
+        exercise: details?.exercise ?? null,
+        pets: details?.pets ?? null,
+      },
+      profileTags: tags.reduce<ProfileTagSelections>(
+        (selection, tag) => ({
+          ...selection,
+          [tag.category]: [...selection[tag.category as keyof ProfileTagSelections], tag.value],
+        }),
+        { connection_goal: [], vibe: [], daily_rhythm: [], communication_style: [] },
+      ),
+      selectedInterestIds: interests.map((interest) => interest.id),
+      spokenLanguages: languages.map((language) => ({
+        code: language.language_code,
+        level: language.proficiency,
+      })),
+    });
+  }, [existingProfileQuery.data]);
+
+  const isDirty =
+    requestedEditMode &&
+    profileHydrated &&
+    pristineFingerprint !== null &&
+    pristineFingerprint !== formFingerprint;
+
+  /** 저장하지 않은 변경이 있으면 확인 후 나간다. */
+  function leaveEditor() {
+    if (!isDirty) {
+      router.replace('/(tabs)/me');
+      return;
+    }
+    Alert.alert('저장하지 않고 나갈까요?', '변경한 내용이 사라져요.', [
+      { text: '계속 편집', style: 'cancel' },
+      { text: '나가기', style: 'destructive', onPress: () => router.replace('/(tabs)/me') },
+    ]);
+  }
 
   const languageList = [nativeLanguage, ...spokenLanguages.map((language) => language.code)].filter(
     Boolean,
@@ -508,7 +597,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                   <Pressable
                     accessibilityLabel="프로필 수정 뒤로가기"
                     accessibilityRole="button"
-                    onPress={() => router.replace('/(tabs)/me')}
+                    onPress={leaveEditor}
                     hitSlop={6}
                     style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
                   >
