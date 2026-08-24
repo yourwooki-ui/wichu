@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -27,6 +28,8 @@ const STEPS = [
     title: '한 명씩 보고\n내 선택을 남겨요',
     body: '프로필을 충분히 확인한 다음 자연스럽게 넘겨보세요.',
     notes: ['왼쪽 PASS · 오른쪽 PICK', '한 번 누르면 상세 프로필'],
+    tip: '다음 프로필은 미리 준비되어 선택 후 바로 이어져요.',
+    tipIcon: illustratedIcons.discoveryVisible,
     visual: 'discover',
   },
   {
@@ -36,6 +39,8 @@ const STEPS = [
     title: '서로 PICK하면\n대화가 열려요',
     body: '상대도 나를 선택했을 때만 매치되고 1:1 채팅을 시작할 수 있어요.',
     notes: ['매치된 사용자만 메시지 가능', '언제든 차단·신고 가능'],
+    tip: '매치 전에는 상대에게 메시지를 보낼 수 없어요.',
+    tipIcon: illustratedIcons.safety,
     visual: 'match',
   },
   {
@@ -45,6 +50,8 @@ const STEPS = [
     title: '언어가 달라도\n바로 대화해요',
     body: '원문은 그대로 두고 필요한 메시지만 자연스럽게 번역해요.',
     notes: ['원문과 번역을 함께 확인', '메시지는 즉시 화면에 표시'],
+    tip: '번역은 원문을 바꾸지 않고 별도로 표시돼요.',
+    tipIcon: illustratedIcons.translation,
     visual: 'chat',
   },
 ] as const;
@@ -128,6 +135,13 @@ export function ProductTutorialScreen() {
                 </View>
               ))}
             </View>
+            <View style={styles.tipCard}>
+              <IllustratedIcon size={34} source={step.tipIcon} />
+              <View style={styles.tipCopy}>
+                <Text style={styles.tipLabel}>알아두세요</Text>
+                <Text style={styles.tipText}>{step.tip}</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -164,7 +178,8 @@ function TutorialVisual({
   compact: boolean;
   kind: (typeof STEPS)[number]['visual'];
 }) {
-  const height = compact ? 232 : 330;
+  const { height: viewportHeight } = useAppViewport();
+  const height = compact ? 250 : Math.min(410, viewportHeight * 0.44);
 
   if (kind === 'match') return <MatchVisual height={height} />;
   if (kind === 'chat') return <ChatVisual height={height} />;
@@ -206,7 +221,10 @@ function DiscoverVisual({ height }: { height: number }) {
         </View>
       </View>
       <View style={styles.discoverCopy}>
-        <Text style={styles.discoverName}>Lina, 24 🇩🇪</Text>
+        <View style={styles.discoverNameRow}>
+          <Text style={styles.discoverName}>Lina, 24</Text>
+          <CountryFlag compact countryCode="DE" style={styles.discoverFlag} />
+        </View>
         <Text style={styles.discoverMeta}>디자인 전공 · 사진 심사 완료</Text>
         <View style={styles.tagRow}>
           {['디자인', '여행', '인디 음악'].map((tag) => (
@@ -373,6 +391,8 @@ const styles = StyleSheet.create({
   pickMark: { backgroundColor: palette.pink },
   pickMarkText: { color: palette.white, fontSize: 9, fontWeight: '900' },
   discoverCopy: { bottom: 16, left: 16, position: 'absolute', right: 16 },
+  discoverNameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  discoverFlag: { borderRadius: 5, height: 20, width: 28 },
   discoverName: { color: palette.white, fontSize: 24, fontWeight: '900', letterSpacing: -0.7 },
   discoverMeta: { color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 3 },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
@@ -535,6 +555,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   noteText: { color: palette.ink, flex: 1, fontSize: 9, fontWeight: '800' },
+  tipCard: {
+    alignItems: 'center',
+    backgroundColor: '#EEEEF2',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 9,
+    minHeight: 52,
+    paddingHorizontal: 10,
+  },
+  tipCopy: { flex: 1 },
+  tipLabel: { color: palette.ink, fontSize: 9, fontWeight: '900' },
+  tipText: { color: palette.inkMuted, fontSize: 9, lineHeight: 14, marginTop: 2 },
   footer: {
     alignItems: 'center',
     flexDirection: 'row',
