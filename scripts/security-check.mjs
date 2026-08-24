@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { extname } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
 
 const TEXT_EXTENSIONS = new Set([
   '',
@@ -22,11 +22,50 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 const findings = [];
-const trackedFiles = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
-  .split('\0')
-  .filter(Boolean);
+const EXCLUDED_DIRECTORIES = new Set([
+  '.expo',
+  '.git',
+  '.vercel',
+  'coverage',
+  'dist',
+  'node_modules',
+]);
 
-for (const file of trackedFiles) {
+function listSourceFiles(directory = '.') {
+  const files = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
+
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (!EXCLUDED_DIRECTORIES.has(entry.name)) files.push(...listSourceFiles(path));
+      continue;
+    }
+
+    if (entry.isFile()) files.push(path);
+  }
+
+  return files;
+}
+
+function listFilesToInspect() {
+  if (existsSync('.git')) {
+    try {
+      return execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
+        .split('\0')
+        .filter(Boolean);
+    } catch {
+      // Deployment providers may upload source without Git metadata.
+    }
+  }
+
+  return listSourceFiles();
+}
+
+const sourceFiles = listFilesToInspect();
+
+for (const file of sourceFiles) {
   if (!TEXT_EXTENSIONS.has(extname(file).toLowerCase())) continue;
   const content = readFileSync(file, 'utf8');
 
@@ -105,4 +144,4 @@ if (findings.length) {
   process.exit(1);
 }
 
-console.log(`Security check passed (${trackedFiles.length} tracked files inspected).`);
+console.log(`Security check passed (${sourceFiles.length} source files inspected).`);
