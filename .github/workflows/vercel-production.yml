@@ -22,23 +22,27 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
         with:
-          version: 2.115.0
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned Supabase CLI
+        run: npm ci
 
       - name: Start isolated Supabase stack
-        run: supabase start
+        run: npx supabase start
 
       - name: Lint database functions
-        run: supabase db lint --local --schema public --level warning --fail-on error
+        run: npx supabase db lint --local --schema public --level warning --fail-on error
 
       - name: Run migration and RLS contracts
-        run: supabase test db
+        run: npx supabase test db
 
       - name: Stop isolated Supabase stack
         if: always()
-        run: supabase stop --no-backup
+        run: npx supabase stop --no-backup
 
   verify-and-deploy:
     name: Verify and deploy to Vercel
