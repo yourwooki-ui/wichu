@@ -1,4 +1,5 @@
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { getSupabaseClient } from '@/lib/supabase';
 import type {
   Gender,
@@ -103,7 +104,7 @@ const DEV_KO_PROFILE_COPY: Record<string, { bio: string; interests: string[] }> 
 };
 
 function isDevelopmentSampleProfile(profileId: string) {
-  return __DEV__ && DEVELOPMENT_SAMPLE_PROFILE_IDS.includes(profileId);
+  return reviewSamplesEnabled && DEVELOPMENT_SAMPLE_PROFILE_IDS.includes(profileId);
 }
 
 function isMissingSameCountryPreference(error: { code?: string; message?: string } | null) {
@@ -130,7 +131,9 @@ function getLanguageDetails(candidate: CandidateRow): ProfileLanguage[] {
   );
   if (returnedDetails?.length) return returnedDetails;
 
-  const devLevels = __DEV__ ? DEV_LANGUAGE_LEVEL_BY_PROFILE_ID[candidate.id] : undefined;
+  const devLevels = reviewSamplesEnabled
+    ? DEV_LANGUAGE_LEVEL_BY_PROFILE_ID[candidate.id]
+    : undefined;
   return candidate.languages.map((code, index) => ({
     code,
     level: devLevels?.[code] ?? (index === 0 ? 'native' : 'intermediate'),
@@ -161,7 +164,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
     });
     if (photos.length === 0 || !isGender(candidate.gender)) return [];
     const localizedDevCopy =
-      __DEV__ && locale.toLowerCase().startsWith('ko')
+      reviewSamplesEnabled && locale.toLowerCase().startsWith('ko')
         ? DEV_KO_PROFILE_COPY[candidate.id]
         : undefined;
 
@@ -176,10 +179,11 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         languages: candidate.languages,
         languageDetails: getLanguageDetails(candidate),
         distanceKm:
-          candidate.distance_km ?? (__DEV__ ? DEV_DISTANCE_BY_PROFILE_ID[candidate.id] : undefined),
+          candidate.distance_km ??
+          (reviewSamplesEnabled ? DEV_DISTANCE_BY_PROFILE_ID[candidate.id] : undefined),
         isGoldPass:
           candidate.is_gold_pass === true ||
-          (__DEV__ && DEVELOPMENT_GOLD_PROFILE_IDS.has(candidate.id)),
+          (reviewSamplesEnabled && DEVELOPMENT_GOLD_PROFILE_IDS.has(candidate.id)),
         bio: localizedDevCopy?.bio ?? candidate.bio,
         interests: localizedDevCopy?.interests ?? candidate.interests,
         photos,
@@ -365,7 +369,7 @@ export const discoveryService = {
     return { ...filters, viewerCountryCode: profileResult.data.country_code };
   },
   async getDevelopmentSampleCandidates(
-    filters: DiscoveryPreferences,
+    _filters: DiscoveryPreferences,
     locale: string,
   ): Promise<Profile[]> {
     const supabase = getSupabaseClient();
@@ -426,17 +430,10 @@ export const discoveryService = {
       ];
     });
 
-    return hydrateCandidates(
-      candidateRows.filter(
-        (candidate) =>
-          (filters.maxDistanceKm === 0 ||
-            (candidate.distance_km != null && candidate.distance_km <= filters.maxDistanceKm)) &&
-          (!filters.excludeSameCountry ||
-            !filters.viewerCountryCode ||
-            candidate.country_code !== filters.viewerCountryCode),
-      ),
-      locale,
-    );
+    // Review samples are a deterministic QA deck. They intentionally bypass
+    // live discovery filters so a narrow saved distance/country setting cannot
+    // leave the review build empty.
+    return hydrateCandidates(candidateRows, locale);
   },
   async swipe(_userId: string, targetId: string, action: SwipeAction) {
     if (isDevelopmentSampleProfile(targetId)) return { matchId: null };
@@ -450,7 +447,7 @@ export const discoveryService = {
   },
   async undoSwipe(_userId: string, targetId: string) {
     if (isDevelopmentSampleProfile(targetId)) {
-      return { creditsRemaining: 0, unlimited: __DEV__ };
+      return { creditsRemaining: 0, unlimited: reviewSamplesEnabled };
     }
 
     const supabase = getSupabaseClient();

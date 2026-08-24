@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { discoveryService } from '@/features/discover/services/discovery-service';
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
@@ -23,7 +24,7 @@ export function useDiscoverDeck() {
   const userId = session?.user.id;
   const passEntitlement = usePassEntitlement();
   const undoEntitlementQuery = useQuery({
-    enabled: Boolean(userId) && !__DEV__,
+    enabled: Boolean(userId) && !reviewSamplesEnabled,
     queryFn: discoveryService.getUndoEntitlement,
     queryKey: ['discover', 'undo-entitlement', userId],
     staleTime: 10_000,
@@ -31,9 +32,9 @@ export function useDiscoverDeck() {
   const undoUnlimited =
     (passEntitlement.data?.unlimitedUndo ?? false) ||
     (undoEntitlementQuery.data?.unlimited ?? false);
-  const undoCredits = __DEV__ ? 0 : (undoEntitlementQuery.data?.credits ?? 0);
+  const undoCredits = reviewSamplesEnabled ? 0 : (undoEntitlementQuery.data?.credits ?? 0);
   const undoEntitlementReady =
-    __DEV__ || (!passEntitlement.isPending && !undoEntitlementQuery.isPending);
+    reviewSamplesEnabled || (!passEntitlement.isPending && !undoEntitlementQuery.isPending);
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en';
   const profiles = useDiscoverStore((state) => state.profiles);
   const mergeProfiles = useDiscoverStore((state) => state.mergeProfiles);
@@ -54,7 +55,7 @@ export function useDiscoverDeck() {
     enabled: Boolean(userId && preferencesQuery.data),
     staleTime: 15_000,
     queryFn: () =>
-      __DEV__
+      reviewSamplesEnabled
         ? discoveryService.getDevelopmentSampleCandidates(preferencesQuery.data!, locale)
         : discoveryService.getCandidates(preferencesQuery.data!, locale),
   });
@@ -65,7 +66,7 @@ export function useDiscoverDeck() {
 
   useEffect(() => {
     if (!candidatesQuery.data) return;
-    if (__DEV__) recycleProfiles(candidatesQuery.data);
+    if (reviewSamplesEnabled) recycleProfiles(candidatesQuery.data);
     else mergeProfiles(candidatesQuery.data);
   }, [candidatesQuery.data, mergeProfiles, recycleProfiles]);
 
@@ -93,7 +94,7 @@ export function useDiscoverDeck() {
     },
     onSettled: () => {
       const remainingProfiles = useDiscoverStore.getState().profiles.length;
-      if (__DEV__ && candidatesQuery.data) {
+      if (reviewSamplesEnabled && candidatesQuery.data) {
         recycleProfiles(candidatesQuery.data);
         return;
       }
@@ -155,7 +156,7 @@ export function useDiscoverDeck() {
       lastSwipe.userId !== userId ||
       swipeMutation.isPending ||
       undoMutation.isPending ||
-      (!undoUnlimited && undoCredits < 1 && !__DEV__)
+      (!undoUnlimited && undoCredits < 1 && !reviewSamplesEnabled)
     )
       return;
     undoMutation.mutate(lastSwipe);
@@ -167,7 +168,7 @@ export function useDiscoverDeck() {
     const result = await adsService.showRewardedUndo('discover_undo');
     if (result !== 'rewarded') return result;
 
-    if (__DEV__) {
+    if (reviewSamplesEnabled) {
       undoMutation.mutate(lastSwipe);
       return 'undone' as const;
     }

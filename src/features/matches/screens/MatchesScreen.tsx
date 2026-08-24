@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
@@ -80,6 +81,15 @@ const visitorTimes: Record<string, string> = {
   'mock-yuna': '3일 전',
 };
 
+function includeReviewSamples(
+  liveProfiles: ConnectionProfile[],
+  sampleProfiles: ConnectionProfile[],
+) {
+  if (!reviewSamplesEnabled) return liveProfiles;
+  const sampleIds = new Set(sampleProfiles.map((profile) => profile.id));
+  return [...sampleProfiles, ...liveProfiles.filter((profile) => !sampleIds.has(profile.id))];
+}
+
 export function MatchesScreen() {
   const router = useRouter();
   const entitlement = usePassEntitlement();
@@ -144,11 +154,11 @@ export function MatchesScreen() {
     isNew: now - new Date(like.likedAt).getTime() <= 24 * 60 * 60 * 1000,
     isGoldPass: like.isGoldPass,
   }));
-  const matchedProfiles = realMatches.length || !__DEV__ ? realMatches : profilesByCategory.matched;
+  const matchedProfiles = includeReviewSamples(realMatches, profilesByCategory.matched);
   const pickedProfiles = prioritizeGoldProfiles(
-    incomingLikes.length || !__DEV__ ? incomingLikes : profilesByCategory['picked-me'],
+    includeReviewSamples(incomingLikes, profilesByCategory['picked-me']),
   );
-  const visitorProfiles = visitors.length || !__DEV__ ? visitors : profilesByCategory.visitors;
+  const visitorProfiles = includeReviewSamples(visitors, profilesByCategory.visitors);
   const profiles =
     category === 'visitors'
       ? visitorProfiles
@@ -157,15 +167,17 @@ export function MatchesScreen() {
         : pickedProfiles;
   const copy = categoryCopy[category];
   const emptyCopy = emptyCategoryCopy[category];
-  const visitorsLocked = category === 'visitors' && entitlement.data?.tier !== 'gold';
+  const visitorsLocked =
+    category === 'visitors' && entitlement.data?.tier !== 'gold' && !reviewSamplesEnabled;
   const categoryLoading =
-    category === 'picked-me'
+    !reviewSamplesEnabled &&
+    (category === 'picked-me'
       ? incomingLikesQuery.isLoading
       : category === 'matched'
         ? matchesQuery.isLoading
-        : !visitorsLocked && visitorsQuery.isLoading;
+        : !visitorsLocked && visitorsQuery.isLoading);
   const categoryError =
-    !__DEV__ &&
+    !reviewSamplesEnabled &&
     (category === 'picked-me'
       ? incomingLikesQuery.isError
       : category === 'matched'
