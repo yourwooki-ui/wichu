@@ -8,6 +8,12 @@ const MAX_STORAGE_OBJECTS = 1000;
 
 export default {
   fetch: withSupabase({ auth: ['user', 'secret'] }, async (req, ctx) => {
+    if (req.method !== 'POST') {
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
+    if (requestTooLarge(req, 4096)) {
+      return Response.json({ error: 'Request payload is too large' }, { status: 413 });
+    }
     const body = (await req.json().catch(() => ({}))) as OutboxPayload;
     const userId = ctx.authMode === 'user' ? ctx.userClaims?.sub : body.userId;
     if (!userId) return Response.json({ error: 'User ID is required' }, { status: 400 });
@@ -65,10 +71,21 @@ export default {
       if (userLookup.user) {
         await ctx.supabaseAdmin.rpc('fail_account_deletion_as_worker', {
           p_user_id: userId,
-          p_error: String(error),
+          p_error: safeErrorMessage(error),
         });
       }
       throw error;
     }
   }),
 };
+
+function safeErrorMessage(error: unknown) {
+  return String(error instanceof Error ? error.message : error)
+    .replace(/(bearer|token|secret|password|apikey)\s*[=:]\s*\S+/gi, '$1=[REDACTED]')
+    .slice(0, 300);
+}
+
+function requestTooLarge(req: Request, maxBytes: number) {
+  const contentLength = Number(req.headers.get('content-length'));
+  return Number.isFinite(contentLength) && contentLength > maxBytes;
+}

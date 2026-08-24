@@ -33,7 +33,7 @@ function isMissingProfileDetails(error: { code?: string; message?: string } | nu
 type CandidateRow = {
   id: string;
   display_name: string;
-  birth_date: string;
+  age: number;
   gender: string;
   country_code: string;
   native_language?: string | null;
@@ -172,7 +172,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
       {
         id: candidate.id,
         name: candidate.display_name,
-        birthDate: candidate.birth_date,
+        age: candidate.age,
         gender: candidate.gender,
         countryCode: candidate.country_code,
         countryLabel: regionNames.of(candidate.country_code) ?? candidate.country_code,
@@ -200,13 +200,7 @@ export const discoveryService = {
     const supabase = getSupabaseClient();
     const [profileResult, detailResult, photosResult, profileInterestsResult, languageResult] =
       await Promise.all([
-        supabase
-          .from('profiles')
-          .select(
-            'id, display_name, birth_date, gender, country_code, native_language, languages, bio, created_at, last_active_at',
-          )
-          .eq('id', profileId)
-          .maybeSingle(),
+        supabase.rpc('get_visible_profiles', { p_profile_ids: [profileId] }).maybeSingle(),
         supabase.from('profile_details').select('*').eq('profile_id', profileId).maybeSingle(),
         supabase
           .from('profile_photos')
@@ -375,12 +369,9 @@ export const discoveryService = {
     const supabase = getSupabaseClient();
     const [profilesResult, photosResult, profileInterestsResult, interestsResult] =
       await Promise.all([
-        supabase
-          .from('profiles')
-          .select(
-            'id, display_name, birth_date, gender, country_code, languages, bio, created_at, last_active_at',
-          )
-          .in('id', DEVELOPMENT_SAMPLE_PROFILE_IDS),
+        supabase.rpc('get_visible_profiles', {
+          p_profile_ids: [...DEVELOPMENT_SAMPLE_PROFILE_IDS],
+        }),
         supabase
           .from('profile_photos')
           .select('profile_id, storage_path, position')

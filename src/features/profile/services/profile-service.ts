@@ -2,7 +2,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTag } from '@/features/profile/types/profile-tag';
 import type { ProfileDetails } from '@/features/profile/types/profile-details';
-import { Json, TablesInsert, TablesUpdate } from '@/types/database';
+import { Json, TablesInsert } from '@/types/database';
 
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
   return Boolean(
@@ -17,12 +17,19 @@ export const profileService = {
   getInterests() {
     return getSupabaseClient().from('interests').select('id, slug, label').order('label');
   },
-  getMyProfile(userId: string) {
-    return getSupabaseClient()
-      .from('profiles')
-      .select('*, profile_photos(*)')
-      .eq('id', userId)
-      .single();
+  async getMyProfile(userId: string) {
+    const supabase = getSupabaseClient();
+    const [profileResult, photosResult] = await Promise.all([
+      supabase.rpc('get_my_private_profile').single(),
+      supabase.from('profile_photos').select('*').eq('profile_id', userId).order('position'),
+    ]);
+    const error = profileResult.error ?? photosResult.error;
+    return {
+      data: profileResult.data
+        ? { ...profileResult.data, profile_photos: photosResult.data ?? [] }
+        : null,
+      error,
+    };
   },
   async getMyOperationalProfile(userId: string) {
     const supabase = getSupabaseClient();
@@ -34,7 +41,7 @@ export const profileService = {
       tagResult,
       settingsResult,
     ] = await Promise.all([
-      supabase.from('profiles').select('*, profile_photos(*)').eq('id', userId).single(),
+      supabase.rpc('get_my_private_profile').single(),
       supabase.from('profile_details').select('*').eq('profile_id', userId).maybeSingle(),
       supabase.from('profile_interests').select('interest_id').eq('profile_id', userId),
       supabase.from('profile_languages').select('*').eq('profile_id', userId),
@@ -61,8 +68,15 @@ export const profileService = {
       : { data: [], error: null };
     if (interestResult.error) throw interestResult.error;
 
+    const { data: profilePhotos, error: profilePhotosError } = await supabase
+      .from('profile_photos')
+      .select('*')
+      .eq('profile_id', userId)
+      .order('position');
+    if (profilePhotosError) throw profilePhotosError;
+
     const signedPhotos = await Promise.all(
-      [...(profileResult.data.profile_photos ?? [])]
+      [...(profilePhotos ?? [])]
         .sort((a, b) => a.position - b.position)
         .map(async (photo) => {
           const { data } = await supabase.storage
@@ -80,13 +94,6 @@ export const profileService = {
       tags: tagResult.data ?? [],
       settings: settingsResult.data,
     };
-  },
-  getMyProfileCompletion(userId: string) {
-    return getSupabaseClient()
-      .from('profiles')
-      .select('profile_completed, review_status, review_note')
-      .eq('id', userId)
-      .maybeSingle();
   },
   submitForReview() {
     return getSupabaseClient().rpc('submit_profile_for_review');
@@ -128,12 +135,6 @@ export const profileService = {
   },
   deleteMyProfile(userId: string) {
     return getSupabaseClient().from('profiles').delete().eq('id', userId);
-  },
-  createMyProfile(values: TablesInsert<'profiles'>) {
-    return getSupabaseClient().from('profiles').insert(values).select().single();
-  },
-  updateMyProfile(userId: string, values: TablesUpdate<'profiles'>) {
-    return getSupabaseClient().from('profiles').update(values).eq('id', userId).select().single();
   },
   upsertMySettings(values: TablesInsert<'user_settings'>) {
     return getSupabaseClient().from('user_settings').upsert(values, { onConflict: 'user_id' });

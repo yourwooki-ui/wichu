@@ -20,7 +20,6 @@ import {
   mockConversations,
 } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
-import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 
@@ -42,7 +41,7 @@ export function ChatListScreen() {
         profile: {
           id: connection.profile.id,
           name: connection.profile.display_name,
-          age: getProfileAge(connection.profile.birth_date),
+          age: connection.profile.age,
           countryCode: connection.profile.country_code,
           distanceKm: 0,
           photo: connection.profile.photo ?? '',

@@ -45,6 +45,12 @@ const RECEIPT_EXPIRY_HOURS = 24;
 
 export default {
   fetch: withSupabase({ auth: 'secret' }, async (req, ctx) => {
+    if (req.method !== 'POST') {
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
+    if (requestTooLarge(req, 64 * 1024)) {
+      return Response.json({ error: 'Request payload is too large' }, { status: 413 });
+    }
     const payload = (await req.json().catch(() => null)) as
       WebhookPayload | ReconcilePayload | null;
 
@@ -268,4 +274,9 @@ function safeErrorCode(value?: string) {
 
 function safeErrorMessage(error: unknown) {
   return String(error instanceof Error ? error.message : error).slice(0, 300);
+}
+
+function requestTooLarge(req: Request, maxBytes: number) {
+  const contentLength = Number(req.headers.get('content-length'));
+  return Number.isFinite(contentLength) && contentLength > maxBytes;
 }

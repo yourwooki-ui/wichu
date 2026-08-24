@@ -1,8 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, processLock, SupabaseClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
+import { sensitiveStorage } from '@/lib/secure-storage';
+import { validateSupabaseConfiguration } from '@/lib/supabase-config';
 import { Database } from '@/types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -13,16 +14,15 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKe
 let client: SupabaseClient<Database> | null = null;
 
 export function getSupabaseClient(): SupabaseClient<Database> {
-  if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error('Supabase 환경변수가 없습니다. .env.example을 참고해 .env.local을 설정하세요.');
-  }
+  const configuration = validateSupabaseConfiguration(supabaseUrl, supabasePublishableKey);
 
-  client ??= createClient<Database>(supabaseUrl, supabasePublishableKey, {
+  client ??= createClient<Database>(configuration.url, configuration.publishableKey, {
     auth: {
-      ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+      storage: sensitiveStorage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      flowType: 'pkce',
       lock: processLock,
     },
   });

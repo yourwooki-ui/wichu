@@ -13,7 +13,7 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { getRepresentativeCountryCode } from '@/constants/languages';
 import { palette, radius } from '@/constants/theme';
-import { getProfileAge, getProfilePresence } from '@/features/profile/utils/profile-display';
+import { getProfilePresence } from '@/features/profile/utils/profile-display';
 import type { Profile } from '@/types/profile';
 
 const HERO_HEIGHT_RATIO = 1.18;
@@ -109,7 +109,7 @@ export function StandardProfileDetail({
   const { i18n, t } = useTranslation();
   const [photoWidth, setPhotoWidth] = useState(0);
   const [now] = useState(() => Date.now());
-  const age = getProfileAge(profile.birthDate, now);
+  const age = profile.age;
   const heroHeight = Math.min((photoWidth || 430) * HERO_HEIGHT_RATIO, HERO_MAX_HEIGHT);
   const primaryPhoto = profile.photos[0];
   const additionalPhotos = profile.photos.slice(1);

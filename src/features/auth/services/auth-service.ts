@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { getSupabaseClient } from '@/lib/supabase';
+import { sensitiveStorage } from '@/lib/secure-storage';
 import { notificationsService } from '@/services/notifications-service';
 
 const PENDING_GOOGLE_BIRTH_DATE_KEY = 'wichu.auth.pending-google-birth-date';
@@ -17,12 +17,12 @@ export function getPasswordResetUrl() {
 }
 
 async function applyPendingGoogleBirthDate() {
-  const birthDate = await AsyncStorage.getItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+  const birthDate = await sensitiveStorage.getItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
   if (!birthDate) return;
 
   const { error } = await getSupabaseClient().auth.updateUser({ data: { birth_date: birthDate } });
   if (error) throw error;
-  await AsyncStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+  await sensitiveStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
 }
 
 async function createSessionFromUrl(url: string) {
@@ -33,24 +33,12 @@ async function createSessionFromUrl(url: string) {
   if (errorDescription) throw new Error(errorDescription);
 
   const code = params.get('code');
-  const result = code
-    ? await getSupabaseClient().auth.exchangeCodeForSession(code)
-    : await createImplicitSession(params);
+  if (!code) throw new Error('인증 코드가 없거나 만료되었습니다. 다시 로그인해주세요.');
+  const result = await getSupabaseClient().auth.exchangeCodeForSession(code);
 
   if (result?.error) throw result.error;
   if (result?.data.session) await applyPendingGoogleBirthDate();
   return result;
-}
-
-async function createImplicitSession(params: URLSearchParams) {
-  const accessToken = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
-  if (!accessToken || !refreshToken) return null;
-
-  return getSupabaseClient().auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
 }
 
 export const authService = {
@@ -76,7 +64,7 @@ export const authService = {
     });
   },
   async signInWithGoogle(birthDate?: string) {
-    if (birthDate) await AsyncStorage.setItem(PENDING_GOOGLE_BIRTH_DATE_KEY, birthDate);
+    if (birthDate) await sensitiveStorage.setItem(PENDING_GOOGLE_BIRTH_DATE_KEY, birthDate);
 
     const redirectTo = getAuthCallbackUrl();
     const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
@@ -89,7 +77,7 @@ export const authService = {
     });
 
     if (error) {
-      if (birthDate) await AsyncStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+      if (birthDate) await sensitiveStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
       throw error;
     }
 
@@ -98,7 +86,7 @@ export const authService = {
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type !== 'success') {
-      if (birthDate) await AsyncStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+      if (birthDate) await sensitiveStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
       return 'cancelled' as const;
     }
 

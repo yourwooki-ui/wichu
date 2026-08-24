@@ -7,10 +7,8 @@ export type MatchConnection = {
   matchedAt: string;
   unreadCount: number;
   lastMessage: Pick<Tables<'messages'>, 'content' | 'created_at' | 'sender_id'> | null;
-  profile: Pick<
-    Tables<'profiles'>,
-    'id' | 'display_name' | 'birth_date' | 'country_code' | 'last_active_at'
-  > & {
+  profile: Pick<Tables<'profiles'>, 'id' | 'display_name' | 'country_code' | 'last_active_at'> & {
+    age: number;
     photo: string | null;
   };
 };
@@ -18,7 +16,7 @@ export type MatchConnection = {
 export type IncomingLike = {
   profileId: string;
   displayName: string;
-  birthDate: string;
+  age: number;
   countryCode: string;
   lastActiveAt: string | null;
   distanceKm: number | null;
@@ -52,7 +50,7 @@ export const matchesService = {
         {
           profileId: like.profile_id,
           displayName: like.display_name,
-          birthDate: like.birth_date,
+          age: like.age,
           countryCode: like.country_code,
           lastActiveAt: like.last_active_at,
           distanceKm: like.distance_km,
@@ -103,7 +101,7 @@ export const matchesService = {
       profile: {
         id: row.profile_id,
         display_name: row.display_name,
-        birth_date: row.birth_date,
+        age: row.age,
         country_code: row.country_code,
         last_active_at: row.last_active_at,
         photo: row.photo_path ? (signedPhotos.get(row.photo_path) ?? null) : null,

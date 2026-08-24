@@ -12,7 +12,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-lina',
     name: 'Lina',
-    birthDate: '2002-04-18',
+    age: 24,
     gender: 'woman',
     countryCode: 'DE',
     countryLabel: '독일',
@@ -45,7 +45,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-noah',
     name: 'Noah',
-    birthDate: '2000-09-07',
+    age: 25,
     gender: 'man',
     countryCode: 'CA',
     countryLabel: '캐나다',
@@ -77,7 +77,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-mia',
     name: 'Mia',
-    birthDate: '2003-02-14',
+    age: 23,
     gender: 'woman',
     countryCode: 'AU',
     countryLabel: '호주',
@@ -110,7 +110,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-jun',
     name: 'Jun',
-    birthDate: '1999-11-22',
+    age: 26,
     gender: 'man',
     countryCode: 'JP',
     countryLabel: '일본',
@@ -141,7 +141,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-sofia',
     name: 'Sofia',
-    birthDate: '2001-06-09',
+    age: 25,
     gender: 'woman',
     countryCode: 'ES',
     countryLabel: '스페인',
@@ -173,7 +173,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-yuna',
     name: 'Yuna',
-    birthDate: '2004-03-21',
+    age: 22,
     gender: 'woman',
     countryCode: 'JP',
     countryLabel: '일본',
@@ -204,7 +204,7 @@ export const mockProfiles: Profile[] = [
   {
     id: 'mock-clara',
     name: 'Clara',
-    birthDate: '2002-08-30',
+    age: 23,
     gender: 'woman',
     countryCode: 'FR',
     countryLabel: '프랑스',

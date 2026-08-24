@@ -9,7 +9,7 @@ import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
-import { getProfileAge, getProfilePresence } from '@/features/profile/utils/profile-display';
+import { getProfilePresence } from '@/features/profile/utils/profile-display';
 import { Profile } from '@/types/profile';
 
 type ProfileCardProps = {
@@ -20,7 +20,7 @@ type ProfileCardProps = {
 
 function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
   const { t } = useTranslation();
-  const age = getProfileAge(profile.birthDate);
+  const age = profile.age;
   const distanceLabel = profile.distanceKm != null ? `${profile.distanceKm}km 거리` : null;
   const presence = getProfilePresence(profile.lastActiveAt, now);
   const presenceLabel = presence

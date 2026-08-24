@@ -22,7 +22,7 @@ export type PublicProfileDetails = {
 export type Profile = {
   id: string;
   name: string;
-  birthDate: string;
+  age: number;
   gender: Gender;
   countryCode: string;
   countryLabel: string;

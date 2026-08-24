@@ -627,7 +627,7 @@ export type Database = {
           matched_at: string;
           profile_id: string;
           display_name: string;
-          birth_date: string;
+          age: number;
           country_code: string;
           last_active_at: string | null;
           photo_path: string | null;
@@ -671,7 +671,7 @@ export type Database = {
         Returns: {
           id: string;
           display_name: string;
-          birth_date: string;
+          age: number;
           gender: string;
           country_code: string;
           languages: string[];
@@ -683,6 +683,25 @@ export type Database = {
           is_gold_pass: boolean;
           photo_paths: string[];
           interests: string[];
+        }[];
+      };
+      get_my_private_profile: {
+        Args: Record<never, never>;
+        Returns: Database['public']['Tables']['profiles']['Row'][];
+      };
+      get_visible_profiles: {
+        Args: { p_profile_ids: string[] };
+        Returns: {
+          id: string;
+          display_name: string;
+          age: number;
+          gender: string;
+          country_code: string;
+          native_language: string | null;
+          languages: string[];
+          bio: string;
+          created_at: string;
+          last_active_at: string | null;
         }[];
       };
       update_my_location: {
@@ -702,7 +721,7 @@ export type Database = {
         Returns: {
           visitor_id: string;
           display_name: string;
-          birth_date: string;
+          age: number;
           country_code: string;
           last_active_at: string | null;
           distance_km: number | null;
@@ -717,7 +736,7 @@ export type Database = {
         Returns: {
           profile_id: string;
           display_name: string;
-          birth_date: string;
+          age: number;
           country_code: string;
           last_active_at: string | null;
           distance_km: number | null;
@@ -824,6 +843,10 @@ export type Database = {
           p_device_name?: string | null;
         };
         Returns: string;
+      };
+      unregister_my_push_devices: {
+        Args: Record<never, never>;
+        Returns: number;
       };
       claim_notification_outbox: {
         Args: { p_outbox_id: string };

@@ -66,11 +66,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     enabled: Boolean(userId),
     retry: 1,
     queryFn: async () => {
-      const { data, error } = await getSupabaseClient()
-        .from('profiles')
-        .select('profile_completed, review_status, review_note')
-        .eq('id', userId!)
-        .maybeSingle();
+      const { data, error } = await getSupabaseClient().rpc('get_my_private_profile').maybeSingle();
       if (error) throw error;
       return data;
     },

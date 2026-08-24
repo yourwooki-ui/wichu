@@ -34,8 +34,8 @@ export const notificationsService = {
     if (error) throw error;
     return token;
   },
-  async unregister(userId: string) {
-    const { error } = await getSupabaseClient().from('push_devices').delete().eq('user_id', userId);
+  async unregister(_userId: string) {
+    const { error } = await getSupabaseClient().rpc('unregister_my_push_devices');
     if (error) throw error;
   },
 };

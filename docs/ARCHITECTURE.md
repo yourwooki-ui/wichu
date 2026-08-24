@@ -1,5 +1,8 @@
 # Architecture
 
+Security boundaries, secret handling, token storage, and incident response are
+defined in [SECURITY.md](./SECURITY.md).
+
 ## 원칙
 
 WICHU는 Expo SDK 57 기반 iOS/Android 네이티브 앱이다. Expo Router는 라우팅, TanStack Query는 서버 상태, Zustand는 짧은 수명의 인터랙션 상태를 담당한다. Supabase는 Auth, PostgreSQL, Storage, Realtime을 제공하며 모든 데이터 접근은 RLS를 통과한다.

@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(43);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -33,6 +33,34 @@ select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-0000000
 set local role authenticated;
 
 select is((select count(*) from public.profiles where id = '30000000-0000-4000-8000-000000000003'), 0::bigint, 'pending profile is hidden');
+select throws_ok(
+  $$select birth_date from public.profiles where id = '30000000-0000-4000-8000-000000000002'$$,
+  '42501',
+  'permission denied for table profiles',
+  'members cannot select exact birth dates from profile rows'
+);
+select is(
+  (select birth_date from public.get_my_private_profile()),
+  '2000-01-01'::date,
+  'the self-only profile RPC returns the caller exact birth date'
+);
+select is(
+  (
+    select age
+    from public.get_visible_profiles(array['30000000-0000-4000-8000-000000000002'::uuid])
+  ),
+  date_part('year', age(current_date, '2000-01-01'::date))::integer,
+  'visible profile reads expose age instead of exact birth date'
+);
+select lives_ok(
+  $$select public.register_my_push_device('ExpoPushToken[0123456789abcdefghijklmnop]', 'android', 'P0 device')$$,
+  'member can register a push token through the controlled RPC'
+);
+select is(
+  public.unregister_my_push_devices(),
+  1,
+  'member can remove only their own push devices through the controlled RPC'
+);
 select is((select count(*) from public.get_my_admin_access()), 0::bigint, 'member has no admin access');
 select throws_ok($$select * from public.get_pending_reports()$$, 'P0001', 'Administrator access required', 'member cannot read report queue');
 

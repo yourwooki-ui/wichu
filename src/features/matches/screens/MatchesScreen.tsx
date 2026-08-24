@@ -20,7 +20,6 @@ import { type ConnectionProfile, mockConnections } from '@/features/matches/data
 import { matchesService } from '@/features/matches/services/matches-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
-import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 
@@ -117,7 +116,7 @@ export function MatchesScreen() {
   const visitors = (visitorsQuery.data ?? []).map((visitor): ConnectionProfile => ({
     id: visitor.visitor_id,
     name: visitor.display_name,
-    age: getProfileAge(visitor.birth_date),
+    age: visitor.age,
     countryCode: visitor.country_code,
     distanceKm: visitor.distance_km ?? 0,
     photo: visitor.photo,
@@ -131,7 +130,7 @@ export function MatchesScreen() {
   const realMatches = (matchesQuery.data ?? []).map((connection): ConnectionProfile => ({
     id: connection.profile.id,
     name: connection.profile.display_name,
-    age: getProfileAge(connection.profile.birth_date),
+    age: connection.profile.age,
     countryCode: connection.profile.country_code,
     distanceKm: 0,
     photo: connection.profile.photo ?? '',
@@ -144,7 +143,7 @@ export function MatchesScreen() {
   const incomingLikes = (incomingLikesQuery.data ?? []).map((like): ConnectionProfile => ({
     id: like.profileId,
     name: like.displayName,
-    age: getProfileAge(like.birthDate),
+    age: like.age,
     countryCode: like.countryCode,
     distanceKm: like.distanceKm ?? 0,
     photo: like.photo,
