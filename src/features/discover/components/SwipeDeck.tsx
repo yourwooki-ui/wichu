@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
+import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, spacing, typography } from '@/constants/theme';
@@ -246,39 +247,25 @@ export function SwipeDeck({
   }
 
   if (!currentProfile) {
+    // 오류와 후보 소진은 해야 할 일이 다르다.
+    // 오류면 다시 불러오는 게 먼저고, 후보가 없으면 새로고침해도 그대로이므로
+    // 조건을 넓히는 쪽을 주 행동으로 둔다.
     return (
       <View style={styles.finished}>
-        <View style={styles.finishedIcon}>
-          <IllustratedIcon
-            size={66}
-            source={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
-          />
-        </View>
-        <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
-          {error ? '프로필을 불러오지 못했어요' : '새로운 프로필이 아직 없어요'}
-        </Text>
-        <Text style={[styles.finishedText, { color: theme.colors.textMuted }]}>
-          {error ??
-            '조건에 맞는 새로운 사람이 생기면 바로 보여드릴게요. 잠시 후 다시 확인해주세요.'}
-        </Text>
-        <View style={styles.finishedActions}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onAdjustFilters}
-            style={styles.adjustButton}
-          >
-            <Ionicons color={theme.colors.text} name="options-outline" size={17} />
-            <Text style={[styles.adjustButtonText, { color: theme.colors.text }]}>조건 조정</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
-            onPress={onRetry}
-          >
-            <Ionicons color={palette.white} name="refresh" size={16} />
-            <Text style={styles.resetButtonText}>새로고침</Text>
-          </Pressable>
-        </View>
+        <StateView
+          actionLabel={error ? '다시 시도' : '조건 넓히기'}
+          body={
+            error ??
+            '지금 조건에 맞는 사람을 다 봤어요. 범위를 조금 넓히면 새로운 사람을 만날 수 있어요.'
+          }
+          container="plain"
+          illustration={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
+          onAction={error ? onRetry : onAdjustFilters}
+          onSecondaryAction={error ? onAdjustFilters : onRetry}
+          secondaryActionLabel={error ? '조건 조정' : '새로고침'}
+          title={error ? '프로필을 불러오지 못했어요' : '오늘 볼 수 있는 사람을 다 봤어요'}
+          tone={error ? 'error' : 'neutral'}
+        />
       </View>
     );
   }
@@ -396,16 +383,6 @@ const styles = StyleSheet.create({
   likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  finishedIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  finishedTitle: { fontSize: 23, fontWeight: '800' },
-  finishedText: { marginTop: 8, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   loadingCard: {
     borderRadius: 28,
     bottom: 0,
@@ -418,26 +395,4 @@ const styles = StyleSheet.create({
   loadingChips: { flexDirection: 'row', gap: 7, marginTop: 13 },
   loadingTitle: { ...typography.heading, marginTop: 18 },
   loadingText: { ...typography.caption, marginTop: 5, textAlign: 'center' },
-  finishedActions: { flexDirection: 'row', gap: 8, marginTop: 22 },
-  adjustButton: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: '#DEDEE3',
-    borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  adjustButtonText: { fontSize: 11, fontWeight: '900' },
-  resetButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 20,
-    borderRadius: radius.pill,
-    paddingVertical: 12,
-  },
-  resetButtonText: { color: '#FFFFFF', fontWeight: '800' },
 });

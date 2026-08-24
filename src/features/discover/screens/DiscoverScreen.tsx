@@ -7,6 +7,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { layout, palette } from '@/constants/theme';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
 import { DiscoverGestureCoach } from '@/features/discover/components/DiscoverGestureCoach';
@@ -149,6 +150,8 @@ function HeaderAction({
   label,
   onPress,
 }: HeaderActionProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       accessibilityLabel={label}
@@ -162,13 +165,15 @@ function HeaderAction({
       ]}
     >
       <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
-      {badge ? <View style={styles.headerActionBadge} /> : null}
+      {badge ? (
+        <View style={[styles.headerActionBadge, { borderColor: theme.colors.background }]} />
+      ) : null}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
   header: {
     height: 70,
     flexDirection: 'row',
@@ -204,8 +209,8 @@ const styles = StyleSheet.create({
     width: 47,
   },
   headerActionBadge: {
-    backgroundColor: '#FF2D6F',
-    borderColor: '#EDEDED',
+    // 테두리는 화면 배경과 같은 색이어야 '파낸' 것처럼 보인다. 색은 호출부에서 넣는다.
+    backgroundColor: palette.pink,
     borderRadius: 5,
     borderWidth: 2,
     height: 10,
