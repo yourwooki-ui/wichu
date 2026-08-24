@@ -87,7 +87,9 @@ export function ProductTutorialScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <BrandWordmark color={palette.ink} size={22} />
+          <View style={styles.logoSlot}>
+            <BrandWordmark color={palette.ink} size={22} />
+          </View>
           <Pressable
             accessibilityLabel="튜토리얼 건너뛰기"
             accessibilityRole="button"
@@ -146,10 +148,6 @@ export function ProductTutorialScreen() {
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.stepCounter}>
-            <Text style={[styles.stepCurrent, { color: step.accent }]}>0{stepIndex + 1}</Text>
-            <Text style={styles.stepTotal}> / 0{STEPS.length}</Text>
-          </View>
           <Pressable
             accessibilityRole="button"
             disabled={finishing}
@@ -313,14 +311,22 @@ function ChatVisual({ height }: { height: number }) {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: '#F7F7F9', flex: 1 },
-  screen: { alignSelf: 'center', flex: 1, maxWidth: 620, paddingHorizontal: 18, width: '100%' },
+  screen: {
+    alignSelf: 'center',
+    flex: 1,
+    maxWidth: 620,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    width: '100%',
+  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    height: 58,
+    height: 52,
     justifyContent: 'space-between',
   },
-  skip: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingLeft: 18 },
+  logoSlot: { height: 44, justifyContent: 'center' },
+  skip: { alignItems: 'center', height: 44, justifyContent: 'center' },
   skipText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   segments: { flexDirection: 'row', gap: 6, marginBottom: 14 },
   segmentTrack: {
@@ -527,7 +533,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 34,
   },
-  copy: { paddingHorizontal: 2, paddingTop: 18 },
+  copy: { paddingTop: 18 },
   copyCompact: { paddingTop: 13 },
   eyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
@@ -569,19 +575,12 @@ const styles = StyleSheet.create({
   tipLabel: { color: palette.ink, fontSize: 9, fontWeight: '900' },
   tipText: { color: palette.inkMuted, fontSize: 9, lineHeight: 14, marginTop: 2 },
   footer: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 14,
     paddingBottom: 10,
     paddingTop: 12,
   },
-  stepCounter: { flexDirection: 'row', width: 50 },
-  stepCurrent: { fontSize: 12, fontWeight: '900' },
-  stepTotal: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   primary: {
     alignItems: 'center',
     borderRadius: 18,
-    flex: 1,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
