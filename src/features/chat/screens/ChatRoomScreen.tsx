@@ -404,7 +404,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               </View>
             </View>
             <Text style={styles.matchTitle}>서로를 픽했어요.</Text>
-            <Text style={styles.matchSubtitle}>가볍게 첫인사를 건네보세요.</Text>
+            <Text style={styles.matchSubtitle}>이제 서로 메시지를 보낼 수 있어요.</Text>
           </View>
 
           <View style={styles.safetyNotice}>

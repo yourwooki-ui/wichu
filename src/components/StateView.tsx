@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ImageSource } from 'expo-image';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 
@@ -12,7 +14,8 @@ type StateViewProps = {
   body: string;
   /** `card`는 테두리 있는 surface 위에, `plain`은 배경 없이 렌더링한다. */
   container?: 'card' | 'plain';
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
   onAction?: () => void;
   onSecondaryAction?: () => void;
   secondaryActionLabel?: string;
@@ -32,6 +35,7 @@ export function StateView({
   body,
   container = 'card',
   icon,
+  illustration,
   onAction,
   onSecondaryAction,
   secondaryActionLabel,
@@ -54,9 +58,15 @@ export function StateView({
         style,
       ]}
     >
-      <View style={[styles.icon, { backgroundColor: `${accent}1A` }]}>
-        <Ionicons color={accent} name={icon} size={26} />
-      </View>
+      {illustration ? (
+        <View style={styles.illustration}>
+          <IllustratedIcon size={64} source={illustration} />
+        </View>
+      ) : icon ? (
+        <View style={[styles.icon, { backgroundColor: `${accent}1A` }]}>
+          <Ionicons color={accent} name={icon} size={26} />
+        </View>
+      ) : null}
       <Text style={[typography.subheading, styles.title, { color: theme.colors.text }]}>
         {title}
       </Text>
@@ -129,6 +139,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 56,
   },
+  illustration: { alignItems: 'center', height: 68, justifyContent: 'center', width: 68 },
   title: { marginTop: spacing.sm, textAlign: 'center' },
   body: { marginTop: spacing.xxs, maxWidth: 280, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },

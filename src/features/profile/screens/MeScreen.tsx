@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -224,7 +224,7 @@ export function MeScreen() {
           <View style={styles.profileHeroHeading}>
             <Text style={styles.profileHeroEyebrow}>PUBLIC PROFILE</Text>
             <Text style={styles.profileHeroTitle}>내 공개 프로필</Text>
-            <Text style={styles.profileHeroAccount}>상대방에게 보이는 모습을 관리해요</Text>
+            <Text style={styles.profileHeroAccount}>공개 사진과 프로필 정보를 관리합니다</Text>
           </View>
           <Pressable
             accessibilityLabel="프로필 수정"
@@ -267,7 +267,7 @@ export function MeScreen() {
               <Text style={styles.previewPlaceholderText}>
                 {photosUnderReview > 0
                   ? '승인 전에는 공개 사진이 제한돼요'
-                  : '사진을 추가해 첫인상을 완성하세요'}
+                  : '사진을 1장 이상 추가해주세요'}
               </Text>
             </LinearGradient>
           )}
@@ -388,9 +388,7 @@ export function MeScreen() {
               <View style={styles.attentionCopy}>
                 <Text style={styles.attentionEyebrow}>프로필 완성도</Text>
                 <Text style={styles.attentionTitle}>
-                  {!photos.length
-                    ? '대표 사진을 다시 등록해주세요'
-                    : '조금만 더 채우면 준비 완료예요'}
+                  {!photos.length ? '대표 사진을 다시 등록해주세요' : '미입력 프로필 항목이 있어요'}
                 </Text>
               </View>
               <Text style={styles.attentionValue}>{profile.profile_completeness}%</Text>
@@ -422,30 +420,26 @@ export function MeScreen() {
         </View>
         <View style={styles.quickGrid}>
           <QuickAction
-            color="#FFE5EE"
             detail="사진 · 소개 · 관심사"
-            icon="person-outline"
+            illustration={illustratedIcons.profileEdit}
             label="프로필 수정"
             onPress={() => router.push('/profile-edit')}
           />
           <QuickAction
-            color="#E9F8C8"
-            detail="연령 · 국가 · 공개"
-            icon="options-outline"
+            detail="연령 · 국가 · 거리"
+            illustration={illustratedIcons.discoverySettings}
             label="탐색 설정"
             onPress={() => router.push('/settings')}
           />
           <QuickAction
-            color="#E8E5FF"
             detail="픽 · 매치 · 방문자"
-            icon="people-outline"
+            illustration={illustratedIcons.connections}
             label="연결 관리"
             onPress={() => router.push('/(tabs)/matches')}
           />
           <QuickAction
-            color="#FFF0BE"
             detail={tierLabel}
-            icon="diamond-outline"
+            illustration={illustratedIcons.goldPremium}
             label="이용권"
             onPress={() => router.push('/(tabs)/shop')}
           />
@@ -470,7 +464,7 @@ export function MeScreen() {
           style={({ pressed }) => [styles.settingsAction, pressed && styles.pressed]}
         >
           <View style={styles.settingsIcon}>
-            <Ionicons color={palette.ink} name="settings-outline" size={21} />
+            <IllustratedIcon size={46} source={illustratedIcons.settings} />
           </View>
           <View style={styles.settingsCopy}>
             <Text style={styles.settingsTitle}>계정 및 개인정보 설정</Text>
@@ -514,15 +508,13 @@ function StatusCell({
 }
 
 function QuickAction({
-  color,
   detail,
-  icon,
+  illustration,
   label,
   onPress,
 }: {
-  color: string;
   detail: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  illustration: ImageSource;
   label: string;
   onPress: () => void;
 }) {
@@ -532,8 +524,8 @@ function QuickAction({
       onPress={onPress}
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
-      <View style={[styles.quickIcon, { backgroundColor: color }]}>
-        <Ionicons color={palette.ink} name={icon} size={20} />
+      <View style={styles.quickIcon}>
+        <IllustratedIcon size={52} source={illustration} />
       </View>
       <View style={styles.quickCopy}>
         <Text style={styles.quickLabel}>{label}</Text>
@@ -700,16 +692,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     flexDirection: 'row',
-    minHeight: 69,
-    paddingHorizontal: 14,
+    minHeight: 78,
+    paddingHorizontal: 12,
     width: '100%',
   },
   quickIcon: {
     alignItems: 'center',
-    borderRadius: 14,
-    height: 38,
+    height: 58,
     justifyContent: 'center',
-    width: 38,
+    width: 58,
   },
   quickCopy: { flex: 1, marginLeft: 9, minWidth: 0 },
   quickLabel: { color: palette.ink, fontSize: 11, fontWeight: '900' },
@@ -831,11 +822,9 @@ const styles = StyleSheet.create({
   },
   settingsIcon: {
     alignItems: 'center',
-    backgroundColor: palette.lime,
-    borderRadius: 16,
-    height: 40,
+    height: 48,
     justifyContent: 'center',
-    width: 40,
+    width: 48,
   },
   settingsCopy: { flex: 1 },
   settingsTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },

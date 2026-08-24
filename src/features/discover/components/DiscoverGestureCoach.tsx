@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppModal } from '@/components/AppModal';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 
 const STORAGE_KEY = '@wichu/discover-gesture-coach-v1';
@@ -27,10 +29,10 @@ export function DiscoverGestureCoach() {
       <View style={styles.backdrop}>
         <View accessibilityViewIsModal style={styles.card}>
           <View style={styles.mark}>
-            <Ionicons color={palette.white} name="sparkles" size={23} />
+            <IllustratedIcon size={52} source={illustratedIcons.discoverySettings} />
           </View>
-          <Text style={styles.eyebrow}>HOW TO DISCOVER</Text>
-          <Text style={styles.title}>가볍게 넘기고,{`\n`}궁금하면 자세히 봐요.</Text>
+          <Text style={styles.eyebrow}>사용 방법</Text>
+          <Text style={styles.title}>카드를 이렇게 조작하세요</Text>
           <View style={styles.gestures}>
             <GestureItem icon="arrow-back" label="왼쪽" value="PASS" />
             <GestureItem icon="hand-left-outline" label="한 번 탭" value="상세 보기" />
@@ -38,10 +40,10 @@ export function DiscoverGestureCoach() {
           </View>
           <View style={styles.doubleTapHint}>
             <Ionicons color={palette.pink} name="heart" size={15} />
-            <Text style={styles.doubleTapText}>카드를 빠르게 두 번 탭해도 PICK할 수 있어요.</Text>
+            <Text style={styles.doubleTapText}>빠르게 두 번 탭하면 PICK</Text>
           </View>
           <Pressable accessibilityRole="button" onPress={dismiss} style={styles.action}>
-            <Text style={styles.actionText}>시작하기</Text>
+            <Text style={styles.actionText}>확인</Text>
           </Pressable>
         </View>
       </View>
@@ -87,11 +89,9 @@ const styles = StyleSheet.create({
   },
   mark: {
     alignItems: 'center',
-    backgroundColor: palette.pink,
-    borderRadius: 24,
-    height: 48,
+    height: 58,
     justifyContent: 'center',
-    width: 48,
+    width: 58,
   },
   eyebrow: {
     color: palette.pink,

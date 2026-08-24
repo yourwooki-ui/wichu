@@ -36,15 +36,15 @@ const categories: {
 const categoryCopy: Record<MatchCategory, { title: string; description: string }> = {
   'picked-me': {
     title: '나를 픽한 사람',
-    description: '프로필을 확인하고 서로의 픽을 완성해보세요.',
+    description: '회원님을 Pick한 사용자입니다.',
   },
   matched: {
     title: '매칭된 사람',
-    description: '서로를 픽해 연결된 사람들이에요.',
+    description: '서로 Pick해 매치된 사용자입니다.',
   },
   visitors: {
     title: '프로필 방문자',
-    description: '최근 내 프로필을 확인한 사람들이에요.',
+    description: '최근 프로필을 본 사용자입니다.',
   },
 };
 
@@ -230,14 +230,14 @@ export function MatchesScreen() {
                 <IllustratedIcon size={37} source={illustratedIcons.goldPremium} />
               </View>
               <View style={styles.visitorLockTextBlock}>
-                <Text style={styles.visitorLockTitle}>누가 방문했는지 궁금한가요?</Text>
+                <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>
                 <Text style={styles.visitorLockText}>
-                  Gold Pass에서 프로필을 선명하게 확인해요.
+                  방문자 프로필은 Gold Pass에서 확인할 수 있습니다.
                 </Text>
               </View>
             </View>
             <Pressable onPress={() => router.push('/(tabs)/shop')} style={styles.visitorLockAction}>
-              <Text style={styles.visitorLockActionText}>확인하기</Text>
+              <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
             </Pressable>
           </View>
         ) : null}
@@ -262,12 +262,13 @@ export function MatchesScreen() {
             actionLabel="발견하러 가기"
             body={
               category === 'matched'
-                ? '서로 Pick하면 새로운 연결이 여기에 모여요.'
+                ? '서로 Pick하면 매치 목록에 표시됩니다.'
                 : category === 'visitors'
-                  ? '내 프로필을 본 사람이 생기면 여기에 알려드려요.'
-                  : '새로운 Pick이 도착하면 가장 먼저 보여드릴게요.'
+                  ? '프로필 방문 기록이 생기면 여기에 표시됩니다.'
+                  : '새로운 Pick을 받으면 여기에 표시됩니다.'
             }
             icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
+            illustration={illustratedIcons.connections}
             onAction={() => router.push('/(tabs)/discover')}
             title={category === 'matched' ? '아직 매치가 없어요' : '아직 새로운 연결이 없어요'}
           />

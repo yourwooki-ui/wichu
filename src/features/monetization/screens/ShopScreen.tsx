@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,16 +12,36 @@ import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
-const goldBenefits: { icon: keyof typeof Ionicons.glyphMap; title: string; detail: string }[] = [
-  { icon: 'eye-outline', title: '방문자 확인', detail: '나를 궁금해한 사람을 확인해요' },
-  { icon: 'sparkles-outline', title: '우선 노출', detail: '조건이 맞는 사용자에게 먼저 보여요' },
+const goldBenefits: {
+  icon: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
+  title: string;
+  detail: string;
+}[] = [
+  {
+    icon: 'eye-outline',
+    illustration: illustratedIcons.connections,
+    title: '방문자 확인',
+    detail: '최근 프로필 방문자를 확인합니다',
+  },
+  {
+    icon: 'sparkles-outline',
+    illustration: illustratedIcons.discoverySettings,
+    title: '우선 노출',
+    detail: '조건이 맞는 후보에게 우선 노출됩니다',
+  },
   {
     icon: 'diamond-outline',
+    illustration: illustratedIcons.goldPremium,
     title: '골드 프로필',
-    detail: '테두리와 다이아몬드로 존재감을 높여요',
+    detail: '골드 테두리와 다이아몬드가 표시됩니다',
   },
-  { icon: 'remove-circle-outline', title: '광고 제거', detail: '흐름이 끊기지 않게 이용해요' },
-  { icon: 'arrow-undo-outline', title: '무제한 되돌리기', detail: '광고 없이 선택을 되돌려요' },
+  { icon: 'remove-circle-outline', title: '광고 제거', detail: '자동 광고가 표시되지 않습니다' },
+  {
+    icon: 'arrow-undo-outline',
+    title: '무제한 되돌리기',
+    detail: '광고 시청 없이 되돌릴 수 있습니다',
+  },
 ];
 
 const planComparison = [
@@ -52,7 +73,7 @@ export function ShopScreen() {
             {tier === 'gold' ? (
               <IllustratedIcon size={38} source={illustratedIcons.goldPremium} />
             ) : (
-              <Ionicons color={palette.pink} name="person-outline" size={18} />
+              <IllustratedIcon size={34} source={illustratedIcons.profileEdit} />
             )}
           </View>
           <View style={styles.currentPlanCopy}>
@@ -73,12 +94,12 @@ export function ShopScreen() {
             </View>
             <View>
               <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
-              <Text style={styles.goldMicrocopy}>발견 가능성을 한 단계 더</Text>
+              <Text style={styles.goldMicrocopy}>방문자 확인 · 광고 제거 · 우선 노출</Text>
             </View>
           </View>
-          <Text style={styles.goldTitle}>더 잘 보이고,{`\n`}먼저 연결되게.</Text>
+          <Text style={styles.goldTitle}>Gold 기능을{`\n`}한 번에 이용하세요.</Text>
           <Text style={styles.goldDescription}>
-            방문자를 확인하고, 무제한으로 되돌리고, 광고 없이 발견에 집중해요.
+            방문자 확인, 무제한 되돌리기, 광고 제거와 우선 노출이 포함됩니다.
           </Text>
           <View style={styles.goldHighlights}>
             {goldBenefits.slice(0, 3).map((benefit) => (
@@ -107,7 +128,7 @@ export function ShopScreen() {
             style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
           >
             <View style={styles.planIconPink}>
-              <Ionicons color={palette.pink} name="remove-circle-outline" size={20} />
+              <IllustratedIcon size={42} source={illustratedIcons.purchase} />
             </View>
             <Text style={styles.planName}>Ad-Free</Text>
             <Text style={styles.planDescription}>선택형 보상 광고를 제외한 자동 광고 제거</Text>
@@ -151,7 +172,11 @@ export function ShopScreen() {
             {goldBenefits.map((benefit) => (
               <View key={benefit.title} style={styles.benefitItem}>
                 <View style={styles.benefitIcon}>
-                  <Ionicons color="#8A6200" name={benefit.icon} size={19} />
+                  {benefit.illustration ? (
+                    <IllustratedIcon size={34} source={benefit.illustration} />
+                  ) : (
+                    <Ionicons color="#8A6200" name={benefit.icon} size={19} />
+                  )}
                 </View>
                 <View style={styles.benefitCopy}>
                   <Text style={styles.benefitTitle}>{benefit.title}</Text>

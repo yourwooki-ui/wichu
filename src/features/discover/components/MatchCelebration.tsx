@@ -35,25 +35,25 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
                 />
               </View>
               <View style={styles.matchMark}>
-                <Ionicons color={palette.white} name="heart" size={22} />
+                <Ionicons color={palette.white} name="checkmark" size={22} />
               </View>
             </LinearGradient>
-            <Text style={styles.eyebrow}>IT&apos;S A MATCH</Text>
+            <Text style={styles.eyebrow}>MATCH</Text>
             <View style={styles.nameRow}>
-              <Text style={styles.title}>{profile.name}님과 연결됐어요</Text>
+              <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
               <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
             </View>
-            <Text style={styles.body}>서로 Pick한 지금, 가볍게 첫인사를 건네보세요.</Text>
+            <Text style={styles.body}>이제 서로 메시지를 보낼 수 있어요.</Text>
             <Pressable accessibilityRole="button" onPress={onChat} style={styles.primaryAction}>
               <Ionicons color={palette.white} name="chatbubble" size={17} />
-              <Text style={styles.primaryActionText}>첫 인사 보내기</Text>
+              <Text style={styles.primaryActionText}>메시지 보내기</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={onContinue}
               style={styles.secondaryAction}
             >
-              <Text style={styles.secondaryActionText}>계속 발견하기</Text>
+              <Text style={styles.secondaryActionText}>발견 계속하기</Text>
             </Pressable>
           </View>
         ) : null}

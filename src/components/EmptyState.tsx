@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ImageSource } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { StateView, type StateTone } from '@/components/StateView';
@@ -6,7 +7,8 @@ import { StateView, type StateTone } from '@/components/StateView';
 type EmptyStateProps = {
   actionLabel?: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
   onAction?: () => void;
   title: string;
   tone?: StateTone;
@@ -21,6 +23,7 @@ export function EmptyState({
   actionLabel,
   description,
   icon,
+  illustration,
   onAction,
   title,
   tone,
@@ -32,6 +35,7 @@ export function EmptyState({
         body={description}
         container="plain"
         icon={icon}
+        illustration={illustration}
         onAction={onAction}
         title={title}
         tone={tone}

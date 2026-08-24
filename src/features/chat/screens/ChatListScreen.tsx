@@ -91,8 +91,8 @@ export function ChatListScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.title}>대화를 이어가요</Text>
-          <Text style={styles.subtitle}>가볍게 인사하고 새로운 이야기를 시작해보세요.</Text>
+          <Text style={styles.title}>채팅</Text>
+          <Text style={styles.subtitle}>매치한 사용자와 메시지를 주고받아요.</Text>
         </View>
 
         <FlashList
@@ -223,9 +223,9 @@ export function ChatListScreen() {
             ) : (
               <StateView
                 actionLabel="발견하러 가기"
-                body="서로 Pick하면 이곳에서 바로 대화를 시작할 수 있어요."
+                body="서로 Pick하면 채팅을 시작할 수 있어요."
                 container="plain"
-                icon="chatbubbles-outline"
+                illustration={illustratedIcons.chatControls}
                 onAction={() => router.push('/(tabs)/discover')}
                 title="아직 시작된 대화가 없어요"
               />
