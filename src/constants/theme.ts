@@ -15,6 +15,10 @@ export const palette = {
   darkSurface: '#111111',
   darkLine: '#2A2A2F',
   darkMuted: '#A8A8B0',
+  /** Gold Pass 표현. 화면마다 제각각이던 금색을 여기서만 정의한다. */
+  goldText: '#FFE7A3',
+  goldLine: 'rgba(255,211,90,0.7)',
+  goldSurface: 'rgba(15,15,18,0.74)',
 } as const;
 
 export const lightTheme = {

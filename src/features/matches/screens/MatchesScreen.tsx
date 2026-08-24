@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
+import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
@@ -33,17 +34,14 @@ const categories: {
   { key: 'visitors', label: '방문자' },
 ];
 
-const categoryCopy: Record<MatchCategory, { title: string; description: string }> = {
+const categoryCopy: Record<MatchCategory, { description: string }> = {
   'picked-me': {
-    title: '나를 픽한 사람',
     description: '회원님을 Pick한 사용자입니다.',
   },
   matched: {
-    title: '매칭된 사람',
     description: '서로 Pick해 매치된 사용자입니다.',
   },
   visitors: {
-    title: '프로필 방문자',
     description: '최근 프로필을 본 사용자입니다.',
   },
 };
@@ -238,12 +236,7 @@ export function MatchesScreen() {
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleBlock}>
-          <View style={styles.titleCopy}>
-            <Text style={styles.title}>{copy.title}</Text>
-            <Text style={styles.subtitle}>{copy.description}</Text>
-          </View>
-        </View>
+        <Text style={styles.subtitle}>{copy.description}</Text>
 
         {visitorsLocked ? (
           <View style={styles.visitorLock}>
@@ -384,12 +377,7 @@ function ProfileTile({
               </View>
             ) : null}
           </View>
-          {profile.isGoldPass ? (
-            <View style={styles.goldBadge}>
-              <IllustratedIcon size={23} source={illustratedIcons.goldPremium} />
-              <Text style={styles.goldBadgeText}>GOLD</Text>
-            </View>
-          ) : null}
+          {profile.isGoldPass ? <GoldBadge /> : null}
         </View>
       ) : null}
 
@@ -492,16 +480,12 @@ const styles = StyleSheet.create({
   categoryCountText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
-  titleBlock: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: 17,
-    paddingTop: 22,
+  subtitle: {
+    ...typography.bodySm,
+    color: palette.inkMuted,
+    paddingBottom: 16,
+    paddingTop: 18,
   },
-  titleCopy: { flex: 1 },
-  title: { ...typography.title, color: palette.ink },
-  subtitle: { ...typography.caption, color: palette.inkMuted, marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: {
     aspectRatio: 0.76,
@@ -584,18 +568,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   newPillText: { color: palette.ink, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
-  goldBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(13,13,15,0.78)',
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 1,
-    height: 28,
-    justifyContent: 'center',
-    paddingLeft: 1,
-    paddingRight: 9,
-  },
-  goldBadgeText: { color: '#FFE7A3', fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   cardContent: { bottom: 14, left: 14, position: 'absolute', right: 14 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   name: { ...typography.subheading, color: palette.white, fontWeight: '900' },

@@ -73,6 +73,8 @@ export function ChatListScreen() {
     .filter((profile) => profile.isOnline);
   const unreadCount = conversations.reduce((total, item) => total + item.unreadCount, 0);
   const listError = matchesQuery.isError && !__DEV__;
+  // 대화가 하나도 없으면 검색·온라인 레일·목록 제목은 의미가 없다.
+  const hasConversations = sourceConversations.length > 0;
   const refreshControl = useRefreshControl(
     useCallback(() => matchesQuery.refetch(), [matchesQuery]),
   );
@@ -96,53 +98,59 @@ export function ChatListScreen() {
           <Text style={styles.subtitle}>매치한 사용자와 메시지를 주고받아요.</Text>
         </View>
 
-        <FlashList
-          contentContainerStyle={styles.activeContent}
-          data={activeProfiles}
-          horizontal
-          keyExtractor={(profile) => profile.id}
-          renderItem={({ item: profile }) => (
-            <ConnectionAvatar
-              onPress={() => {
-                const conversation = sourceConversations.find(
-                  (item) => item.profile.id === profile.id,
-                );
-                router.push(
-                  `/chat/${conversation?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
-                );
-              }}
-              profile={profile}
-            />
-          )}
-          showsHorizontalScrollIndicator={false}
-          style={styles.activeRail}
-        />
-
-        <View style={styles.searchWrap}>
-          <Ionicons color={palette.inkMuted} name="search" size={19} />
-          <TextInput
-            autoCapitalize="none"
-            onChangeText={setQuery}
-            placeholder="이름 검색"
-            placeholderTextColor="#9999A1"
-            style={styles.searchInput}
-            value={query}
+        {activeProfiles.length ? (
+          <FlashList
+            contentContainerStyle={styles.activeContent}
+            data={activeProfiles}
+            horizontal
+            keyExtractor={(profile) => profile.id}
+            renderItem={({ item: profile }) => (
+              <ConnectionAvatar
+                onPress={() => {
+                  const conversation = sourceConversations.find(
+                    (item) => item.profile.id === profile.id,
+                  );
+                  router.push(
+                    `/chat/${conversation?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
+                  );
+                }}
+                profile={profile}
+              />
+            )}
+            showsHorizontalScrollIndicator={false}
+            style={styles.activeRail}
           />
-          {query ? (
-            <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
-              <Ionicons color={palette.inkMuted} name="close-circle" size={20} />
-            </Pressable>
-          ) : null}
-        </View>
+        ) : null}
 
-        <View style={styles.listHeading}>
-          <Text style={styles.listTitle}>메시지</Text>
-          {unreadCount ? (
-            <View style={styles.unreadPill}>
-              <Text style={styles.unreadPillText}>새 메시지 {unreadCount}</Text>
-            </View>
-          ) : null}
-        </View>
+        {hasConversations ? (
+          <View style={styles.searchWrap}>
+            <Ionicons color={palette.inkMuted} name="search" size={19} />
+            <TextInput
+              autoCapitalize="none"
+              onChangeText={setQuery}
+              placeholder="이름 검색"
+              placeholderTextColor="#9999A1"
+              style={styles.searchInput}
+              value={query}
+            />
+            {query ? (
+              <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
+                <Ionicons color={palette.inkMuted} name="close-circle" size={20} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        {hasConversations ? (
+          <View style={styles.listHeading}>
+            <Text style={styles.listTitle}>메시지</Text>
+            {unreadCount ? (
+              <View style={styles.unreadPill}>
+                <Text style={styles.unreadPillText}>새 메시지 {unreadCount}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.list}>
           {matchesQuery.isLoading ? <ChatRowsSkeleton /> : null}

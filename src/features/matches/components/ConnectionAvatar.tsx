@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
   goldRing: { borderColor: '#DCAF2D' },
   goldMark: {
     alignItems: 'center',
-    backgroundColor: '#19170F',
-    borderColor: '#FFD35A',
+    backgroundColor: palette.goldSurface,
+    borderColor: palette.goldLine,
     borderRadius: 9,
     borderWidth: 1,
     height: 22,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 18,
   },
-  goldMarkText: { color: '#FFD35A', fontSize: 10 },
+  goldMarkText: { color: palette.goldText, fontSize: 10 },
   image: { borderRadius: 32, height: 64, width: 64 },
   imageLarge: { borderRadius: 47, height: 94, width: 94 },
   onlineDot: {

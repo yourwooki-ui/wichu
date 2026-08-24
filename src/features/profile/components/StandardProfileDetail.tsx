@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { CountryFlag } from '@/components/CountryFlag';
+import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -318,9 +319,8 @@ export function StandardProfileDetail({
               ) : null}
             </View>
             {profile.isGoldPass ? (
-              <View style={styles.goldIdentity}>
-                <IllustratedIcon size={22} source={illustratedIcons.goldPremium} />
-                <Text style={styles.goldIdentityText}>GOLD PASS</Text>
+              <View style={styles.goldIdentitySlot}>
+                <GoldBadge label="GOLD PASS" size="md" />
               </View>
             ) : null}
             <View style={styles.heroMetaRow}>
@@ -577,20 +577,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   reviewedBadgeText: { color: palette.white, fontSize: 10, fontWeight: '900' },
-  goldIdentity: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(16,16,18,0.64)',
-    borderColor: 'rgba(255,211,90,0.7)',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    marginTop: 7,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  goldIdentityText: { color: '#FFE9A9', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+  goldIdentitySlot: { alignSelf: 'flex-start', marginTop: 7 },
   heroMetaRow: { alignItems: 'center', flexDirection: 'row', marginTop: 7 },
   heroMetaItem: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   presence: { alignItems: 'center', flexDirection: 'row', gap: 6 },

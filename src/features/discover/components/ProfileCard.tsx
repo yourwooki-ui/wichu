@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CountryFlag } from '@/components/CountryFlag';
+import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
@@ -72,9 +73,8 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
         ) : null}
       </View>
       {profile.isGoldPass ? (
-        <View style={styles.goldBadge}>
-          <IllustratedIcon size={24} source={illustratedIcons.goldPremium} />
-          <Text style={styles.goldBadgeText}>GOLD</Text>
+        <View style={styles.goldBadgeSlot}>
+          <GoldBadge size="md" />
         </View>
       ) : null}
       <View style={styles.content}>
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     ...elevation.lg,
   },
   cardPressed: pressFeedback.surface,
+  goldBadgeSlot: { position: 'absolute', right: 16, top: 19 },
   goldCardBorder: { borderColor: '#E8B936', borderWidth: 3 },
   nonInteractive: { pointerEvents: 'none' },
   gradientTop: {
@@ -174,21 +175,6 @@ const styles = StyleSheet.create({
   },
   photoProgressActive: { backgroundColor: '#FFFFFF' },
   badges: { position: 'absolute', top: 22, left: 18, flexDirection: 'row' },
-  goldBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(17,17,17,0.72)',
-    borderColor: 'rgba(255,210,83,0.72)',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    position: 'absolute',
-    right: 16,
-    top: 19,
-  },
-  goldBadgeText: { color: '#FFE59A', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   badge: {
     alignItems: 'center',
     flexDirection: 'row',

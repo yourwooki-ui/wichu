@@ -11,6 +11,7 @@ import {
   Skeleton,
   SkeletonLine,
 } from '@/components/Skeleton';
+import { GoldBadge } from '@/components/GoldBadge';
 import { StateView } from '@/components/StateView';
 import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -104,6 +105,13 @@ export default function DesignQaScreen() {
           </View>
         </Section>
 
+        <Section title="GoldBadge">
+          <View style={[styles.row, styles.goldBed]}>
+            <GoldBadge />
+            <GoldBadge label="GOLD PASS" size="md" />
+          </View>
+        </Section>
+
         <Section title="StateView">
           <StateView
             actionLabel="다시 시도"
@@ -181,5 +189,11 @@ const styles = StyleSheet.create({
     width: 96,
   },
   skeletonCard: { borderRadius: radius.lg, height: 120 },
+  goldBed: {
+    alignItems: 'center',
+    backgroundColor: '#2A2A30',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
   tutorialFrame: { borderRadius: radius.lg, height: 780, overflow: 'hidden' },
 });
