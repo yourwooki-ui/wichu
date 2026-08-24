@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -11,7 +11,15 @@ import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import {
+  layout,
+  palette,
+  pressFeedback,
+  radius,
+  spacing,
+  touchSlop,
+  typography,
+} from '@/constants/theme';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
@@ -75,6 +83,8 @@ export function ProductTutorialScreen() {
     router.replace('/(tabs)/discover?coach=1');
   };
 
+  const back = () => setStepIndex((current) => Math.max(current - 1, 0));
+
   const next = () => {
     if (isLastStep) {
       void finish();
@@ -94,15 +104,20 @@ export function ProductTutorialScreen() {
             accessibilityLabel="튜토리얼 건너뛰기"
             accessibilityRole="button"
             disabled={finishing}
-            hitSlop={8}
+            hitSlop={touchSlop.link}
             onPress={() => void finish()}
-            style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.skip, pressed && pressFeedback.icon]}
           >
             <Text style={styles.skipText}>건너뛰기</Text>
           </Pressable>
         </View>
 
-        <View accessibilityLabel={`${stepIndex + 1}/${STEPS.length} 단계`} style={styles.segments}>
+        <View
+          accessibilityLabel={`${stepIndex + 1}/${STEPS.length} 단계`}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ max: STEPS.length, min: 1, now: stepIndex + 1 }}
+          style={styles.segments}
+        >
           {STEPS.map((item, index) => (
             <View key={item.eyebrow} style={styles.segmentTrack}>
               {index <= stepIndex ? (
@@ -117,7 +132,11 @@ export function ProductTutorialScreen() {
           ))}
         </View>
 
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.contentScroll}
+        >
           <TutorialVisual compact={compact} kind={step.visual} />
 
           <View style={[styles.copy, compact && styles.copyCompact]}>
@@ -131,7 +150,7 @@ export function ProductTutorialScreen() {
               {step.notes.map((note) => (
                 <View key={note} style={styles.noteChip}>
                   <Ionicons color={step.accent} name="checkmark-circle" size={16} />
-                  <Text numberOfLines={1} style={styles.noteText}>
+                  <Text numberOfLines={2} style={styles.noteText}>
                     {note}
                   </Text>
                 </View>
@@ -145,24 +164,40 @@ export function ProductTutorialScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={finishing}
-            onPress={next}
-            style={({ pressed }) => [
-              styles.primary,
-              { backgroundColor: isLastStep ? palette.pink : palette.ink },
-              (pressed || finishing) && styles.pressed,
-            ]}
-          >
-            <Text style={styles.primaryText}>
-              {finishing ? '준비 중…' : isLastStep ? '발견 시작하기' : '다음'}
-            </Text>
-            {!finishing ? <Ionicons color={palette.white} name="arrow-forward" size={18} /> : null}
-          </Pressable>
+          <View style={styles.footerActions}>
+            {stepIndex > 0 ? (
+              <Pressable
+                accessibilityLabel="이전 단계"
+                accessibilityRole="button"
+                disabled={finishing}
+                onPress={back}
+                style={({ pressed }) => [styles.backButton, pressed && pressFeedback.control]}
+              >
+                <Ionicons color={palette.ink} name="arrow-back" size={18} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={finishing}
+              onPress={next}
+              style={({ pressed }) => [
+                styles.primary,
+                { backgroundColor: isLastStep ? palette.pink : palette.ink },
+                pressed && !finishing && pressFeedback.control,
+                finishing && styles.busy,
+              ]}
+            >
+              <Text style={styles.primaryText}>
+                {finishing ? '준비 중…' : isLastStep ? '발견 시작하기' : '다음'}
+              </Text>
+              {!finishing ? (
+                <Ionicons color={palette.white} name="arrow-forward" size={18} />
+              ) : null}
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -314,7 +349,7 @@ const styles = StyleSheet.create({
   screen: {
     alignSelf: 'center',
     flex: 1,
-    maxWidth: 620,
+    maxWidth: layout.maxContentWidth,
     paddingHorizontal: 18,
     paddingTop: 10,
     width: '100%',
@@ -327,7 +362,7 @@ const styles = StyleSheet.create({
   },
   logoSlot: { height: 44, justifyContent: 'center' },
   skip: { alignItems: 'center', height: 44, justifyContent: 'center' },
-  skipText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
+  skipText: { ...typography.caption, color: palette.inkMuted, fontWeight: '800' },
   segments: { flexDirection: 'row', gap: 6, marginBottom: 14 },
   segmentTrack: {
     backgroundColor: '#DEDEE3',
@@ -337,7 +372,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   segmentFill: { borderRadius: radius.pill, height: '100%', width: '100%' },
-  content: { flex: 1 },
+  contentScroll: { flex: 1 },
+  content: { paddingBottom: spacing.xs },
   visual: {
     borderColor: 'rgba(17,17,19,0.06)',
     borderRadius: 30,
@@ -365,7 +401,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   liveDot: { backgroundColor: '#7DFF8A', borderRadius: 4, height: 7, width: 7 },
-  liveText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
+  liveText: { color: palette.white, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   distancePill: {
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -375,7 +411,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  distanceText: { color: palette.ink, fontSize: 9, fontWeight: '900' },
+  distanceText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
   swipeMarks: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -393,9 +429,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   passMark: { backgroundColor: 'rgba(255,255,255,0.92)' },
-  passMarkText: { color: palette.ink, fontSize: 9, fontWeight: '900' },
+  passMarkText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
   pickMark: { backgroundColor: palette.pink },
-  pickMarkText: { color: palette.white, fontSize: 9, fontWeight: '900' },
+  pickMarkText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   discoverCopy: { bottom: 16, left: 16, position: 'absolute', right: 16 },
   discoverNameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   discoverFlag: { borderRadius: 5, height: 20, width: 28 },
@@ -410,10 +446,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  profileTagText: { color: palette.white, fontSize: 9, fontWeight: '800' },
+  profileTagText: { color: palette.white, fontSize: 10, fontWeight: '800' },
   matchOverline: {
     color: '#6C5400',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.1,
     marginTop: 20,
@@ -480,7 +516,7 @@ const styles = StyleSheet.create({
   chatAvatar: { borderRadius: 18, height: 36, width: 36 },
   chatHeaderCopy: { flex: 1, marginLeft: 9 },
   chatName: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  chatPresence: { color: '#16845D', fontSize: 9, fontWeight: '800', marginTop: 2 },
+  chatPresence: { color: '#16845D', fontSize: 10, fontWeight: '800', marginTop: 2 },
   chatThread: { flex: 1, gap: 10, justifyContent: 'center', paddingHorizontal: 16 },
   theirBubble: {
     alignSelf: 'flex-start',
@@ -510,7 +546,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   mineMessage: { color: palette.white, fontSize: 11, fontWeight: '700', lineHeight: 16 },
-  sentText: { color: 'rgba(255,255,255,0.55)', fontSize: 8, marginTop: 5, textAlign: 'right' },
+  sentText: { color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 5, textAlign: 'right' },
   chatComposer: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -536,17 +572,10 @@ const styles = StyleSheet.create({
   copy: { paddingTop: 18 },
   copyCompact: { paddingTop: 13 },
   eyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
-  title: {
-    color: palette.ink,
-    fontSize: 27,
-    fontWeight: '900',
-    letterSpacing: -0.95,
-    lineHeight: 33,
-    marginTop: 6,
-  },
-  titleCompact: { fontSize: 23, lineHeight: 28 },
-  body: { color: palette.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 8 },
+  eyebrow: { ...typography.overline },
+  title: { ...typography.display, color: palette.ink, marginTop: 6 },
+  titleCompact: { ...typography.title },
+  body: { ...typography.bodySm, color: palette.inkMuted, marginTop: 8 },
   noteGrid: { flexDirection: 'row', gap: 7, marginTop: 13 },
   noteChip: {
     alignItems: 'center',
@@ -559,8 +588,9 @@ const styles = StyleSheet.create({
     gap: 5,
     minHeight: 38,
     paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  noteText: { color: palette.ink, flex: 1, fontSize: 9, fontWeight: '800' },
+  noteText: { ...typography.caption, color: palette.ink, flex: 1, fontWeight: '800' },
   tipCard: {
     alignItems: 'center',
     backgroundColor: '#EEEEF2',
@@ -572,20 +602,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   tipCopy: { flex: 1 },
-  tipLabel: { color: palette.ink, fontSize: 9, fontWeight: '900' },
-  tipText: { color: palette.inkMuted, fontSize: 9, lineHeight: 14, marginTop: 2 },
+  tipLabel: { ...typography.caption, color: palette.ink, fontWeight: '900' },
+  tipText: { ...typography.caption, color: palette.inkMuted, marginTop: 2 },
   footer: {
     paddingBottom: 10,
     paddingTop: 12,
   },
+  footerActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  backButton: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 54,
+    width: 54,
+  },
   primary: {
     alignItems: 'center',
     borderRadius: 18,
+    flex: 1,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
     minHeight: 54,
   },
-  primaryText: { color: palette.white, fontSize: 13, fontWeight: '900' },
-  pressed: { opacity: 0.68 },
+  busy: { opacity: 0.68 },
+  primaryText: { ...typography.subheading, color: palette.white, fontWeight: '900' },
 });

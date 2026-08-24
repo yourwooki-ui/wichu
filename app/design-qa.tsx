@@ -12,6 +12,7 @@ import {
   SkeletonLine,
 } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
+import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, layout, radius, spacing, typography } from '@/constants/theme';
@@ -124,6 +125,13 @@ export default function DesignQaScreen() {
           />
         </Section>
 
+        {/* 튜토리얼은 인증 뒤에 있어 평소 웹 프리뷰로 열 수 없다. 여기서 실제 렌더를 확인한다. */}
+        <Section title="Tutorial (onboarding)">
+          <View style={styles.tutorialFrame}>
+            <ProductTutorialScreen />
+          </View>
+        </Section>
+
         <Section title="Skeleton">
           <SkeletonLine height={24} width="60%" />
           <Skeleton style={styles.skeletonCard} />
@@ -173,4 +181,5 @@ const styles = StyleSheet.create({
     width: 96,
   },
   skeletonCard: { borderRadius: radius.lg, height: 120 },
+  tutorialFrame: { borderRadius: radius.lg, height: 780, overflow: 'hidden' },
 });

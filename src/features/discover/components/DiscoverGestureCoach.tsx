@@ -7,7 +7,7 @@ import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, radius, typography } from '@/constants/theme';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 
 const STEPS = [
@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
   },
   calloutHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   calloutIdentity: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  eyebrow: { color: palette.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
-  counter: { color: palette.inkMuted, fontSize: 9, fontWeight: '800', marginTop: 2 },
+  eyebrow: { ...typography.overline, color: palette.pink },
+  counter: { ...typography.caption, color: palette.inkMuted, fontWeight: '800', marginTop: 2 },
   skipText: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   title: {
     color: palette.ink,
