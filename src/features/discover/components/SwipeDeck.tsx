@@ -14,9 +14,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
@@ -246,8 +248,11 @@ export function SwipeDeck({
   if (!currentProfile) {
     return (
       <View style={styles.finished}>
-        <View style={[styles.finishedIcon, { backgroundColor: `${theme.colors.primary}18` }]}>
-          <Ionicons name="sparkles-outline" size={32} color={theme.colors.primary} />
+        <View style={styles.finishedIcon}>
+          <IllustratedIcon
+            size={66}
+            source={error ? illustratedIcons.connectionError : illustratedIcons.discoverySettings}
+          />
         </View>
         <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
           {error ? '프로필을 불러오지 못했어요' : '오늘의 후보를 모두 확인했어요'}
@@ -281,7 +286,7 @@ export function SwipeDeck({
     <View style={styles.container}>
       {error ? (
         <Pressable onPress={onRetry} style={styles.errorBanner}>
-          <Ionicons color={palette.pink} name="alert-circle-outline" size={17} />
+          <IllustratedIcon size={24} source={illustratedIcons.connectionError} />
           <Text numberOfLines={2} style={styles.errorText}>
             {error}
           </Text>

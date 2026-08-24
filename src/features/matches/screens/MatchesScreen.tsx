@@ -227,7 +227,7 @@ export function MatchesScreen() {
           <View style={styles.visitorLock}>
             <View style={styles.visitorLockCopy}>
               <View style={styles.visitorLockIcon}>
-                <IllustratedIcon size={37} source={illustratedIcons.goldPremium} />
+                <IllustratedIcon size={40} source={illustratedIcons.goldPass} />
               </View>
               <View style={styles.visitorLockTextBlock}>
                 <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>

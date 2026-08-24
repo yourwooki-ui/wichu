@@ -221,7 +221,7 @@ export function StandardProfileDetail({
           ) : (
             <LinearGradient colors={['#D9DAE1', '#B7B9C4']} style={StyleSheet.absoluteFill}>
               <View style={styles.photoPlaceholder}>
-                <Ionicons color={palette.white} name="images-outline" size={34} />
+                <IllustratedIcon size={54} source={illustratedIcons.profilePhotos} />
                 <Text style={styles.photoPlaceholderText}>대표 사진을 준비 중이에요</Text>
               </View>
             </LinearGradient>
@@ -255,7 +255,7 @@ export function StandardProfileDetail({
           ) : null}
           {photoStatusLabel ? (
             <View style={styles.photoStatus}>
-              <Ionicons color={palette.white} name="time-outline" size={13} />
+              <IllustratedIcon size={18} source={illustratedIcons.photoReview} />
               <Text style={styles.photoStatusText}>{photoStatusLabel}</Text>
             </View>
           ) : null}
@@ -266,7 +266,7 @@ export function StandardProfileDetail({
               </Text>
               {profile.isPhotoReviewed ? (
                 <View accessibilityLabel="운영진 사진 심사 완료" style={styles.reviewedBadge}>
-                  <Ionicons color={palette.white} name="shield-checkmark" size={12} />
+                  <IllustratedIcon size={17} source={illustratedIcons.safety} />
                   <Text style={styles.reviewedBadgeText}>사진 심사</Text>
                 </View>
               ) : null}
@@ -280,7 +280,7 @@ export function StandardProfileDetail({
             <View style={styles.heroMetaRow}>
               {distanceLabel ? (
                 <View style={styles.heroMetaItem}>
-                  <Ionicons color={palette.lime} name="navigate" size={13} />
+                  <IllustratedIcon size={18} source={illustratedIcons.location} />
                   <Text style={styles.heroMetaText}>{distanceLabel}</Text>
                 </View>
               ) : null}

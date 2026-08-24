@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,43 +6,37 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
-import { illustratedIcons } from '@/constants/illustrated-icons';
+import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
 const goldBenefits: {
-  icon: keyof typeof Ionicons.glyphMap;
-  illustration?: ImageSource;
+  illustration: (typeof illustratedIcons)[keyof typeof illustratedIcons];
   title: string;
   detail: string;
 }[] = [
   {
-    icon: 'eye-outline',
     illustration: illustratedIcons.connections,
     title: '방문자 확인',
     detail: '최근 프로필 방문자를 확인합니다',
   },
   {
-    icon: 'sparkles-outline',
-    illustration: illustratedIcons.discoverySettings,
+    illustration: illustratedIcons.discoveryVisible,
     title: '우선 노출',
     detail: '조건이 맞는 후보에게 우선 노출됩니다',
   },
   {
-    icon: 'diamond-outline',
     illustration: illustratedIcons.goldPremium,
     title: '골드 프로필',
     detail: '골드 테두리와 다이아몬드가 표시됩니다',
   },
   {
-    icon: 'remove-circle-outline',
     illustration: illustratedIcons.adFree,
     title: '광고 제거',
     detail: '자동 광고가 표시되지 않습니다',
   },
   {
-    icon: 'arrow-undo-outline',
     illustration: illustratedIcons.rewind,
     title: '무제한 되돌리기',
     detail: '광고 시청 없이 되돌릴 수 있습니다',
@@ -76,11 +69,7 @@ export function ShopScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.currentPlan}>
           <View style={styles.currentPlanIcon}>
-            {tier === 'gold' ? (
-              <IllustratedIcon size={38} source={illustratedIcons.goldPremium} />
-            ) : (
-              <IllustratedIcon size={34} source={illustratedIcons.profileEdit} />
-            )}
+            <IllustratedIcon size={38} source={getPassIllustration(tier)} />
           </View>
           <View style={styles.currentPlanCopy}>
             <Text style={styles.currentPlanLabel}>현재 이용권</Text>
@@ -96,7 +85,7 @@ export function ShopScreen() {
           <View style={styles.goldGlow} />
           <View style={styles.goldTopRow}>
             <View style={styles.diamondMark}>
-              <IllustratedIcon size={52} source={illustratedIcons.goldPremium} />
+              <IllustratedIcon size={52} source={illustratedIcons.goldPass} />
             </View>
             <View>
               <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
@@ -110,11 +99,7 @@ export function ShopScreen() {
           <View style={styles.goldHighlights}>
             {goldBenefits.slice(0, 3).map((benefit) => (
               <View key={benefit.title} style={styles.highlightChip}>
-                {benefit.illustration ? (
-                  <IllustratedIcon size={20} source={benefit.illustration} />
-                ) : (
-                  <Ionicons color="#7B5800" name={benefit.icon} size={14} />
-                )}
+                <IllustratedIcon size={20} source={benefit.illustration} />
                 <Text style={styles.highlightText}>{benefit.title}</Text>
               </View>
             ))}
@@ -138,7 +123,7 @@ export function ShopScreen() {
             style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
           >
             <View style={styles.planIconPink}>
-              <IllustratedIcon size={42} source={illustratedIcons.purchase} />
+              <IllustratedIcon size={42} source={illustratedIcons.adFree} />
             </View>
             <Text style={styles.planName}>Ad-Free</Text>
             <Text style={styles.planDescription}>선택형 보상 광고를 제외한 자동 광고 제거</Text>
@@ -158,7 +143,7 @@ export function ShopScreen() {
             ]}
           >
             <View style={styles.planIconGold}>
-              <IllustratedIcon size={42} source={illustratedIcons.goldPremium} />
+              <IllustratedIcon size={42} source={illustratedIcons.goldPass} />
             </View>
             <View style={styles.recommendPill}>
               <Text style={styles.recommendText}>추천</Text>
@@ -182,11 +167,7 @@ export function ShopScreen() {
             {goldBenefits.map((benefit) => (
               <View key={benefit.title} style={styles.benefitItem}>
                 <View style={styles.benefitIcon}>
-                  {benefit.illustration ? (
-                    <IllustratedIcon size={34} source={benefit.illustration} />
-                  ) : (
-                    <Ionicons color="#8A6200" name={benefit.icon} size={19} />
-                  )}
+                  <IllustratedIcon size={34} source={benefit.illustration} />
                 </View>
                 <View style={styles.benefitCopy}>
                   <Text style={styles.benefitTitle}>{benefit.title}</Text>
@@ -225,7 +206,7 @@ export function ShopScreen() {
           style={({ pressed }) => [styles.purchaseManagement, pressed && styles.pressed]}
         >
           <View style={styles.purchaseIcon}>
-            <Ionicons color={palette.ink} name="refresh-outline" size={19} />
+            <IllustratedIcon size={30} source={illustratedIcons.purchase} />
           </View>
           <View style={styles.purchaseCopy}>
             <Text style={styles.purchaseTitle}>구매 복원 및 이용권 관리</Text>

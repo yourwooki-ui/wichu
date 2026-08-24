@@ -109,15 +109,12 @@ const EDIT_SECTIONS: {
   },
 ];
 
-const ONBOARDING_SECTIONS: readonly {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}[] = [
-  { icon: 'person-outline', label: '기본 정보' },
-  { icon: 'options-outline', label: '만남 취향' },
-  { icon: 'chatbubbles-outline', label: '소개와 언어' },
-  { icon: 'images-outline', label: '프로필 사진' },
-];
+const ONBOARDING_SECTIONS = [
+  { illustration: illustratedIcons.profileEdit, label: '기본 정보' },
+  { illustration: illustratedIcons.discoverySettings, label: '만남 취향' },
+  { illustration: illustratedIcons.translation, label: '소개와 언어' },
+  { illustration: illustratedIcons.profilePhotos, label: '프로필 사진' },
+] as const;
 
 type ProfileFormMode = 'onboarding' | 'edit';
 
@@ -180,6 +177,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const isEditingProfile = requestedEditMode && Boolean(existingProfileQuery.data?.profile);
   const activeEditSection = EDIT_SECTIONS[step];
   const activeSection = getFormSection(step, requestedEditMode);
+  const activeOnboardingSection =
+    ONBOARDING_SECTIONS[Math.min(step, ONBOARDING_SECTIONS.length - 1)]!;
 
   useEffect(() => {
     const existing = existingProfileQuery.data;
@@ -496,7 +495,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     hitSlop={6}
                     style={({ pressed }) => [styles.previewButton, pressed && styles.pressed]}
                   >
-                    <Ionicons color={palette.ink} name="eye-outline" size={20} />
+                    <IllustratedIcon size={30} source={illustratedIcons.discoveryVisible} />
                   </Pressable>
                 </View>
                 <View accessibilityRole="tablist" style={styles.editTabs}>
@@ -554,8 +553,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                   />
                 </View>
                 <View style={styles.onboardingStepBadge}>
-                  <Ionicons color={palette.pink} name={ONBOARDING_SECTIONS[step].icon} size={14} />
-                  <Text style={styles.onboardingStepText}>{ONBOARDING_SECTIONS[step].label}</Text>
+                  <IllustratedIcon size={22} source={activeOnboardingSection.illustration} />
+                  <Text style={styles.onboardingStepText}>{activeOnboardingSection.label}</Text>
                 </View>
                 <Text style={styles.title}>{t(`profileSetup.steps.${step}.title`)}</Text>
                 <Text style={styles.subtitle}>{t(`profileSetup.steps.${step}.body`)}</Text>

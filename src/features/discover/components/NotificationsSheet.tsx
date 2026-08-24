@@ -103,7 +103,7 @@ export function NotificationsSheet({
                     <Image source={{ uri: item.photo }} style={styles.avatar} />
                   ) : (
                     <View style={styles.avatarFallback}>
-                      <Ionicons color={palette.pink} name="heart" size={18} />
+                      <IllustratedIcon size={30} source={illustratedIcons.connections} />
                     </View>
                   )}
                   <View style={styles.rowCopy}>

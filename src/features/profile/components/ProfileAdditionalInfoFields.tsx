@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/FormField';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import {
   DRINKING_OPTIONS,
@@ -75,7 +77,7 @@ export function ProfileAdditionalInfoFields({
     <View style={styles.container}>
       <View style={styles.notice}>
         <View style={styles.noticeIcon}>
-          <Ionicons color={palette.pink} name="eye-outline" size={17} />
+          <IllustratedIcon size={26} source={illustratedIcons.discoveryVisible} />
         </View>
         <View style={styles.noticeCopy}>
           <Text style={styles.noticeTitle}>원하는 정보만 공개해요</Text>

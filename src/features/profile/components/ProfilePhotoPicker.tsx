@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -230,10 +230,13 @@ export function ProfilePhotoPicker({
                   photo.reviewStatus === 'rejected' && styles.reviewBadgeRejected,
                 ]}
               >
-                <Ionicons
-                  color="#FFFFFF"
-                  name={photo.reviewStatus === 'pending' ? 'time-outline' : 'alert-circle-outline'}
-                  size={11}
+                <IllustratedIcon
+                  size={17}
+                  source={
+                    photo.reviewStatus === 'pending'
+                      ? illustratedIcons.photoReview
+                      : illustratedIcons.photoRejected
+                  }
                 />
                 <Text style={styles.reviewBadgeText}>
                   {photo.reviewStatus === 'pending' ? '사진 심사 중' : '사진 반려'}
@@ -311,7 +314,7 @@ export function ProfilePhotoPicker({
       <View style={styles.photoTips}>
         <PhotoTip icon="person-outline" label={t('profileSetup.photos.tipFace')} />
         <PhotoTip icon="sunny-outline" label={t('profileSetup.photos.tipClear')} />
-        <PhotoTip icon="shield-checkmark-outline" label={t('profileSetup.photos.tipSafe')} />
+        <PhotoTip illustration={illustratedIcons.safety} label={t('profileSetup.photos.tipSafe')} />
       </View>
 
       {uploadProgress ? (
@@ -361,11 +364,23 @@ function SourceButton({ icon, label, disabled, onPress }: SourceButtonProps) {
   );
 }
 
-function PhotoTip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+function PhotoTip({
+  icon,
+  illustration,
+  label,
+}: {
+  icon?: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
+  label: string;
+}) {
   const theme = useAppTheme();
   return (
     <View style={styles.photoTip}>
-      <Ionicons name={icon} size={13} color={theme.colors.textMuted} />
+      {illustration ? (
+        <IllustratedIcon size={18} source={illustration} />
+      ) : icon ? (
+        <Ionicons name={icon} size={13} color={theme.colors.textMuted} />
+      ) : null}
       <Text style={[styles.photoTipText, { color: theme.colors.textMuted }]}>{label}</Text>
     </View>
   );

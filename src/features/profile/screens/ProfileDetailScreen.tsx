@@ -7,9 +7,11 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
@@ -100,7 +102,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     return (
       <Screen style={[styles.screen, styles.unavailableScreen]}>
         <View style={[styles.unavailableIcon, { backgroundColor: theme.colors.surface }]}>
-          <Ionicons color={theme.colors.textMuted} name="person-outline" size={30} />
+          <IllustratedIcon size={60} source={illustratedIcons.searchEmpty} />
         </View>
         <Text style={[styles.unavailableTitle, { color: theme.colors.text }]}>
           {t('profileDetail.unavailable')}

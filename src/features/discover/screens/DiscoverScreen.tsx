@@ -7,6 +7,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
 import { DiscoverGestureCoach } from '@/features/discover/components/DiscoverGestureCoach';
 import { DiscoveryFilterSheet } from '@/features/discover/components/DiscoveryFilterSheet';
@@ -17,9 +18,9 @@ import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
 const headerIcons = {
-  undo: require('../../../../assets/header-icons/undo.png'),
-  filter: require('../../../../assets/header-icons/filter.png'),
-  notification: require('../../../../assets/header-icons/notification.png'),
+  undo: illustratedIcons.rewind,
+  filter: illustratedIcons.discoverySettings,
+  notification: illustratedIcons.notification,
 } satisfies Record<string, ImageSource>;
 
 export function DiscoverScreen() {

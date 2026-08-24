@@ -12,7 +12,7 @@ import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
-import { illustratedIcons } from '@/constants/illustrated-icons';
+import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
@@ -259,7 +259,7 @@ export function MeScreen() {
           ) : (
             <LinearGradient colors={['#DDDDE3', '#BDBEC7']} style={styles.previewPlaceholder}>
               <View style={styles.previewPlaceholderIcon}>
-                <Ionicons color={palette.white} name="images-outline" size={28} />
+                <IllustratedIcon size={48} source={illustratedIcons.profilePhotos} />
               </View>
               <Text style={styles.previewPlaceholderTitle}>
                 {photosUnderReview ? '사진 확인 중' : '대표 사진이 필요해요'}
@@ -278,12 +278,12 @@ export function MeScreen() {
           />
           {photosUnderReview > 0 ? (
             <View style={styles.previewReviewBadge}>
-              <Ionicons color={palette.white} name="time-outline" size={13} />
+              <IllustratedIcon size={18} source={illustratedIcons.photoReview} />
               <Text style={styles.previewReviewText}>{photosUnderReview}장 심사 중</Text>
             </View>
           ) : null}
           <View style={styles.previewModeBadge}>
-            <Ionicons color={palette.white} name="eye-outline" size={12} />
+            <IllustratedIcon size={18} source={illustratedIcons.discoveryVisible} />
             <Text style={styles.previewModeText}>전체 미리보기</Text>
           </View>
           <View style={styles.previewCopy}>
@@ -375,7 +375,7 @@ export function MeScreen() {
           />
           <View style={styles.statusDivider} />
           <StatusCell
-            illustration={tier === 'gold' ? illustratedIcons.goldPass : illustratedIcons.purchase}
+            illustration={getPassIllustration(tier)}
             label="이용권"
             tone={tier === 'gold' ? 'gold' : 'neutral'}
             value={tierLabel}
@@ -439,7 +439,7 @@ export function MeScreen() {
           />
           <QuickAction
             detail={tierLabel}
-            illustration={illustratedIcons.goldPremium}
+            illustration={getPassIllustration(tier)}
             label="이용권"
             onPress={() => router.push('/(tabs)/shop')}
           />
@@ -451,7 +451,7 @@ export function MeScreen() {
           style={({ pressed }) => [styles.detailsToggle, pressed && styles.pressed]}
         >
           <View style={styles.detailsToggleIcon}>
-            <Ionicons color={palette.pink} name="eye-outline" size={20} />
+            <IllustratedIcon size={30} source={illustratedIcons.discoveryVisible} />
           </View>
           <View style={styles.detailsToggleCopy}>
             <Text style={styles.detailsTitle}>공개 프로필 전체 보기</Text>

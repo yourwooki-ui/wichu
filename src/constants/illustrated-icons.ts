@@ -21,3 +21,10 @@ export const illustratedIcons = {
   adFree: require('../../assets/soft-icons/ad-free.png'),
   rewind: require('../../assets/soft-icons/rewind.png'),
 } as const;
+
+/** 이용권 등급이 표시되는 모든 화면에서 같은 상품 아이콘을 사용한다. */
+export function getPassIllustration(tier: string | null | undefined) {
+  if (tier === 'gold') return illustratedIcons.goldPass;
+  if (tier === 'ad_free') return illustratedIcons.adFree;
+  return illustratedIcons.purchase;
+}

@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
@@ -91,7 +90,7 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
           />
           {profile.isPhotoReviewed && (
             <View accessibilityLabel="운영진 사진 심사 완료" style={styles.reviewedBadge}>
-              <Ionicons name="shield-checkmark" size={12} color={palette.white} />
+              <IllustratedIcon size={17} source={illustratedIcons.safety} />
               <Text style={styles.reviewedBadgeText}>사진 심사</Text>
             </View>
           )}
@@ -111,7 +110,7 @@ function ProfileCardComponent({ profile, now, onPress }: ProfileCardProps) {
           {presenceLabel ? <View style={styles.metaDivider} /> : null}
           {distanceLabel ? (
             <View style={styles.locationRow}>
-              <Ionicons name="navigate" size={13} color={palette.lime} />
+              <IllustratedIcon size={18} source={illustratedIcons.location} />
               <Text style={styles.location}>{distanceLabel}</Text>
             </View>
           ) : null}

@@ -10,12 +10,14 @@ import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 
 const GOLD_BENEFITS = [
-  '골드 다이아몬드 배지와 프로필 테두리',
-  '내 프로필 방문자 확인',
-  'Discover 노출 우선순위',
-  '모든 광고 제거',
-  '광고 없이 무제한 되돌리기',
-];
+  { label: '골드 다이아몬드 배지와 프로필 테두리', icon: illustratedIcons.goldPremium },
+  { label: '내 프로필 방문자 확인', icon: illustratedIcons.connections },
+  { label: 'Discover 노출 우선순위', icon: illustratedIcons.discoveryVisible },
+  { label: '모든 광고 제거', icon: illustratedIcons.adFree },
+  { label: '광고 없이 무제한 되돌리기', icon: illustratedIcons.rewind },
+] as const;
+
+const AD_FREE_BENEFITS = [{ label: '자동 노출 광고 제거', icon: illustratedIcons.adFree }] as const;
 
 export default function PassDetailRoute() {
   const router = useRouter();
@@ -39,12 +41,11 @@ export default function PassDetailRoute() {
         <View style={styles.back} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={[styles.mark, adFreeOnly && styles.markPink]}>
-          {adFreeOnly ? (
-            <Ionicons color={palette.pink} name="remove-circle" size={29} />
-          ) : (
-            <IllustratedIcon size={76} source={illustratedIcons.goldPremium} />
-          )}
+        <View style={styles.mark}>
+          <IllustratedIcon
+            size={78}
+            source={adFreeOnly ? illustratedIcons.adFree : illustratedIcons.goldPass}
+          />
         </View>
         <Text style={styles.eyebrow}>{adFreeOnly ? 'WICHU AD-FREE' : 'WICHU GOLD PASS'}</Text>
         <Text style={styles.title}>
@@ -57,8 +58,10 @@ export default function PassDetailRoute() {
         </Text>
 
         <View style={styles.benefits}>
-          {(adFreeOnly ? ['자동 노출 광고 제거'] : GOLD_BENEFITS).map((benefit) => (
-            <View key={benefit} style={styles.benefitRow}>
+          {(adFreeOnly ? AD_FREE_BENEFITS : GOLD_BENEFITS).map((benefit) => (
+            <View key={benefit.label} style={styles.benefitRow}>
+              <IllustratedIcon size={36} source={benefit.icon} />
+              <Text style={styles.benefitText}>{benefit.label}</Text>
               <View style={[styles.check, !adFreeOnly && styles.checkGold]}>
                 <Ionicons
                   color={adFreeOnly ? palette.white : '#4A3500'}
@@ -66,7 +69,6 @@ export default function PassDetailRoute() {
                   size={14}
                 />
               </View>
-              <Text style={styles.benefitText}>{benefit}</Text>
             </View>
           ))}
         </View>
@@ -89,6 +91,7 @@ export default function PassDetailRoute() {
           </Text>
         </Pressable>
         <Pressable onPress={showProviderPending} style={styles.restore}>
+          <IllustratedIcon size={24} source={illustratedIcons.purchase} />
           <Text style={styles.restoreText}>구매 복원</Text>
         </Pressable>
         <Text style={styles.legal}>
@@ -117,7 +120,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 80,
   },
-  markPink: { backgroundColor: '#FFE4ED', borderRadius: 31, height: 62, width: 62 },
   eyebrow: { color: '#A2760D', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginTop: 18 },
   title: {
     color: palette.ink,
@@ -167,7 +169,13 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   purchaseText: { color: palette.white, fontSize: 13, fontWeight: '900' },
-  restore: { paddingHorizontal: 18, paddingVertical: 15 },
+  restore: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  },
   restoreText: {
     color: palette.ink,
     fontSize: 11,
