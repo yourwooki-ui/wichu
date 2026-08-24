@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { MONETIZATION_ENABLED } from '@/constants/features';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
@@ -262,9 +263,14 @@ export function MatchesScreen() {
                 </Text>
               </View>
             </View>
-            <Pressable onPress={() => router.push('/(tabs)/shop')} style={styles.visitorLockAction}>
-              <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
-            </Pressable>
+            {MONETIZATION_ENABLED ? (
+              <Pressable
+                onPress={() => router.push('/(tabs)/shop')}
+                style={styles.visitorLockAction}
+              >
+                <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -318,7 +324,11 @@ export function MatchesScreen() {
                 locked={visitorsLocked}
                 onChat={() => openChat(profile)}
                 onPress={() =>
-                  visitorsLocked ? router.push('/(tabs)/shop') : openProfile(profile.id)
+                  visitorsLocked
+                    ? MONETIZATION_ENABLED
+                      ? router.push('/(tabs)/shop')
+                      : undefined
+                    : openProfile(profile.id)
                 }
                 profile={profile}
               />

@@ -1,10 +1,8 @@
-import '@/i18n';
-
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -16,6 +14,7 @@ import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-loc
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
+import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -47,6 +46,8 @@ function RootNavigator() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="legal/[document]" />
+        {/* Play Console 데이터 안전 섹션에 등록하는 공개 삭제 안내. 인증 밖이어야 한다. */}
+        <Stack.Screen name="account-deletion" />
         <Stack.Protected guard={!session}>
           <Stack.Screen name="login" />
         </Stack.Protected>
@@ -79,8 +80,30 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [languageReady, setLanguageReady] = useState(false);
+  const [language, setLanguage] = useState(getAppLanguage());
+
+  useEffect(() => {
+    let mounted = true;
+    const syncLanguage = () => setLanguage(getAppLanguage());
+
+    void i18nReady.finally(() => {
+      if (!mounted) return;
+      syncLanguage();
+      setLanguageReady(true);
+    });
+    i18n.on('languageChanged', syncLanguage);
+
+    return () => {
+      mounted = false;
+      i18n.off('languageChanged', syncLanguage);
+    };
+  }, []);
+
+  if (!languageReady) return null;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ direction: getAppTextDirection(language), flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>

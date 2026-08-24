@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, radius, touchSlop, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
@@ -20,7 +21,13 @@ const GOLD_BENEFITS = [
 
 const AD_FREE_BENEFITS = [{ label: '자동 노출 광고 제거', icon: illustratedIcons.adFree }] as const;
 
+/** 결제 연동 전에는 직접 접근도 막는다 (딥링크·뒤로가기 포함). */
 export default function PassDetailRoute() {
+  if (!MONETIZATION_ENABLED) return <Redirect href="/(tabs)/discover" />;
+  return <PassDetailScreen />;
+}
+
+function PassDetailScreen() {
   const router = useRouter();
   const { product } = useLocalSearchParams<{ product?: string }>();
   const entitlement = usePassEntitlement();

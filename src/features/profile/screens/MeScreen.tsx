@@ -13,6 +13,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
+import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
@@ -462,12 +463,14 @@ export function MeScreen() {
             label="연결 관리"
             onPress={() => router.push('/(tabs)/matches')}
           />
-          <QuickAction
-            detail={tierLabel}
-            illustration={getPassIllustration(tier)}
-            label="이용권"
-            onPress={() => router.push('/(tabs)/shop')}
-          />
+          {MONETIZATION_ENABLED ? (
+            <QuickAction
+              detail={tierLabel}
+              illustration={getPassIllustration(tier)}
+              label="이용권"
+              onPress={() => router.push('/(tabs)/shop')}
+            />
+          ) : null}
         </View>
 
         <Pressable

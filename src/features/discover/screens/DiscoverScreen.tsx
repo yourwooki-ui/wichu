@@ -16,6 +16,7 @@ import { MatchCelebration } from '@/features/discover/components/MatchCelebratio
 import { NotificationsSheet } from '@/features/discover/components/NotificationsSheet';
 import { useDiscoverDeck } from '@/features/discover/hooks/use-discover-deck';
 import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
+import { REWARDED_ADS_ENABLED } from '@/constants/features';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
@@ -48,6 +49,12 @@ export function DiscoverScreen() {
       deck.undo();
       return;
     }
+    if (!REWARDED_ADS_ENABLED) {
+      // 광고 연동 전에 "광고 보기"를 제안하면 100% 실패한다. 제안 자체를 하지 않는다.
+      Alert.alert('되돌리기를 모두 사용했어요', '다음 프로필에서 신중하게 선택해보세요.');
+      return;
+    }
+
     Alert.alert(
       '되돌리기 1회 받기',
       '광고를 끝까지 시청하면 마지막 선택을 한 번 되돌릴 수 있어요.',

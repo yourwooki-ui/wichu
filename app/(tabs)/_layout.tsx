@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 
 export default function TabLayout() {
@@ -87,7 +88,14 @@ export default function TabLayout() {
       <Tabs.Screen name="matches" options={{ title: t('tabs.matches') }} />
       <Tabs.Screen name="chat" options={{ title: t('tabs.chat') }} />
       <Tabs.Screen name="discover" options={{ title: t('tabs.discover') }} />
-      <Tabs.Screen name="shop" options={{ title: t('tabs.shop') }} />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: t('tabs.shop'),
+          // 결제 연동 전에는 탭 자체를 노출하지 않는다.
+          href: MONETIZATION_ENABLED ? undefined : null,
+        }}
+      />
       <Tabs.Screen name="me" options={{ title: t('tabs.me') }} />
     </Tabs>
   );

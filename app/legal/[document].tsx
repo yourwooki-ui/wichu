@@ -3,13 +3,23 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
-import { palette } from '@/constants/theme';
+import { palette, radius } from '@/constants/theme';
 
 type LegalDocument = {
   title: string;
   summary: string;
   sections: { title: string; body: string }[];
 };
+
+/**
+ * 약관·개인정보처리방침의 시행 상태.
+ *
+ * ⚠️ `effective`로 바꾸는 것은 실제 법률 검토가 끝났다는 뜻이다.
+ * 이 값이 `draft`인 동안에는 이 페이지 주소를 스토어 콘솔의
+ * 개인정보처리방침 URL로 제출하면 안 된다.
+ */
+const POLICY_STATUS: 'draft' | 'effective' = 'draft';
+const POLICY_EFFECTIVE_DATE = '2026.08';
 
 const DOCUMENTS: Record<string, LegalDocument> = {
   terms: {
@@ -115,7 +125,16 @@ export default function LegalDocumentRoute() {
         <View style={styles.intro}>
           <Text style={styles.kicker}>WICHU POLICY</Text>
           <Text style={styles.summary}>{content.summary}</Text>
-          <Text style={styles.date}>시행 예정일 2026.08 · 운영 검토본</Text>
+          {POLICY_STATUS === 'effective' ? (
+            <Text style={styles.date}>시행일 {POLICY_EFFECTIVE_DATE}</Text>
+          ) : (
+            <View style={styles.draftNotice}>
+              <Ionicons color="#FFC64D" name="alert-circle" size={15} />
+              <Text style={styles.draftText}>
+                아직 법률 검토를 마치지 않은 내부 검토본입니다. 시행 예정일 {POLICY_EFFECTIVE_DATE}
+              </Text>
+            </View>
+          )}
         </View>
         {content.sections.map((section, index) => (
           <View key={section.title} style={styles.section}>
@@ -150,6 +169,18 @@ const styles = StyleSheet.create({
   kicker: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },
   summary: { color: palette.white, fontSize: 20, fontWeight: '900', lineHeight: 28, marginTop: 8 },
   date: { color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 15 },
+  draftNotice: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255,198,77,0.12)',
+    borderColor: 'rgba(255,198,77,0.4)',
+    borderRadius: radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 15,
+    padding: 10,
+  },
+  draftText: { color: '#FFD98A', flex: 1, fontSize: 11, lineHeight: 16 },
   section: {
     borderBottomColor: '#DFDFE3',
     borderBottomWidth: StyleSheet.hairlineWidth,
