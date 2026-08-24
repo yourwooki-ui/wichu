@@ -2,16 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useMemo, useState } from 'react';
-import {
-  LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -117,10 +108,11 @@ export function StandardProfileDetail({
   const insets = useSafeAreaInsets();
   const { i18n, t } = useTranslation();
   const [photoWidth, setPhotoWidth] = useState(0);
-  const [photoIndex, setPhotoIndex] = useState(0);
   const [now] = useState(() => Date.now());
   const age = getProfileAge(profile.birthDate, now);
   const heroHeight = Math.min((photoWidth || 430) * HERO_HEIGHT_RATIO, HERO_MAX_HEIGHT);
+  const primaryPhoto = profile.photos[0];
+  const additionalPhotos = profile.photos.slice(1);
   const presence = useMemo(
     () => getProfilePresence(profile.lastActiveAt, now),
     [now, profile.lastActiveAt],
@@ -226,11 +218,6 @@ export function StandardProfileDetail({
     if (nextWidth !== photoWidth) setPhotoWidth(nextWidth);
   };
 
-  const handlePhotoScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!photoWidth) return;
-    setPhotoIndex(Math.round(event.nativeEvent.contentOffset.x / photoWidth));
-  };
-
   return (
     <View style={styles.root}>
       <ScrollView
@@ -242,29 +229,17 @@ export function StandardProfileDetail({
         showsVerticalScrollIndicator={false}
       >
         <View onLayout={handleHeroLayout} style={[styles.hero, { height: heroHeight }]}>
-          {photoWidth > 0 && profile.photos.length ? (
-            <ScrollView
-              decelerationRate="fast"
-              horizontal
-              onMomentumScrollEnd={handlePhotoScroll}
-              pagingEnabled
-              scrollEnabled={profile.photos.length > 1}
-              showsHorizontalScrollIndicator={false}
-            >
-              {profile.photos.map((photo, index) => (
-                <Image
-                  accessibilityLabel={`${profile.name} ${t('profileDetail.photo', { index: index + 1 })}`}
-                  blurRadius={photoBlurRadius}
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                  key={photo}
-                  priority={index === 0 ? 'high' : 'normal'}
-                  source={{ uri: photo }}
-                  style={{ height: heroHeight, width: photoWidth }}
-                  transition={160}
-                />
-              ))}
-            </ScrollView>
+          {primaryPhoto ? (
+            <Image
+              accessibilityLabel={`${profile.name} ${t('profileDetail.photo', { index: 1 })}`}
+              blurRadius={photoBlurRadius}
+              cachePolicy="memory-disk"
+              contentFit="cover"
+              priority="high"
+              source={{ uri: primaryPhoto }}
+              style={StyleSheet.absoluteFill}
+              transition={160}
+            />
           ) : (
             <LinearGradient colors={['#D9DAE1', '#B7B9C4']} style={StyleSheet.absoluteFill}>
               <View style={styles.photoPlaceholder}>
@@ -287,17 +262,9 @@ export function StandardProfileDetail({
               <View style={styles.headerGap} />
             )}
           </View>
-          {profile.photos.length > 1 ? (
-            <View pointerEvents="none" style={styles.photoProgress}>
-              {profile.photos.map((photo, index) => (
-                <View
-                  key={photo}
-                  style={[
-                    styles.photoProgressItem,
-                    index === photoIndex && styles.photoProgressActive,
-                  ]}
-                />
-              ))}
+          {additionalPhotos.length ? (
+            <View pointerEvents="none" style={styles.photoCountBadge}>
+              <Text style={styles.photoCountText}>1 / {profile.photos.length}</Text>
             </View>
           ) : null}
           {photoStatusLabel ? (
@@ -429,6 +396,38 @@ export function StandardProfileDetail({
             </DetailSection>
           ) : null}
 
+          {additionalPhotos.length ? (
+            <DetailSection title={t('profileDetail.photos', { count: profile.photos.length })}>
+              <View style={styles.photoGallery}>
+                {additionalPhotos.map((photo, index) => (
+                  <View key={`${photo}-${index}`} style={styles.galleryPhotoFrame}>
+                    <Image
+                      accessibilityLabel={`${profile.name} ${t('profileDetail.photo', { index: index + 2 })}`}
+                      blurRadius={photoBlurRadius}
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      priority="normal"
+                      source={{ uri: photo }}
+                      style={StyleSheet.absoluteFill}
+                      transition={160}
+                    />
+                    {photoStatusLabel ? (
+                      <View style={styles.galleryPhotoStatus}>
+                        <IllustratedIcon size={17} source={illustratedIcons.photoReview} />
+                        <Text style={styles.galleryPhotoStatusText}>{photoStatusLabel}</Text>
+                      </View>
+                    ) : null}
+                    <View pointerEvents="none" style={styles.galleryPhotoCount}>
+                      <Text style={styles.galleryPhotoCountText}>
+                        {index + 2} / {profile.photos.length}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </DetailSection>
+          ) : null}
+
           {onSafety ? (
             <Pressable
               accessibilityRole="button"
@@ -529,21 +528,16 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerGap: { height: 44, width: 44 },
-  photoProgress: {
-    flexDirection: 'row',
-    gap: 5,
-    left: 18,
+  photoCountBadge: {
+    backgroundColor: 'rgba(17,17,20,0.56)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     position: 'absolute',
     right: 18,
-    top: 10,
+    top: 76,
   },
-  photoProgressItem: {
-    backgroundColor: 'rgba(255,255,255,0.38)',
-    borderRadius: 2,
-    flex: 1,
-    height: 3,
-  },
-  photoProgressActive: { backgroundColor: palette.white },
+  photoCountText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   photoStatus: {
     alignItems: 'center',
     backgroundColor: 'rgba(17,17,20,0.58)',
@@ -649,6 +643,37 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   interestText: { color: palette.pinkPressed, fontSize: 12, fontWeight: '800' },
+  photoGallery: { gap: 14 },
+  galleryPhotoFrame: {
+    aspectRatio: 0.8,
+    backgroundColor: '#D8D8DE',
+    borderRadius: 22,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  galleryPhotoStatus: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,20,0.62)',
+    borderRadius: radius.pill,
+    bottom: 14,
+    flexDirection: 'row',
+    gap: 5,
+    left: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+  },
+  galleryPhotoStatusText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  galleryPhotoCount: {
+    backgroundColor: 'rgba(17,17,20,0.56)',
+    borderRadius: radius.pill,
+    bottom: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+    right: 14,
+  },
+  galleryPhotoCountText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   safetyLink: {
     alignItems: 'center',
     flexDirection: 'row',

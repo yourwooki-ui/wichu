@@ -23,6 +23,7 @@ const resources = {
         distanceAway: 'About {{distance}} km away',
         about: 'About',
         languages: 'Languages',
+        photos: 'Photos {{count}}',
         languageLevels: {
           native: 'Native',
           beginner: 'Basic',
@@ -303,6 +304,7 @@ const resources = {
         distanceAway: '약 {{distance}} km',
         about: '소개',
         languages: '언어',
+        photos: '사진 {{count}}장',
         languageLevels: {
           native: '모국어',
           beginner: '기초',
