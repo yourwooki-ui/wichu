@@ -81,7 +81,7 @@ export function ChatListScreen() {
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
         actionAccessibilityLabel="채팅 알림 설정"
-        actionIcon={illustratedIcons.chatControls}
+        actionIcon={illustratedIcons.notification}
         eyebrow="메시지"
         onAction={() => router.push('/settings')}
       />
@@ -226,7 +226,7 @@ export function ChatListScreen() {
                 actionLabel="발견하러 가기"
                 body="서로 Pick하면 채팅을 시작할 수 있어요."
                 container="plain"
-                illustration={illustratedIcons.chatControls}
+                illustration={illustratedIcons.chatEmpty}
                 onAction={() => router.push('/(tabs)/discover')}
                 title="아직 시작된 대화가 없어요"
               />
