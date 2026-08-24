@@ -36,9 +36,15 @@ const goldBenefits: {
     title: '골드 프로필',
     detail: '골드 테두리와 다이아몬드가 표시됩니다',
   },
-  { icon: 'remove-circle-outline', title: '광고 제거', detail: '자동 광고가 표시되지 않습니다' },
+  {
+    icon: 'remove-circle-outline',
+    illustration: illustratedIcons.adFree,
+    title: '광고 제거',
+    detail: '자동 광고가 표시되지 않습니다',
+  },
   {
     icon: 'arrow-undo-outline',
+    illustration: illustratedIcons.rewind,
     title: '무제한 되돌리기',
     detail: '광고 시청 없이 되돌릴 수 있습니다',
   },
@@ -104,7 +110,11 @@ export function ShopScreen() {
           <View style={styles.goldHighlights}>
             {goldBenefits.slice(0, 3).map((benefit) => (
               <View key={benefit.title} style={styles.highlightChip}>
-                <Ionicons color="#7B5800" name={benefit.icon} size={14} />
+                {benefit.illustration ? (
+                  <IllustratedIcon size={20} source={benefit.illustration} />
+                ) : (
+                  <Ionicons color="#7B5800" name={benefit.icon} size={14} />
+                )}
                 <Text style={styles.highlightText}>{benefit.title}</Text>
               </View>
             ))}

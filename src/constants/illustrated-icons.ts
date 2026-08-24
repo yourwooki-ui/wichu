@@ -18,4 +18,6 @@ export const illustratedIcons = {
   notification: require('../../assets/soft-icons/notification.png'),
   location: require('../../assets/soft-icons/location.png'),
   profilePhotos: require('../../assets/soft-icons/profile-photos.png'),
+  adFree: require('../../assets/soft-icons/ad-free.png'),
+  rewind: require('../../assets/soft-icons/rewind.png'),
 } as const;

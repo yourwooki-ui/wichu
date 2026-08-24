@@ -320,7 +320,7 @@ export function MeScreen() {
         {photosUnderReview > 0 ? (
           <View style={styles.pendingNotice}>
             <View style={styles.pendingNoticeIcon}>
-              <Ionicons color="#A36B00" name="time-outline" size={20} />
+              <IllustratedIcon size={38} source={illustratedIcons.photoReview} />
             </View>
             <View style={styles.pendingNoticeCopy}>
               <Text style={styles.pendingNoticeTitle}>
@@ -335,7 +335,7 @@ export function MeScreen() {
 
         {rejectedPhotos.length > 0 ? (
           <View style={styles.reviewNotice}>
-            <Ionicons color={palette.danger} name="alert-circle" size={20} />
+            <IllustratedIcon size={34} source={illustratedIcons.photoRejected} />
             <View style={styles.reviewNoticeCopy}>
               <Text style={styles.reviewNoticeTitle}>반려된 사진이 있어요</Text>
               <Text style={styles.reviewNoticeText}>

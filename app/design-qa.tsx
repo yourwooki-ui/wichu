@@ -88,6 +88,8 @@ export default function DesignQaScreen() {
                 ['알림', illustratedIcons.notification],
                 ['사진 관리', illustratedIcons.profilePhotos],
                 ['위치', illustratedIcons.location],
+                ['광고 제거', illustratedIcons.adFree],
+                ['되돌리기', illustratedIcons.rewind],
               ] as const
             ).map(([label, source]) => (
               <View
