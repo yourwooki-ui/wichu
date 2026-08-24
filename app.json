@@ -18,10 +18,8 @@
       },
       "package": "app.wichu.mobile",
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      "permissions": ["android.permission.ACCESS_COARSE_LOCATION"],
+      "blockedPermissions": ["android.permission.ACCESS_FINE_LOCATION"]
     },
     "web": {
       "favicon": "./assets/brand/wichu-app-icon.png"
