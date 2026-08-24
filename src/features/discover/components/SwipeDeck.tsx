@@ -251,14 +251,15 @@ export function SwipeDeck({
         <View style={styles.finishedIcon}>
           <IllustratedIcon
             size={66}
-            source={error ? illustratedIcons.connectionError : illustratedIcons.discoverySettings}
+            source={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
           />
         </View>
         <Text style={[styles.finishedTitle, { color: theme.colors.text }]}>
-          {error ? '프로필을 불러오지 못했어요' : '오늘의 후보를 모두 확인했어요'}
+          {error ? '프로필을 불러오지 못했어요' : '새로운 프로필이 아직 없어요'}
         </Text>
         <Text style={[styles.finishedText, { color: theme.colors.textMuted }]}>
-          {error ?? '탐색 조건을 넓히거나 잠시 후 새로운 프로필을 확인해보세요.'}
+          {error ??
+            '조건에 맞는 새로운 사람이 생기면 바로 보여드릴게요. 잠시 후 다시 확인해주세요.'}
         </Text>
         <View style={styles.finishedActions}>
           <Pressable
@@ -275,7 +276,7 @@ export function SwipeDeck({
             onPress={onRetry}
           >
             <Ionicons color={palette.white} name="refresh" size={16} />
-            <Text style={styles.resetButtonText}>다시 확인</Text>
+            <Text style={styles.resetButtonText}>새로고침</Text>
           </Pressable>
         </View>
       </View>
