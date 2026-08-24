@@ -1,6 +1,6 @@
 import { Image, type ImageSource } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -25,6 +25,7 @@ const headerIcons = {
 
 export function DiscoverScreen() {
   const router = useRouter();
+  const { coach } = useLocalSearchParams<{ coach?: string }>();
   const theme = useAppTheme();
   const { session } = useAuthSession();
   const deck = useDiscoverDeck();
@@ -124,7 +125,11 @@ export function DiscoverScreen() {
         onContinue={clearLastMatch}
         profile={lastMatch?.profile ?? null}
       />
-      <DiscoverGestureCoach />
+      <DiscoverGestureCoach
+        active={coach === '1'}
+        onComplete={() => router.replace('/(tabs)/discover')}
+        userId={session?.user.id}
+      />
     </Screen>
   );
 }

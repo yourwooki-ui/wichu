@@ -66,6 +66,7 @@
 - [x] Profile Detail: 하단 Pick/Pass와 Discover queue 연계
 - [x] 상대 상세프로필과 내 공개 미리보기를 단일 표준 컴포넌트로 통합하고 행동 영역만 모드별 분리
 - [x] 최초 세팅·일반 편집·마이페이지의 역할과 시각 계층 분리 — 온보딩 단계 표식, 편집 전용 헤더/탭, 관리 허브 밀도 정리
+- [x] 최초 프로필 저장 후 권한 안내 → 3단계 제품 튜토리얼 → 발견 헤더·카드·하단 탭 코치마크 연결, 계정별 기기 저장과 설정 재실행 경로 구성
 - [x] 경쟁 앱 UX benchmark와 WICHU 적용 원칙 문서화 (`UX_BENCHMARK.md`)
 - [x] Discover 최초 1회 제스처 안내, 브랜드형 Match 전환, 후보 소진·오류·필터 조정 상태
 - [ ] `나를 픽함` 운영 조회 — 최소 RLS policy, security-invoker RPC, 앱 서비스·상태 UI 완료; WICHU 원격 migration 적용 대기

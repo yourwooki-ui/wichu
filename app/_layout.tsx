@@ -15,6 +15,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
+import { ProductTutorialGate } from '@/features/onboarding/components/ProductTutorialGate';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
 
@@ -48,6 +49,7 @@ function RootNavigator() {
           <Stack.Screen name="profile-setup" />
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session) && profileCompleted}>
+          <Stack.Screen name="tutorial" options={{ animation: 'fade' }} />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile-edit" />
           <Stack.Screen name="profile-preview" />
@@ -62,6 +64,7 @@ function RootNavigator() {
           <Stack.Screen name="operations" />
         </Stack.Protected>
       </Stack>
+      <ProductTutorialGate profileCompleted={profileCompleted} userId={session?.user.id} />
       {session && profileCompleted ? <AppPermissionOnboarding /> : null}
     </>
   );

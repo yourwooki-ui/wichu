@@ -24,6 +24,7 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { isAdult, isValidBirthDate } from '@/features/auth/utils/age';
 import { formatBirthDateInput } from '@/features/auth/utils/format-birth-date';
+import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 import { AgeRangeField } from '@/features/profile/components/AgeRangeField';
 import { CountryPickerField } from '@/features/profile/components/CountryPickerField';
 import { LanguagePreferencesField } from '@/features/profile/components/LanguagePreferencesField';
@@ -375,8 +376,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       }
 
       uploadedPaths = [];
+      if (!requestedEditMode) {
+        await tutorialState.requireProductTutorial(session.user.id).catch(() => undefined);
+      }
       await refreshProfile().catch(() => undefined);
-      router.replace('/(tabs)/me');
+      router.replace(requestedEditMode ? '/(tabs)/me' : '/tutorial');
     } catch (error) {
       if (uploadedPaths.length > 0) {
         await profilePhotoService.removeStorageFiles(uploadedPaths);

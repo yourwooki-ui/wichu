@@ -233,6 +233,12 @@ export function SettingsScreen() {
 
           <SettingSection title="계정">
             <SettingLink
+              icon="compass-outline"
+              illustration={illustratedIcons.discoverySettings}
+              label="앱 사용법 다시 보기"
+              onPress={() => router.push('/tutorial')}
+            />
+            <SettingLink
               icon="language-outline"
               illustration={illustratedIcons.translation}
               label="앱 언어"
