@@ -247,23 +247,20 @@ export function SwipeDeck({
   }
 
   if (!currentProfile) {
-    // 오류와 후보 소진은 해야 할 일이 다르다.
-    // 오류면 다시 불러오는 게 먼저고, 후보가 없으면 새로고침해도 그대로이므로
-    // 조건을 넓히는 쪽을 주 행동으로 둔다.
     return (
       <View style={styles.finished}>
         <StateView
-          actionLabel={error ? '다시 시도' : '조건 넓히기'}
+          actionLabel={error ? '다시 시도' : '다시 확인'}
           body={
             error ??
-            '지금 조건에 맞는 사람을 다 봤어요. 범위를 조금 넓히면 새로운 사람을 만날 수 있어요.'
+            '현재 조건에서 보여드릴 새 프로필이 아직 없어요. 새로운 카드가 준비되면 바로 나타나요.'
           }
           container="plain"
           illustration={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
-          onAction={error ? onRetry : onAdjustFilters}
-          onSecondaryAction={error ? onAdjustFilters : onRetry}
-          secondaryActionLabel={error ? '조건 조정' : '새로고침'}
-          title={error ? '프로필을 불러오지 못했어요' : '오늘 볼 수 있는 사람을 다 봤어요'}
+          onAction={onRetry}
+          onSecondaryAction={onAdjustFilters}
+          secondaryActionLabel="탐색 조건 조정"
+          title={error ? '프로필을 불러오지 못했어요' : '새로운 카드가 아직 없어요'}
           tone={error ? 'error' : 'neutral'}
         />
       </View>
