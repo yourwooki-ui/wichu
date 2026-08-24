@@ -355,7 +355,7 @@ export function MeScreen() {
           <View style={styles.statusDivider} />
           <StatusCell
             illustration={illustratedIcons.photoReview}
-            label="사진 심사"
+            label="사진 상태"
             tone={
               photosUnderReview > 0
                 ? 'amber'
@@ -559,7 +559,7 @@ function MeSkeleton() {
 }
 
 function shortReviewLabel(status: ReviewStatus) {
-  if (status === 'approved') return '승인';
+  if (status === 'approved') return '승인 완료';
   if (status === 'rejected') return '수정 필요';
   if (status === 'pending') return '심사 중';
   return '작성 중';

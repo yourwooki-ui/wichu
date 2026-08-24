@@ -311,9 +311,9 @@ export function StandardProfileDetail({
                 {profile.name}, {age}
               </Text>
               {profile.isPhotoReviewed ? (
-                <View accessibilityLabel="운영진 사진 심사 완료" style={styles.reviewedBadge}>
+                <View accessibilityLabel="운영진 사진 인증 완료" style={styles.reviewedBadge}>
                   <IllustratedIcon size={17} source={illustratedIcons.safety} />
-                  <Text style={styles.reviewedBadgeText}>사진 심사</Text>
+                  <Text style={styles.reviewedBadgeText}>인증 완료</Text>
                 </View>
               ) : null}
             </View>
