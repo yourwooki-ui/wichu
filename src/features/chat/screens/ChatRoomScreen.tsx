@@ -26,7 +26,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import {
   chatService,
@@ -408,7 +410,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           </View>
 
           <View style={styles.safetyNotice}>
-            <Ionicons color="#8B6A00" name="shield-checkmark-outline" size={15} />
+            <IllustratedIcon size={22} source={illustratedIcons.safety} />
             <Text style={styles.safetyNoticeText}>
               연락처와 개인정보는 충분히 알아간 뒤 천천히 공유하세요.
             </Text>
@@ -440,7 +442,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           ) : null}
           {failed ? (
             <View style={styles.stateBlock}>
-              <Ionicons color={palette.inkMuted} name="cloud-offline-outline" size={26} />
+              <IllustratedIcon size={56} source={illustratedIcons.connectionError} />
               <Text style={styles.stateTitle}>대화를 불러오지 못했어요</Text>
               <Pressable
                 onPress={() => {
@@ -496,7 +498,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                   </View>
                   {message.translated ? (
                     <View style={styles.translation}>
-                      <Ionicons color={palette.inkMuted} name="language" size={12} />
+                      <IllustratedIcon size={18} source={illustratedIcons.translation} />
                       <Text style={styles.translationText}>{message.translated}</Text>
                     </View>
                   ) : !message.mine &&
@@ -512,7 +514,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                       {message.translationStatus === 'translating' ? (
                         <ActivityIndicator color={palette.pink} size="small" />
                       ) : (
-                        <Ionicons color={palette.pink} name="language" size={13} />
+                        <IllustratedIcon size={18} source={illustratedIcons.translation} />
                       )}
                       <Text
                         style={[

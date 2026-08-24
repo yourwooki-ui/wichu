@@ -18,7 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { ConsentRow } from '@/components/ConsentRow';
 import { FormField } from '@/components/FormField';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { isAdult, isValidBirthDate } from '@/features/auth/utils/age';
 import { formatBirthDateInput } from '@/features/auth/utils/format-birth-date';
@@ -417,7 +419,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.editState}>
           <View style={styles.editStateIcon}>
-            <Ionicons color={palette.pink} name="cloud-offline-outline" size={26} />
+            <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
           </View>
           <Text style={styles.editStateTitle}>프로필을 불러오지 못했어요</Text>
           <Text style={styles.editStateBody}>

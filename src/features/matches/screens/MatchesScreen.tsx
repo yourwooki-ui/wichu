@@ -248,7 +248,7 @@ export function MatchesScreen() {
           <StateView
             actionLabel="다시 시도"
             body="저장된 연결은 그대로예요. 잠시 후 다시 확인해주세요."
-            icon="cloud-offline-outline"
+            illustration={illustratedIcons.connectionError}
             onAction={() => {
               if (category === 'picked-me') void incomingLikesQuery.refetch();
               if (category === 'matched') void matchesQuery.refetch();

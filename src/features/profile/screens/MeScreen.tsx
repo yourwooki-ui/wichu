@@ -114,7 +114,7 @@ export function MeScreen() {
     return (
       <Screen edges={['top', 'left', 'right']} style={styles.centered}>
         <View style={styles.emptyIcon}>
-          <Ionicons color={palette.pink} name="cloud-offline-outline" size={28} />
+          <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
         </View>
         <Text style={styles.emptyTitle}>프로필을 불러오지 못했어요.</Text>
         <Text style={styles.emptyText}>저장된 프로필은 그대로예요. 연결 상태를 확인해 주세요.</Text>
@@ -129,7 +129,7 @@ export function MeScreen() {
     return (
       <Screen edges={['top', 'left', 'right']} style={styles.centered}>
         <View style={styles.emptyIcon}>
-          <Ionicons color={palette.pink} name="person-add-outline" size={28} />
+          <IllustratedIcon size={58} source={illustratedIcons.profileEdit} />
         </View>
         <Text style={styles.emptyTitle}>프로필이 아직 준비되지 않았어요.</Text>
         <Text style={styles.emptyText}>WICHU를 이용하려면 프로필 설정을 완료해주세요.</Text>
@@ -347,14 +347,14 @@ export function MeScreen() {
 
         <View style={styles.statusStrip}>
           <StatusCell
-            icon="eye-outline"
+            illustration={illustratedIcons.discoveryVisible}
             label="발견 노출"
             tone={isDiscoverable ? 'green' : 'neutral'}
             value={isDiscoverable ? '켜짐' : '꺼짐'}
           />
           <View style={styles.statusDivider} />
           <StatusCell
-            icon="shield-checkmark-outline"
+            illustration={illustratedIcons.photoReview}
             label="사진 심사"
             tone={
               photosUnderReview > 0
@@ -375,7 +375,7 @@ export function MeScreen() {
           />
           <View style={styles.statusDivider} />
           <StatusCell
-            icon="ticket-outline"
+            illustration={tier === 'gold' ? illustratedIcons.goldPass : illustratedIcons.purchase}
             label="이용권"
             tone={tier === 'gold' ? 'gold' : 'neutral'}
             value={tierLabel}
@@ -478,12 +478,12 @@ export function MeScreen() {
 }
 
 function StatusCell({
-  icon,
+  illustration,
   label,
   tone = 'neutral',
   value,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  illustration: ImageSource;
   label: string;
   tone?: 'amber' | 'gold' | 'green' | 'neutral';
   value: string;
@@ -498,7 +498,7 @@ function StatusCell({
           : palette.ink;
   return (
     <View style={styles.statusCell}>
-      <Ionicons color={color} name={icon} size={17} />
+      <IllustratedIcon size={28} source={illustration} />
       <Text style={styles.statusLabel}>{label}</Text>
       <Text numberOfLines={1} style={[styles.statusValue, { color }]}>
         {value}

@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,6 +6,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -118,10 +119,9 @@ export function AppPermissionOnboarding() {
             style={styles.visual}
           >
             <View style={[styles.iconCircle, !isLocation && styles.iconCircleYellow]}>
-              <Ionicons
-                color={isLocation ? palette.pink : '#D29B00'}
-                name={isLocation ? 'navigate' : 'notifications'}
-                size={38}
+              <IllustratedIcon
+                size={68}
+                source={isLocation ? illustratedIcons.location : illustratedIcons.notification}
               />
             </View>
           </LinearGradient>
@@ -137,7 +137,7 @@ export function AppPermissionOnboarding() {
               : '매치, 메시지와 중요한 계정 알림만 보내요. 마케팅 알림은 기본으로 켜지지 않아요.'}
           </Text>
           <View style={styles.trustRow}>
-            <Ionicons color="#16895A" name="shield-checkmark" size={16} />
+            <IllustratedIcon size={20} source={illustratedIcons.safety} />
             <Text style={styles.trustText}>
               {isLocation ? '백그라운드 위치 추적 안 함' : '설정에서 언제든 변경 가능'}
             </Text>

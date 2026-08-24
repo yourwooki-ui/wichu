@@ -389,7 +389,7 @@ export function StandardProfileDetail({
               onPress={onSafety}
               style={({ pressed }) => [styles.safetyLink, pressed && styles.pressed]}
             >
-              <Ionicons color={theme.colors.textMuted} name="shield-checkmark-outline" size={18} />
+              <IllustratedIcon size={24} source={illustratedIcons.safety} />
               <Text style={[styles.safetyLinkText, { color: theme.colors.textMuted }]}>
                 {t('profileDetail.reportOrBlock')}
               </Text>

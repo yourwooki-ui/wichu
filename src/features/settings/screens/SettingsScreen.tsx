@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ImageSource } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -13,8 +14,10 @@ import {
   View,
 } from 'react-native';
 
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
 import { settingsService } from '@/features/settings/services/settings-service';
@@ -140,7 +143,7 @@ export function SettingsScreen() {
       ) : settingsQuery.isError || !settingsQuery.data ? (
         <View style={styles.centered}>
           <View style={styles.stateIcon}>
-            <Ionicons color={palette.pink} name="cloud-offline-outline" size={28} />
+            <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
           </View>
           <Text style={styles.stateTitle}>설정을 불러오지 못했어요.</Text>
           <Text style={styles.stateText}>연결 상태를 확인하고 다시 시도해 주세요.</Text>
@@ -152,7 +155,7 @@ export function SettingsScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.accountCard}>
             <View style={styles.accountMark}>
-              <Ionicons color={palette.pink} name="person" size={22} />
+              <IllustratedIcon size={38} source={illustratedIcons.profileEdit} />
             </View>
             <View style={styles.accountCopy}>
               <Text style={styles.accountLabel}>WICHU 계정</Text>
@@ -169,6 +172,7 @@ export function SettingsScreen() {
             <SettingToggle
               description="끄면 내 프로필이 다른 사람의 Discover에 표시되지 않아요."
               icon="sparkles-outline"
+              illustration={illustratedIcons.discoveryVisible}
               label="내 프로필 노출"
               onValueChange={(value) => updateSetting.mutate({ key: 'discovery_enabled', value })}
               value={settingsQuery.data.discovery_enabled}
@@ -179,6 +183,7 @@ export function SettingsScreen() {
             <SettingToggle
               description="서로 Pick해 매치가 성사되면 알려드려요."
               icon="people-outline"
+              illustration={illustratedIcons.notification}
               label="새로운 매치"
               onValueChange={(value) => updateSetting.mutate({ key: 'push_matches', value })}
               value={settingsQuery.data.push_matches}
@@ -186,6 +191,7 @@ export function SettingsScreen() {
             <SettingToggle
               description="새로운 채팅 메시지를 놓치지 않도록 알려드려요."
               icon="chatbubble-outline"
+              illustration={illustratedIcons.notification}
               label="새 메시지"
               onValueChange={(value) => updateSetting.mutate({ key: 'push_messages', value })}
               value={settingsQuery.data.push_messages}
@@ -195,12 +201,14 @@ export function SettingsScreen() {
           <SettingSection title="개인정보 및 안전">
             <SettingLink
               icon="ban-outline"
+              illustration={illustratedIcons.safety}
               label="차단한 사용자"
               onPress={() => router.push('/blocked-users')}
               value="관리"
             />
             <SettingLink
               icon="shield-checkmark-outline"
+              illustration={illustratedIcons.safety}
               label="커뮤니티 가이드"
               onPress={() => router.push('/legal/community')}
             />
@@ -215,6 +223,7 @@ export function SettingsScreen() {
             <SettingSection title="운영">
               <SettingLink
                 icon="shield-checkmark"
+                illustration={illustratedIcons.safety}
                 label="운영 센터"
                 onPress={() => router.push('/operations')}
                 value={adminRole === 'master' ? '마스터' : '운영자'}
@@ -225,6 +234,7 @@ export function SettingsScreen() {
           <SettingSection title="계정">
             <SettingLink
               icon="language-outline"
+              illustration={illustratedIcons.translation}
               label="앱 언어"
               onPress={() => Alert.alert('앱 언어', '현재 운영 언어는 한국어예요.')}
               value="한국어"
@@ -273,12 +283,14 @@ function SettingSection({ children, title }: { children: React.ReactNode; title:
 function SettingToggle({
   description,
   icon,
+  illustration,
   label,
   onValueChange,
   value,
 }: {
   description: string;
   icon: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
   label: string;
   onValueChange: (value: boolean) => void;
   value: boolean;
@@ -286,7 +298,11 @@ function SettingToggle({
   return (
     <View style={styles.row}>
       <View style={styles.rowIcon}>
-        <Ionicons color={palette.ink} name={icon} size={19} />
+        {illustration ? (
+          <IllustratedIcon size={31} source={illustration} />
+        ) : (
+          <Ionicons color={palette.ink} name={icon} size={19} />
+        )}
       </View>
       <View style={styles.rowCopy}>
         <Text style={styles.rowLabel}>{label}</Text>
@@ -306,12 +322,14 @@ function SettingToggle({
 function SettingLink({
   danger = false,
   icon,
+  illustration,
   label,
   onPress,
   value,
 }: {
   danger?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
+  illustration?: ImageSource;
   label: string;
   onPress: () => void;
   value?: string;
@@ -324,7 +342,11 @@ function SettingLink({
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
-        <Ionicons color={color} name={icon} size={19} />
+        {illustration ? (
+          <IllustratedIcon size={31} source={illustration} />
+        ) : (
+          <Ionicons color={color} name={icon} size={19} />
+        )}
       </View>
       <Text style={[styles.rowLabel, styles.rowLinkLabel, { color }]}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}

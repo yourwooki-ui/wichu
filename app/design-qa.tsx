@@ -77,6 +77,17 @@ export default function DesignQaScreen() {
                 ['연결 관리', illustratedIcons.connections],
                 ['설정', illustratedIcons.settings],
                 ['Gold Pass', illustratedIcons.goldPremium],
+                ['연결 오류', illustratedIcons.connectionError],
+                ['발견 노출', illustratedIcons.discoveryVisible],
+                ['사진 심사', illustratedIcons.photoReview],
+                ['사진 반려', illustratedIcons.photoRejected],
+                ['이용권', illustratedIcons.goldPass],
+                ['검색 없음', illustratedIcons.searchEmpty],
+                ['번역', illustratedIcons.translation],
+                ['안전', illustratedIcons.safety],
+                ['알림', illustratedIcons.notification],
+                ['사진 관리', illustratedIcons.profilePhotos],
+                ['위치', illustratedIcons.location],
               ] as const
             ).map(([label, source]) => (
               <View
@@ -94,7 +105,7 @@ export default function DesignQaScreen() {
           <StateView
             actionLabel="다시 시도"
             body="저장된 연결은 그대로예요. 잠시 후 다시 확인해주세요."
-            icon="cloud-offline-outline"
+            illustration={illustratedIcons.connectionError}
             onAction={() => {}}
             secondaryActionLabel="문의"
             onSecondaryAction={() => {}}

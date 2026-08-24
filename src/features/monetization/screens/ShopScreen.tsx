@@ -225,7 +225,7 @@ export function ShopScreen() {
         </Pressable>
 
         <View style={styles.notice}>
-          <Ionicons color={palette.inkMuted} name="shield-checkmark-outline" size={18} />
+          <IllustratedIcon size={24} source={illustratedIcons.safety} />
           <Text style={styles.noticeText}>
             결제 여부와 관계없이 매치와 채팅 등 핵심 기능은 무료예요. 우선 노출은 필터와 안전 기준을
             통과한 후보 안에서만 적용됩니다.

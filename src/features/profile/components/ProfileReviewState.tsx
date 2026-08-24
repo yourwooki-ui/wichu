@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 
 type ProfileReviewStateProps = {
@@ -42,13 +44,10 @@ export function ProfileReviewState({
       <View style={styles.page}>
         <BrandWordmark color={palette.ink} size={25} />
         <View style={styles.content}>
-          <View style={[styles.icon, !isPending && styles.rejectedIcon]}>
-            <Ionicons
-              name={isPending ? 'time-outline' : 'alert-circle-outline'}
-              size={34}
-              color={isPending ? palette.pink : palette.danger}
-            />
-          </View>
+          <IllustratedIcon
+            size={82}
+            source={isPending ? illustratedIcons.photoReview : illustratedIcons.photoRejected}
+          />
           <Text style={styles.eyebrow}>{t(`profileReview.${status}.eyebrow`)}</Text>
           <Text style={styles.title}>{t(`profileReview.${status}.title`)}</Text>
           <Text style={styles.body}>{t(`profileReview.${status}.body`)}</Text>

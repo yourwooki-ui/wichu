@@ -8,6 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
@@ -102,15 +103,17 @@ export function OperationsScreen() {
           <ListRowsSkeleton count={4} height={104} />
         </View>
       ) : activeQuery.isError ? (
-        <View style={styles.center}>
-          <Text style={styles.errorTitle}>운영 큐를 불러오지 못했어요</Text>
-          <Pressable onPress={() => activeQuery.refetch()} style={styles.retry}>
-            <Text style={styles.retryText}>다시 시도</Text>
-          </Pressable>
-        </View>
+        <EmptyState
+          actionLabel="다시 시도"
+          description="연결 상태를 확인하고 다시 불러와 주세요."
+          illustration={illustratedIcons.connectionError}
+          onAction={() => void activeQuery.refetch()}
+          title="운영 큐를 불러오지 못했어요"
+          tone="error"
+        />
       ) : count === 0 ? (
         <EmptyState
-          icon="checkmark-done"
+          illustration={illustratedIcons.safety}
           title="처리할 항목이 없어요"
           description="새 요청이 들어오면 이곳에 오래된 순서부터 표시됩니다."
         />

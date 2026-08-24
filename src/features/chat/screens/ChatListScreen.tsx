@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
@@ -150,7 +151,7 @@ export function ChatListScreen() {
               actionLabel="다시 시도"
               body="대화 내용은 그대로예요. 연결 상태를 확인해주세요."
               container="plain"
-              icon="cloud-offline-outline"
+              illustration={illustratedIcons.connectionError}
               onAction={() => matchesQuery.refetch()}
               title="메시지를 불러오지 못했어요"
               tone="error"
@@ -204,7 +205,7 @@ export function ChatListScreen() {
                     </View>
                     {conversation.isTranslated ? (
                       <View style={styles.translatedRow}>
-                        <Ionicons color={palette.inkMuted} name="language" size={11} />
+                        <IllustratedIcon size={17} source={illustratedIcons.translation} />
                         <Text style={styles.translatedText}>번역 가능</Text>
                       </View>
                     ) : null}
@@ -217,7 +218,7 @@ export function ChatListScreen() {
               <StateView
                 body="철자나 다른 이름으로 다시 검색해보세요."
                 container="plain"
-                icon="search-outline"
+                illustration={illustratedIcons.searchEmpty}
                 title="검색 결과가 없어요"
               />
             ) : (

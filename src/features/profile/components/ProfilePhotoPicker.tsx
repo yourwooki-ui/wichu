@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { radius, spacing } from '@/constants/theme';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
 
@@ -298,7 +300,7 @@ export function ProfilePhotoPicker({
               (pressed || controlsDisabled) && styles.pressed,
             ]}
           >
-            <Ionicons name="add" size={28} color={theme.colors.primary} />
+            <IllustratedIcon size={42} source={illustratedIcons.profilePhotos} />
             <Text style={[styles.addLabel, { color: textColor }]}>
               {t('profileSetup.photos.add')}
             </Text>
@@ -314,7 +316,7 @@ export function ProfilePhotoPicker({
 
       {uploadProgress ? (
         <View style={[styles.uploadStatus, { backgroundColor: surfaceColor }]}>
-          <Ionicons name="cloud-upload-outline" size={17} color={theme.colors.primary} />
+          <IllustratedIcon size={24} source={illustratedIcons.profilePhotos} />
           <Text style={[styles.uploadText, { color: textColor }]}>
             {t('profileSetup.photos.uploading', uploadProgress)}
           </Text>

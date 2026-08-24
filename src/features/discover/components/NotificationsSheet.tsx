@@ -6,7 +6,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
+import { StateView } from '@/components/StateView';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -75,6 +78,16 @@ export function NotificationsSheet({
             <View style={styles.list}>
               <ChatRowsSkeleton count={4} />
             </View>
+          ) : connectionsQuery.isError ? (
+            <StateView
+              actionLabel="다시 시도"
+              body="연결 상태를 확인하고 다시 불러와 주세요."
+              container="plain"
+              illustration={illustratedIcons.connectionError}
+              onAction={() => void connectionsQuery.refetch()}
+              title="알림을 불러오지 못했어요"
+              tone="error"
+            />
           ) : items.length ? (
             <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
               {items.map((item) => (
@@ -106,7 +119,7 @@ export function NotificationsSheet({
           ) : (
             <View style={styles.empty}>
               <View style={styles.icon}>
-                <Ionicons color="#E9AD17" name="notifications-outline" size={27} />
+                <IllustratedIcon size={56} source={illustratedIcons.notification} />
               </View>
               <Text style={styles.emptyTitle}>새로운 알림이 없어요</Text>
               <Text style={styles.emptyText}>

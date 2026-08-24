@@ -8,6 +8,7 @@ import { CountryFlag } from '@/components/CountryFlag';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { safetyService } from '@/features/settings/services/safety-service';
 
@@ -55,7 +56,7 @@ export function BlockedUsersScreen() {
         <EmptyState
           actionLabel="다시 시도"
           description="연결 상태를 확인하고 다시 불러와 주세요."
-          icon="cloud-offline-outline"
+          illustration={illustratedIcons.connectionError}
           onAction={() => void blockedQuery.refetch()}
           title="차단 목록을 불러오지 못했어요"
           tone="error"
@@ -63,7 +64,7 @@ export function BlockedUsersScreen() {
       ) : blockedQuery.data?.length === 0 ? (
         <EmptyState
           description="차단한 사용자가 없어요."
-          icon="shield-checkmark-outline"
+          illustration={illustratedIcons.safety}
           title="차단 목록이 비어 있어요"
         />
       ) : (

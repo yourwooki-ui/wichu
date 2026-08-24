@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import {
   getLanguageOptions,
   getRepresentativeCountryCode,
@@ -242,7 +244,7 @@ function LanguageTrigger({
       {option ? (
         <CountryFlag countryCode={option.countryCode} label={option.name} />
       ) : (
-        <Ionicons color={palette.inkMuted} name="language" size={20} />
+        <IllustratedIcon size={26} source={illustratedIcons.translation} />
       )}
       <Text style={[styles.triggerText, !option && styles.placeholder]}>
         {option?.name ?? placeholder}
