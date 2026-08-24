@@ -47,8 +47,8 @@ export default function AccountDeletionRoute() {
 
         <Text style={styles.title}>계정과 데이터를 삭제할 수 있어요</Text>
         <Text style={styles.lede}>
-          WICHU 계정을 삭제하면 프로필과 사진, 대화 내용이 서비스에서 제거됩니다. 아래 두 가지 방법
-          중 편한 쪽을 이용하세요.
+          WICHU 계정을 삭제하면 프로필과 사진, 대화 내용이 서비스에서 제거됩니다. 계정을 유지한 채
+          일부 데이터만 지우는 것도 가능해요.
         </Text>
 
         <Section index="1" title="앱에서 삭제하기">
@@ -79,7 +79,17 @@ export default function AccountDeletionRoute() {
           </Pressable>
         </Section>
 
-        <Section index="3" title="삭제되는 데이터">
+        <Section index="3" title="계정을 유지하고 일부 데이터만 삭제하기">
+          <Text style={styles.body}>
+            프로필 사진, 소개와 관심사 등은 앱의{' '}
+            <Text style={styles.strong}>마이 → 프로필 수정</Text>에서 직접 제거할 수 있습니다. 그
+            밖의 특정 개인정보 삭제를 원하면 가입 이메일로 {SUPPORT_EMAIL}에 삭제할 항목을 적어 보내
+            주세요. 본인 확인 후 해당 데이터와 서비스 제공에 꼭 필요한 데이터인지 확인해 처리 결과를
+            안내합니다.
+          </Text>
+        </Section>
+
+        <Section index="4" title="계정 삭제 시 삭제되는 데이터">
           {DELETED_ITEMS.map((item) => (
             <View key={item} style={styles.listRow}>
               <Ionicons color={palette.pink} name="checkmark-circle" size={16} />
@@ -88,7 +98,7 @@ export default function AccountDeletionRoute() {
           ))}
         </Section>
 
-        <Section index="4" title="보존되는 정보">
+        <Section index="5" title="보존되는 정보">
           <Text style={styles.body}>
             삭제가 끝나면 원래 계정 ID를 복원할 수 없는 SHA-256 해시, 요청·완료 시각과 제거된 사진
             수만 삭제 처리 증명 목적으로 1년 보관한 뒤 자동 삭제합니다. 프로필, 메시지, 매치, 신고와
