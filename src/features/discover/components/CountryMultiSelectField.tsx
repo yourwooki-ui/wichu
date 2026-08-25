@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
 import { getCountryOptions } from '@/constants/countries';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 
 type Props = {
   value: string[];
@@ -71,7 +71,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
                 accessibilityLabel="국가 선택 닫기"
                 hitSlop={8}
                 onPress={close}
-                style={styles.close}
+                style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
               >
                 <Ionicons color={palette.ink} name="close" size={21} />
               </Pressable>
@@ -115,7 +115,10 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
                 </Pressable>
               )}
             />
-            <Pressable onPress={close} style={styles.done}>
+            <Pressable
+              onPress={close}
+              style={({ pressed }) => [styles.done, pressed && pressFeedback.control]}
+            >
               <Text style={styles.doneText}>선택 완료</Text>
             </Pressable>
           </SafeAreaView>

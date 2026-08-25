@@ -8,7 +8,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { radius, spacing } from '@/constants/theme';
+import { pressFeedback, radius, spacing } from '@/constants/theme';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
 
 const MAX_PHOTOS = 6;
@@ -401,7 +401,11 @@ function OrderButton({ icon, label, disabled, onPress }: OrderButtonProps) {
       disabled={disabled}
       onPress={onPress}
       hitSlop={8}
-      style={[styles.orderButton, disabled && styles.disabledOrderButton]}
+      style={({ pressed }) => [
+        styles.orderButton,
+        disabled && styles.disabledOrderButton,
+        pressed && !disabled && pressFeedback.control,
+      ]}
     >
       <Ionicons name={icon} size={17} color="#FFFFFF" />
     </Pressable>

@@ -22,7 +22,7 @@ import {
   getRepresentativeCountryCode,
   type LanguageOption,
 } from '@/constants/languages';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import type { LanguageLevel, SpokenLanguage } from '@/features/profile/types/language';
 
 const LEVELS: LanguageLevel[] = ['beginner', 'intermediate', 'advanced', 'fluent'];
@@ -181,7 +181,11 @@ export function LanguagePreferencesField({
                 </Text>
                 <Text style={styles.sheetSubtitle}>{t('profileSetup.language.searchHint')}</Text>
               </View>
-              <Pressable hitSlop={8} onPress={closePicker} style={styles.closeButton}>
+              <Pressable
+                hitSlop={8}
+                onPress={closePicker}
+                style={({ pressed }) => [styles.closeButton, pressed && pressFeedback.icon]}
+              >
                 <Ionicons color={palette.ink} name="close" size={22} />
               </Pressable>
             </View>

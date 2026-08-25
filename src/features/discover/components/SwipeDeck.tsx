@@ -21,7 +21,7 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius, spacing, typography } from '@/constants/theme';
+import { palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
 import { hapticsService } from '@/services/haptics-service';
@@ -299,7 +299,10 @@ export function SwipeDeck({
   return (
     <View style={styles.container}>
       {error ? (
-        <Pressable onPress={onRetry} style={styles.errorBanner}>
+        <Pressable
+          onPress={onRetry}
+          style={({ pressed }) => [styles.errorBanner, pressed && pressFeedback.surface]}
+        >
           <IllustratedIcon size={24} source={illustratedIcons.connectionError} />
           <Text numberOfLines={2} style={styles.errorText}>
             {error}

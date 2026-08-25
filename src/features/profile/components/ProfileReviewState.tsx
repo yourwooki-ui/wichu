@@ -8,7 +8,7 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 
 type ProfileReviewStateProps = {
   status: 'pending' | 'rejected';
@@ -80,7 +80,11 @@ export function ProfileReviewState({
             onPress={isPending ? onBrowse : () => onEdit?.()}
           />
           {isPending && onEdit ? (
-            <Pressable accessibilityRole="button" onPress={onEdit} style={styles.editPendingButton}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onEdit}
+              style={({ pressed }) => [styles.editPendingButton, pressed && pressFeedback.control]}
+            >
               <Text style={styles.editPendingText}>프로필 수정</Text>
             </Pressable>
           ) : null}

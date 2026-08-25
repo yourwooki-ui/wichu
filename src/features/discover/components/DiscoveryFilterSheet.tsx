@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { CountryMultiSelectField } from '@/features/discover/components/CountryMultiSelectField';
 import {
   DistanceLimitField,
@@ -95,7 +95,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
               accessibilityLabel="탐색 조건 닫기"
               hitSlop={8}
               onPress={onClose}
-              style={styles.close}
+              style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
             >
               <Ionicons color={palette.ink} name="close" size={21} />
             </Pressable>

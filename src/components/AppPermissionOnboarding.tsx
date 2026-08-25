@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import {
@@ -168,7 +168,11 @@ export function AppPermissionOnboarding() {
               {t(working ? 'permissionOnboarding.checking' : 'permissionOnboarding.allowContinue')}
             </Text>
           </Pressable>
-          <Pressable disabled={working} onPress={skip} style={styles.secondary}>
+          <Pressable
+            disabled={working}
+            onPress={skip}
+            style={({ pressed }) => [styles.secondary, pressed && pressFeedback.control]}
+          >
             <Text style={styles.secondaryText}>{t('permissionOnboarding.later')}</Text>
           </Pressable>
         </View>

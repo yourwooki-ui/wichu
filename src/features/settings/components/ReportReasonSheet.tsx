@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppModal } from '@/components/AppModal';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 
 export const REPORT_REASONS = [
   { value: 'inappropriate_content', label: '부적절한 사진 또는 콘텐츠', icon: 'images-outline' },
@@ -60,7 +60,11 @@ export function ReportReasonSheet({ busy, onClose, onSelect, visible }: ReportRe
               </Pressable>
             ))}
           </View>
-          <Pressable disabled={busy} onPress={onClose} style={styles.cancel}>
+          <Pressable
+            disabled={busy}
+            onPress={onClose}
+            style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}
+          >
             <Text style={styles.cancelText}>{busy ? '접수 중…' : '취소'}</Text>
           </Pressable>
         </View>

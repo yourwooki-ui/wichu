@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
 import { COMPANY_INFO, SUPPORT_EMAIL } from '@/constants/company';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 
 const FAQS = [
   [
@@ -51,7 +51,11 @@ export default function SupportRoute() {
           </View>
           <Text style={styles.heroTitle}>무엇을 도와드릴까요?</Text>
           <Text style={styles.heroBody}>계정·안전·결제 문제를 운영팀에 알려주세요.</Text>
-          <Pressable accessibilityRole="button" onPress={sendEmail} style={styles.contactButton}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={sendEmail}
+            style={({ pressed }) => [styles.contactButton, pressed && pressFeedback.control]}
+          >
             <Ionicons color={palette.white} name="mail" size={18} />
             <Text style={styles.contactText}>이메일 문의</Text>
           </Pressable>
@@ -78,7 +82,7 @@ export default function SupportRoute() {
             accessibilityLabel="무브먼트 스튜디오 웹사이트 열기"
             accessibilityRole="link"
             onPress={openCompanyWebsite}
-            style={styles.websiteButton}
+            style={({ pressed }) => [styles.websiteButton, pressed && pressFeedback.control]}
           >
             <Ionicons color={palette.ink} name="globe-outline" size={17} />
             <Text style={styles.websiteText}>movementstudio.kr</Text>

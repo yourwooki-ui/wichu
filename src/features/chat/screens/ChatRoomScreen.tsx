@@ -32,7 +32,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
 import {
@@ -749,9 +749,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               disabled={(!draft.trim() && !selectedImages.length) || failed}
               onPress={send}
               hitSlop={6}
-              style={[
+              style={({ pressed }) => [
                 styles.sendButton,
                 (!draft.trim() && !selectedImages.length) || failed ? styles.sendDisabled : null,
+                pressed && pressFeedback.control,
               ]}
             >
               <Ionicons color={palette.white} name="arrow-up" size={20} />

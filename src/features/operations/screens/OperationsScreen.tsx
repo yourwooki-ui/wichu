@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -146,7 +146,14 @@ export function OperationsScreen() {
 
 function Tab({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[styles.tab, active && styles.tabActive]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tab,
+        active && styles.tabActive,
+        pressed && pressFeedback.control,
+      ]}
+    >
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -269,7 +276,12 @@ function Action({
     <Pressable
       disabled={disabled}
       onPress={onPress}
-      style={[styles.action, primary && styles.actionPrimary, disabled && styles.disabled]}
+      style={({ pressed }) => [
+        styles.action,
+        primary && styles.actionPrimary,
+        disabled && styles.disabled,
+        pressed && !disabled && pressFeedback.control,
+      ]}
     >
       <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>
     </Pressable>

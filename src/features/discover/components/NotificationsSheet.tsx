@@ -11,7 +11,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette } from '@/constants/theme';
+import { palette, pressFeedback } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
@@ -44,7 +44,7 @@ export function NotificationsSheet({
               accessibilityLabel="알림 닫기"
               hitSlop={8}
               onPress={onClose}
-              style={styles.close}
+              style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
             >
               <Ionicons color={palette.ink} name="close" size={21} />
             </Pressable>

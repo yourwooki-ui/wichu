@@ -18,7 +18,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
-import { palette, radius, touchSlop, typography } from '@/constants/theme';
+import { palette, pressFeedback, radius, touchSlop, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { purchaseService } from '@/features/monetization/services/purchase-service';
@@ -177,7 +177,7 @@ function PassDetailScreen() {
           disabled={purchasePending}
           hitSlop={touchSlop.link}
           onPress={handleRestore}
-          style={styles.restore}
+          style={({ pressed }) => [styles.restore, pressed && pressFeedback.control]}
         >
           <IllustratedIcon size={24} source={illustratedIcons.purchase} />
           <Text style={styles.restoreText}>구매 복원</Text>
