@@ -1,3 +1,5 @@
+import { getLanguageDisplayName } from '@/lib/display-names';
+
 export const LANGUAGE_CODES = `
 aa ab ae af ak am an ar as av ay az ba be bg bh bi bm bn bo br bs ca ce ch co
 cr cs cu cv cy da de dv dz ee el en eo es et eu fa ff fi fj fo fr fy ga gd gl gn
@@ -16,7 +18,33 @@ export type LanguageOption = {
   name: string;
 };
 
+const REPRESENTATIVE_COUNTRY_BY_LANGUAGE: Record<string, string> = {
+  ar: 'SA',
+  de: 'DE',
+  en: 'US',
+  es: 'ES',
+  fa: 'IR',
+  fr: 'FR',
+  hi: 'IN',
+  id: 'ID',
+  it: 'IT',
+  ja: 'JP',
+  ko: 'KR',
+  ms: 'MY',
+  pt: 'BR',
+  ru: 'RU',
+  th: 'TH',
+  tl: 'PH',
+  tr: 'TR',
+  vi: 'VN',
+  zh: 'TW',
+};
+
 export function getRepresentativeCountryCode(languageCode: string) {
+  const normalizedCode = languageCode.toLowerCase().split('-')[0];
+  const knownCountry = REPRESENTATIVE_COUNTRY_BY_LANGUAGE[normalizedCode];
+  if (knownCountry) return knownCountry;
+
   try {
     const region = new Intl.Locale(languageCode).maximize().region;
     return region && /^[A-Z]{2}$/.test(region) ? region : 'UN';
@@ -26,11 +54,9 @@ export function getRepresentativeCountryCode(languageCode: string) {
 }
 
 export function getLanguageOptions(locale: string): LanguageOption[] {
-  const displayNames = new Intl.DisplayNames([locale], { type: 'language' });
-
   return LANGUAGE_CODES.map((code) => ({
     code,
     countryCode: getRepresentativeCountryCode(code),
-    name: displayNames.of(code) ?? code.toUpperCase(),
+    name: getLanguageDisplayName(locale, code),
   })).sort((a, b) => a.name.localeCompare(b.name, locale));
 }

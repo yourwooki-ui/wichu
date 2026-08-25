@@ -1,6 +1,7 @@
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { getSupabaseClient } from '@/lib/supabase';
+import { getRegionDisplayName } from '@/lib/display-names';
 import type {
   Gender,
   Profile,
@@ -152,7 +153,6 @@ function getLanguageDetails(candidate: CandidateRow): ProfileLanguage[] {
 
 async function hydrateCandidates(candidates: CandidateRow[], locale: string): Promise<Profile[]> {
   const supabase = getSupabaseClient();
-  const regionNames = new Intl.DisplayNames([locale], { type: 'region' });
   const photoPaths = [...new Set(candidates.flatMap((candidate) => candidate.photo_paths))];
   const signedUrlsByPath = new Map<string, string>();
   const candidateIds = candidates.map((candidate) => candidate.id);
@@ -163,9 +163,11 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         .eq('category', 'connection_goal')
         .in('profile_id', candidateIds)
     : { data: [], error: null };
-  if (goalError) throw goalError;
+  // Connection goals improve ranking, but must never make the core profile fail to load.
+  // Older deployments can legitimately lack the optional tag read permission.
+  const availableGoalRows = goalError ? [] : (goalRows ?? []);
   const goalsByProfile = new Map<string, string[]>();
-  for (const row of goalRows ?? []) {
+  for (const row of availableGoalRows) {
     goalsByProfile.set(row.profile_id, [...(goalsByProfile.get(row.profile_id) ?? []), row.value]);
   }
 
@@ -197,7 +199,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         age: candidate.age,
         gender: candidate.gender,
         countryCode: candidate.country_code,
-        countryLabel: regionNames.of(candidate.country_code) ?? candidate.country_code,
+        countryLabel: getRegionDisplayName(locale, candidate.country_code),
         languages: candidate.languages,
         languageDetails: getLanguageDetails(candidate),
         distanceKm:

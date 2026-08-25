@@ -11,6 +11,7 @@ import { adsService } from '@/features/monetization/services/ads-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 import type { Profile, SwipeAction } from '@/types/profile';
 
@@ -235,6 +236,10 @@ export function useDiscoverDeck() {
   const clearLastMatch = useCallback(() => setLastMatch(null), []);
 
   const queryError = preferencesQuery.error ?? candidatesQuery.error;
+
+  useEffect(() => {
+    if (queryError) reportOperationalError('discover_query', queryError, '/discover');
+  }, [queryError]);
 
   return {
     profiles,

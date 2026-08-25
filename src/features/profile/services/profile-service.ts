@@ -2,7 +2,10 @@ import { getSupabaseClient } from '@/lib/supabase';
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTag } from '@/features/profile/types/profile-tag';
 import type { ProfileDetails } from '@/features/profile/types/profile-details';
+import { getProfileAge } from '@/features/profile/utils/profile-display';
+import { getRegionDisplayName } from '@/lib/display-names';
 import { Json, TablesInsert } from '@/types/database';
+import type { Gender, Profile, ProfileLanguageLevel } from '@/types/profile';
 
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
   return Boolean(
@@ -93,6 +96,61 @@ export const profileService = {
       languages: languageResult.data ?? [],
       tags: tagResult.data ?? [],
       settings: settingsResult.data,
+    };
+  },
+  async getMyPreviewProfile(userId: string, locale: string): Promise<Profile> {
+    const operational = await profileService.getMyOperationalProfile(userId);
+    const { details, interests, languages, profile, tags } = operational;
+    const nativeLanguage = profile.native_language;
+    const languageDetails = [
+      ...(nativeLanguage
+        ? [{ code: nativeLanguage, level: 'native' as const, isNative: true }]
+        : []),
+      ...languages
+        .filter((language) => language.language_code !== nativeLanguage)
+        .map((language) => ({
+          code: language.language_code,
+          level: language.proficiency as ProfileLanguageLevel,
+          isNative: false,
+        })),
+    ];
+    const approvedPhotos = profile.profile_photos.filter(
+      (photo) => photo.review_status === 'approved' && photo.signed_url,
+    );
+    const previewPhotos = approvedPhotos.length
+      ? approvedPhotos
+      : profile.profile_photos.filter((photo) => photo.signed_url);
+
+    return {
+      id: profile.id,
+      name: profile.display_name,
+      age: getProfileAge(profile.birth_date),
+      gender: profile.gender as Gender,
+      countryCode: profile.country_code,
+      countryLabel: getRegionDisplayName(locale, profile.country_code),
+      languages: profile.languages,
+      languageDetails,
+      bio: profile.bio,
+      interests: interests.map((interest) => interest.label),
+      connectionGoals: tags
+        .filter((tag) => tag.category === 'connection_goal')
+        .map((tag) => tag.value),
+      photos: previewPhotos.map((photo) => photo.signed_url),
+      lastActiveAt: profile.last_active_at,
+      isPhotoReviewed: approvedPhotos.length > 0,
+      isNew: Date.now() - new Date(profile.created_at).getTime() <= 7 * 24 * 60 * 60 * 1000,
+      details: details
+        ? {
+            occupation: details.occupation ?? undefined,
+            educationLevel: details.education_level ?? undefined,
+            heightCm: details.height_cm ?? undefined,
+            personalityType: details.personality_type ?? undefined,
+            drinking: details.drinking ?? undefined,
+            smoking: details.smoking ?? undefined,
+            exercise: details.exercise ?? undefined,
+            pets: details.pets ?? undefined,
+          }
+        : undefined,
     };
   },
   submitForReview() {

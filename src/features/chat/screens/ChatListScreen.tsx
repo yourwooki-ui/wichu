@@ -3,7 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -25,6 +25,7 @@ import {
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -41,6 +42,9 @@ export function ChatListScreen() {
     queryKey: ['matches', 'connections', session?.user.id],
     staleTime: 20_000,
   });
+  useEffect(() => {
+    if (matchesQuery.error) reportOperationalError('chat_list_query', matchesQuery.error, '/chat');
+  }, [matchesQuery.error]);
   const realConversations = useMemo<ConversationPreview[]>(
     () =>
       (matchesQuery.data ?? []).map((connection) => ({

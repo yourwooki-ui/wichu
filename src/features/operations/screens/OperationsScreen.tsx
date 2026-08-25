@@ -13,6 +13,7 @@ import { palette, pressFeedback, radius } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { formatDateTime } from '@/lib/intl-format';
 
 type Section = 'profiles' | 'reports';
 
@@ -195,7 +196,7 @@ function ReviewCard({
         </Text>
         <Text style={styles.time}>
           {item.submitted_at
-            ? new Date(item.submitted_at).toLocaleString('ko-KR')
+            ? formatDateTime('ko-KR', new Date(item.submitted_at))
             : '제출 시간 없음'}
         </Text>
         <Text style={styles.photoCount}>이번 심사 사진 {item.photo_paths.length}장</Text>
@@ -251,7 +252,7 @@ function ReportCard({
         <Text numberOfLines={3} style={styles.body}>
           {item.details || '상세 내용 없음'}
         </Text>
-        <Text style={styles.time}>{new Date(item.created_at).toLocaleString('ko-KR')}</Text>
+        <Text style={styles.time}>{formatDateTime('ko-KR', new Date(item.created_at))}</Text>
         <View style={styles.actions}>
           <Action disabled={busy} label="종결" onPress={onClose} />
           <Action primary disabled={busy} label="검토 완료" onPress={onReview} />

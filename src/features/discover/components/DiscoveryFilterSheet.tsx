@@ -36,7 +36,7 @@ export function DiscoveryFilterSheet({ visible, value, saving, onClose, onSave }
 
   return (
     <DiscoveryFilterForm
-      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}-${value?.excludeSameCountry ?? false}-${value?.connectionGoals.join(',') ?? ''}`}
+      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders?.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}-${value?.excludeSameCountry ?? false}-${value?.connectionGoals?.join(',') ?? ''}`}
       onClose={onClose}
       onSave={onSave}
       saving={saving}

@@ -14,6 +14,8 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { getRepresentativeCountryCode } from '@/constants/languages';
 import { palette, radius } from '@/constants/theme';
 import { getProfilePresence } from '@/features/profile/utils/profile-display';
+import { getLanguageDisplayName } from '@/lib/display-names';
+import { formatNumber } from '@/lib/intl-format';
 import type { Profile } from '@/types/profile';
 
 const HERO_HEIGHT_RATIO = 1.18;
@@ -122,13 +124,9 @@ export function StandardProfileDetail({
     : null;
   const distanceLabel = profile.distanceKm
     ? t('profileDetail.distanceAway', {
-        distance: new Intl.NumberFormat(i18n.language).format(profile.distanceKm),
+        distance: formatNumber(i18n.language, profile.distanceKm),
       })
     : null;
-  const languageDisplayNames = useMemo(
-    () => new Intl.DisplayNames([i18n.language], { type: 'language' }),
-    [i18n.language],
-  );
   const languages =
     profile.languageDetails ??
     profile.languages.map((code, index) => ({
@@ -385,7 +383,7 @@ export function StandardProfileDetail({
                       <CountryFlag
                         compact
                         countryCode={getRepresentativeCountryCode(getLanguageCode(language.code)!)}
-                        label={getLanguageLabel(language.code, languageDisplayNames)}
+                        label={getLanguageLabel(language.code, i18n.language)}
                         style={styles.languageFlag}
                       />
                     ) : (
@@ -393,7 +391,7 @@ export function StandardProfileDetail({
                     )}
                     <View style={styles.languageCopy}>
                       <Text style={[styles.languageText, { color: theme.colors.text }]}>
-                        {getLanguageLabel(language.code, languageDisplayNames)}
+                        {getLanguageLabel(language.code, i18n.language)}
                       </Text>
                       <Text style={[styles.languageLevelText, { color: theme.colors.textMuted }]}>
                         {t(`profileDetail.languageLevels.${language.level}`)}
@@ -519,9 +517,9 @@ function getLanguageCode(language: string) {
   return LANGUAGE_NAME_TO_CODE[language];
 }
 
-function getLanguageLabel(language: string, displayNames: Intl.DisplayNames) {
+function getLanguageLabel(language: string, locale: string) {
   const code = getLanguageCode(language);
-  return code ? (displayNames.of(code) ?? language) : language;
+  return code ? getLanguageDisplayName(locale, code) : language;
 }
 
 const styles = StyleSheet.create({

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -26,6 +26,7 @@ import { profileVisitService } from '@/features/profile/services/profile-visit-s
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { hapticsService } from '@/services/haptics-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 
@@ -117,6 +118,13 @@ export function MatchesScreen() {
     queryKey: ['matches', 'connections', session?.user.id],
     staleTime: 20_000,
   });
+  const connectionQueryError =
+    incomingLikesQuery.error ?? matchesQuery.error ?? visitorsQuery.error;
+  useEffect(() => {
+    if (connectionQueryError) {
+      reportOperationalError('matches_query', connectionQueryError, '/matches');
+    }
+  }, [connectionQueryError]);
   const visitors = (visitorsQuery.data ?? []).map((visitor): ConnectionProfile => ({
     id: visitor.visitor_id,
     name: visitor.display_name,

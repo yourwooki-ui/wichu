@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
@@ -23,6 +23,7 @@ import { getProfileAge } from '@/features/profile/utils/profile-display';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 type ReviewStatus = 'approved' | 'draft' | 'pending' | 'rejected';
 
@@ -111,6 +112,10 @@ export function MeScreen() {
       [profileQuery, refreshProfile],
     ),
   );
+
+  useEffect(() => {
+    if (profileQuery.error) reportOperationalError('me_query', profileQuery.error, '/me');
+  }, [profileQuery.error]);
 
   if (profileQuery.isLoading) return <MeSkeleton />;
 

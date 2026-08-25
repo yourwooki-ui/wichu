@@ -30,6 +30,7 @@ import { discoveryService } from '@/features/discover/services/discovery-service
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { StandardProfileDetail } from '@/features/profile/components/StandardProfileDetail';
+import { profileService } from '@/features/profile/services/profile-service';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
 import {
   ReportReasonSheet,
@@ -38,6 +39,7 @@ import {
 import { safetyService } from '@/features/settings/services/safety-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 import type { SwipeAction } from '@/types/profile';
 
@@ -71,7 +73,10 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     queryKey: [isPreview ? 'my-profile-preview' : 'profile-detail', id, i18n.language],
     enabled: Boolean(id && session?.user.id && !id.startsWith('mock-')),
     staleTime: 60_000,
-    queryFn: () => discoveryService.getProfileById(id!, i18n.language),
+    queryFn: () =>
+      isPreview
+        ? profileService.getMyPreviewProfile(id!, i18n.language)
+        : discoveryService.getProfileById(id!, i18n.language),
   });
   const loadedProfile = remoteProfileQuery.data ?? cachedProfile ?? undefined;
   const profile = useMemo(
@@ -116,6 +121,16 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     void profileVisitService.recordVisit(id, session.user.id).catch(() => undefined);
   }, [id, isPreview, session?.user.id]);
 
+  useEffect(() => {
+    if (remoteProfileQuery.error) {
+      reportOperationalError(
+        isPreview ? 'profile_preview_query' : 'profile_detail_query',
+        remoteProfileQuery.error,
+        isPreview ? '/profile-preview' : '/profile/[id]',
+      );
+    }
+  }, [isPreview, remoteProfileQuery.error]);
+
   if (!profile && remoteProfileQuery.isLoading) {
     // 사진이 먼저 오는 화면이라 스피너 대신 실제 배치(대표 사진 → 이름 → 태그)를 미리 그린다.
     return (
@@ -137,6 +152,9 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   }
 
   if (!profile) {
+    const retryProfile = remoteProfileQuery.isError
+      ? () => void remoteProfileQuery.refetch()
+      : () => router.back();
     return (
       <Screen style={[styles.screen, styles.unavailableScreen]}>
         <View style={[styles.unavailableIcon, { backgroundColor: theme.colors.surface }]}>
@@ -145,8 +163,10 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         <Text style={[styles.unavailableTitle, { color: theme.colors.text }]}>
           {t('profileDetail.unavailable')}
         </Text>
-        <Pressable onPress={() => router.back()} style={styles.unavailableButton}>
-          <Text style={styles.unavailableButtonText}>{t('profileDetail.back')}</Text>
+        <Pressable onPress={retryProfile} style={styles.unavailableButton}>
+          <Text style={styles.unavailableButtonText}>
+            {remoteProfileQuery.isError ? '다시 시도' : t('profileDetail.back')}
+          </Text>
         </Pressable>
       </Screen>
     );

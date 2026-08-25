@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { productAnalyticsService } from '@/services/product-analytics-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 type Props = { children: ReactNode };
 type State = { failed: boolean };
@@ -16,10 +16,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    productAnalyticsService.track('app_error', {
-      error_name: error.name || 'Error',
-      surface: info.componentStack ? 'render' : 'unknown',
-    });
+    reportOperationalError(info.componentStack ? 'render' : 'unknown', error);
   }
 
   private retry = () => this.setState({ failed: false });

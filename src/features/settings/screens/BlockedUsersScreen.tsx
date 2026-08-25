@@ -13,9 +13,9 @@ import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { safetyService } from '@/features/settings/services/safety-service';
+import { formatDate } from '@/lib/intl-format';
 
 const queryKey = ['safety', 'blocked-users'] as const;
-const blockedDateFormatter = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' });
 
 export function BlockedUsersScreen() {
   const router = useRouter();
@@ -101,9 +101,7 @@ export function BlockedUsersScreen() {
                       />
                     ) : null}
                   </View>
-                  <Text style={styles.date}>
-                    {blockedDateFormatter.format(new Date(item.blocked_at))}
-                  </Text>
+                  <Text style={styles.date}>{formatDate('ko-KR', new Date(item.blocked_at))}</Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"

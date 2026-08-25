@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { type GestureResponderEvent, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { palette, radius } from '@/constants/theme';
+import { formatNumber } from '@/lib/intl-format';
 
 export const MIN_DISCOVERY_DISTANCE_KM = 1;
 export const MAX_DISCOVERY_DISTANCE_KM = 16_000;
@@ -164,7 +165,7 @@ function getNearestStepIndex(value: number) {
 }
 
 function formatDistance(value: number) {
-  return `${new Intl.NumberFormat('ko-KR').format(value)}km`;
+  return `${formatNumber('ko-KR', value)}km`;
 }
 
 function clamp(value: number, minimum: number, maximum: number) {

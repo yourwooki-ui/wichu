@@ -1,3 +1,5 @@
+import { getRegionDisplayName } from '@/lib/display-names';
+
 export const COUNTRY_CODES = `
 AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ
 BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
@@ -57,11 +59,9 @@ const COUNTRY_SEARCH_ALIASES: Record<string, string> = {
 };
 
 export function getCountryOptions(locale: string): CountryOption[] {
-  const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
-
   return COUNTRY_CODES.map((code) => ({
     code,
-    name: displayNames.of(code) ?? code,
+    name: getRegionDisplayName(locale, code),
     searchAliases: COUNTRY_SEARCH_ALIASES[code] ?? '',
   })).sort((a, b) => a.name.localeCompare(b.name, locale));
 }
