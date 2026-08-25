@@ -18,7 +18,10 @@ const baseConfig = {
     package: 'app.wichu.mobile',
     predictiveBackGestureEnabled: false,
     permissions: ['android.permission.ACCESS_COARSE_LOCATION'],
-    blockedPermissions: ['android.permission.ACCESS_FINE_LOCATION'],
+    blockedPermissions: [
+      'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+    ],
   },
   web: {
     favicon: './assets/brand/wichu-app-icon.png',
