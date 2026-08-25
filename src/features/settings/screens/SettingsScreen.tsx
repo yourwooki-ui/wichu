@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
@@ -35,6 +36,8 @@ export function SettingsScreen() {
   const { session, adminRole } = useAuthSession();
   const userId = session?.user.id;
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const [accountBusy, setAccountBusy] = useState(false);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const queryKey = ['settings', userId];
@@ -61,20 +64,19 @@ export function SettingsScreen() {
     onSuccess: (data) => queryClient.setQueryData(queryKey, data),
   });
 
-  const signOut = () => {
-    Alert.alert(t('settings.signOutTitle'), t('settings.signOutBody'), [
-      { text: t('settings.cancel'), style: 'cancel' },
-      {
-        text: t('settings.signOut'),
-        style: 'destructive',
-        onPress: async () => {
-          setSigningOut(true);
-          const { error } = await authService.signOut();
-          setSigningOut(false);
-          if (error) Alert.alert(t('settings.saveFailed'), error.message);
-        },
-      },
-    ]);
+  const signOut = async () => {
+    setSigningOut(true);
+    setSignOutError(null);
+    const { error } = await authService.signOut();
+    if (error) {
+      setSigningOut(false);
+      setSignOutError(error.message);
+      return;
+    }
+    queryClient.clear();
+    setSignOutOpen(false);
+    setSigningOut(false);
+    router.replace('/login');
   };
 
   const confirmDeactivation = () =>
@@ -264,7 +266,10 @@ export function SettingsScreen() {
 
           <Pressable
             disabled={signingOut || accountBusy}
-            onPress={signOut}
+            onPress={() => {
+              setSignOutError(null);
+              setSignOutOpen(true);
+            }}
             style={styles.signOutButton}
           >
             {signingOut ? (
@@ -280,6 +285,55 @@ export function SettingsScreen() {
         onClose={() => setLanguagePickerOpen(false)}
         visible={languagePickerOpen}
       />
+      <AppModal
+        animationType="fade"
+        onRequestClose={() => {
+          if (!signingOut) setSignOutOpen(false);
+        }}
+        transparent
+        visible={signOutOpen}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            accessibilityLabel={t('settings.cancel')}
+            disabled={signingOut}
+            onPress={() => setSignOutOpen(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View accessibilityViewIsModal style={styles.signOutSheet}>
+            <View style={styles.signOutIcon}>
+              <Ionicons color={palette.danger} name="log-out-outline" size={25} />
+            </View>
+            <Text style={styles.signOutTitle}>{t('settings.signOutTitle')}</Text>
+            <Text style={styles.signOutBody}>{t('settings.signOutBody')}</Text>
+            {signOutError ? (
+              <View style={styles.signOutErrorBox}>
+                <Text style={styles.signOutErrorText}>{signOutError}</Text>
+              </View>
+            ) : null}
+            <View style={styles.signOutActions}>
+              <Pressable
+                disabled={signingOut}
+                onPress={() => setSignOutOpen(false)}
+                style={[styles.modalAction, styles.cancelAction]}
+              >
+                <Text style={styles.cancelActionText}>{t('settings.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                disabled={signingOut}
+                onPress={() => void signOut()}
+                style={[styles.modalAction, styles.confirmSignOutAction]}
+              >
+                {signingOut ? (
+                  <ActivityIndicator color={palette.white} />
+                ) : (
+                  <Text style={styles.confirmSignOutText}>{t('settings.signOut')}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </AppModal>
     </Screen>
   );
 }
@@ -470,6 +524,58 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   signOutText: { color: palette.danger, fontSize: 12, fontWeight: '900' },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,17,0.42)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  signOutSheet: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 26,
+    maxWidth: 380,
+    padding: 22,
+    width: '100%',
+  },
+  signOutIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F2',
+    borderRadius: 20,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  signOutTitle: { color: palette.ink, fontSize: 18, fontWeight: '900', marginTop: 14 },
+  signOutBody: {
+    color: palette.inkMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  signOutErrorBox: {
+    backgroundColor: '#FFF0F2',
+    borderRadius: 12,
+    marginTop: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    width: '100%',
+  },
+  signOutErrorText: { color: palette.danger, fontSize: 11, fontWeight: '700' },
+  signOutActions: { flexDirection: 'row', gap: 8, marginTop: 20, width: '100%' },
+  modalAction: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  cancelAction: { backgroundColor: '#F1F1F3' },
+  cancelActionText: { color: palette.ink, fontSize: 13, fontWeight: '900' },
+  confirmSignOutAction: { backgroundColor: palette.danger },
+  confirmSignOutText: { color: palette.white, fontSize: 13, fontWeight: '900' },
   version: { color: '#92929A', fontSize: 11, marginTop: 18, textAlign: 'center' },
   pressed: { opacity: 0.62 },
 });

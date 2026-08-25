@@ -98,7 +98,7 @@ export const authService = {
     const supabase = getSupabaseClient();
     const { data } = await supabase.auth.getUser();
     if (data.user) await notificationsService.unregister(data.user.id).catch(() => undefined);
-    return supabase.auth.signOut();
+    return supabase.auth.signOut({ scope: 'local' });
   },
   clearLocalSession() {
     return getSupabaseClient().auth.signOut({ scope: 'local' });
