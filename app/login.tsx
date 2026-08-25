@@ -22,6 +22,7 @@ import { AuthWelcome } from '@/features/auth/components/AuthWelcome';
 import { GoogleAuthButton } from '@/features/auth/components/GoogleAuthButton';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
 import { authService } from '@/features/auth/services/auth-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { getAge, isAdult } from '@/features/auth/utils/age';
 import { formatBirthDateInput } from '@/features/auth/utils/format-birth-date';
 
@@ -103,7 +104,8 @@ export default function LoginRoute() {
         if (error) throw error;
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : t('auth.authFailed'));
+      reportOperationalError('email_auth', error, '/login');
+      setMessage(t('auth.authFailed'));
     } finally {
       setLoadingMethod(null);
     }
@@ -125,7 +127,8 @@ export default function LoginRoute() {
     try {
       await authService.signInWithGoogle(isSignUp ? birthDate : undefined);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : t('auth.authFailed'));
+      reportOperationalError('google_auth', error, '/login');
+      setMessage(t('auth.authFailed'));
     } finally {
       setLoadingMethod(null);
     }
@@ -213,11 +216,18 @@ export default function LoginRoute() {
                     label={t('auth.consent')}
                   />
                   <View style={styles.policyLinks}>
-                    <Pressable hitSlop={touchSlop.link} onPress={() => router.push('/legal/terms')}>
+                    <Pressable
+                      accessibilityLabel={t('authExtras.terms')}
+                      accessibilityRole="link"
+                      hitSlop={touchSlop.link}
+                      onPress={() => router.push('/legal/terms')}
+                    >
                       <Text style={styles.policyLink}>{t('authExtras.terms')}</Text>
                     </Pressable>
                     <Text style={styles.policyDot}>·</Text>
                     <Pressable
+                      accessibilityLabel={t('authExtras.privacy')}
+                      accessibilityRole="link"
                       hitSlop={touchSlop.link}
                       onPress={() => router.push('/legal/privacy')}
                     >

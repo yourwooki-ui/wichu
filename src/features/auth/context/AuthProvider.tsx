@@ -12,6 +12,7 @@ import {
 
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { usePresenceHeartbeat } from '@/hooks/use-presence-heartbeat';
+import { reportOperationalError } from '@/services/operational-error-service';
 import type { Database } from '@/types/database';
 
 type ProfileReviewStatus = Database['public']['Enums']['profile_review_status'];
@@ -24,6 +25,7 @@ type AuthContextValue = {
   profileApproved: boolean;
   profileReviewStatus: ProfileReviewStatus | null;
   profileReviewNote: string | null;
+  profileLoadError: boolean;
   adminRole: AdminRole | null;
   refreshProfile: () => Promise<void>;
 };
@@ -59,6 +61,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const {
     data: profile,
+    error: profileError,
+    isError: isProfileError,
     isLoading: isProfileLoading,
     refetch: refetchProfile,
   } = useQuery({
@@ -87,6 +91,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await refetchProfile();
   }, [refetchProfile]);
 
+  useEffect(() => {
+    if (profileError) reportOperationalError('auth_profile_query', profileError, '/');
+  }, [profileError]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -96,12 +104,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       profileApproved: Boolean(profile?.profile_completed) && profile?.review_status === 'approved',
       profileReviewStatus: profile?.review_status ?? null,
       profileReviewNote: profile?.review_note ?? null,
+      profileLoadError: Boolean(session) && isProfileError,
       refreshProfile,
     }),
     [
       isProfileLoading,
       isAdminLoading,
       isSessionLoading,
+      isProfileError,
       adminAccess?.active,
       adminAccess?.role,
       profile?.profile_completed,

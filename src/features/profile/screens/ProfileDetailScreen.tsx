@@ -16,9 +16,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
-import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { Screen } from '@/components/Screen';
+import { StateView } from '@/components/StateView';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -152,22 +152,18 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   }
 
   if (!profile) {
-    const retryProfile = remoteProfileQuery.isError
-      ? () => void remoteProfileQuery.refetch()
-      : () => router.back();
+    const failed = remoteProfileQuery.isError;
     return (
       <Screen style={[styles.screen, styles.unavailableScreen]}>
-        <View style={[styles.unavailableIcon, { backgroundColor: theme.colors.surface }]}>
-          <IllustratedIcon size={60} source={illustratedIcons.searchEmpty} />
-        </View>
-        <Text style={[styles.unavailableTitle, { color: theme.colors.text }]}>
-          {t('profileDetail.unavailable')}
-        </Text>
-        <Pressable onPress={retryProfile} style={styles.unavailableButton}>
-          <Text style={styles.unavailableButtonText}>
-            {remoteProfileQuery.isError ? '다시 시도' : t('profileDetail.back')}
-          </Text>
-        </Pressable>
+        <StateView
+          actionLabel={failed ? t('reliability.retry') : t('profileDetail.back')}
+          body={failed ? t('reliability.profileBody') : t('profileDetail.unavailable')}
+          container="plain"
+          illustration={failed ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
+          onAction={failed ? () => void remoteProfileQuery.refetch() : () => router.back()}
+          title={failed ? t('reliability.profileTitle') : t('profileDetail.unavailable')}
+          tone={failed ? 'error' : 'neutral'}
+        />
       </Screen>
     );
   }
@@ -397,6 +393,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             <View style={styles.modalBackdrop}>
               <Pressable
                 accessibilityLabel="안전 메뉴 닫기"
+                accessibilityRole="button"
                 onPress={() => setSafetyOpen(false)}
                 style={StyleSheet.absoluteFill}
               />
@@ -425,6 +422,9 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
                   onPress={handleBlock}
                 />
                 <Pressable
+                  accessibilityLabel={t('profileDetail.cancel')}
+                  accessibilityRole="button"
+                  accessibilityState={{ busy: safetyBusy, disabled: safetyBusy }}
                   disabled={safetyBusy}
                   onPress={() => setSafetyOpen(false)}
                   style={[styles.cancelButton, { backgroundColor: theme.colors.background }]}
@@ -484,6 +484,9 @@ function SafetyAction({
   const color = danger ? theme.colors.danger : theme.colors.text;
   return (
     <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.safetyAction, pressed && styles.pressed]}
@@ -556,22 +559,6 @@ const styles = StyleSheet.create({
   loadingScreen: { paddingTop: 12 },
   loadingPhoto: { borderRadius: 26, height: 340 },
   loadingChips: { flexDirection: 'row', gap: 8, marginTop: 18 },
-  unavailableIcon: {
-    alignItems: 'center',
-    borderRadius: 26,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-  },
-  unavailableTitle: { ...typography.heading, marginTop: 16 },
-  unavailableButton: {
-    backgroundColor: palette.pink,
-    borderRadius: radius.pill,
-    marginTop: 22,
-    paddingHorizontal: 22,
-    paddingVertical: 13,
-  },
-  unavailableButtonText: { color: palette.white, fontWeight: '800' },
   decisionBar: {
     alignItems: 'center',
     borderTopColor: 'rgba(17,17,17,0.08)',

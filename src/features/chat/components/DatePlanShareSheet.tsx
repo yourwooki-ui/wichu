@@ -49,7 +49,12 @@ export function DatePlanShareSheet({ matchName, onClose, visible }: Props) {
   return (
     <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
       <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable
+          accessibilityLabel={t('experience.common.cancel')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.hero}>
@@ -88,10 +93,18 @@ export function DatePlanShareSheet({ matchName, onClose, visible }: Props) {
             <Text style={styles.noticeText}>{t('experience.dateShare.privacy')}</Text>
           </View>
           <View style={styles.actions}>
-            <Pressable onPress={onClose} style={styles.cancelButton}>
+            <Pressable
+              accessibilityLabel={t('experience.common.cancel')}
+              accessibilityRole="button"
+              onPress={onClose}
+              style={styles.cancelButton}
+            >
               <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
             </Pressable>
             <Pressable
+              accessibilityLabel={t('experience.dateShare.share')}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canShare }}
               disabled={!canShare}
               onPress={() => void share()}
               style={[styles.shareButton, !canShare && styles.shareButtonDisabled]}

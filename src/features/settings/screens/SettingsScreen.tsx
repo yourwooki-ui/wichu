@@ -73,7 +73,7 @@ export function SettingsScreen() {
     const { error } = await authService.signOut();
     if (error) {
       setSigningOut(false);
-      setSignOutError(error.message);
+      setSignOutError(t('settings.checkConnection'));
       return;
     }
     queryClient.clear();
@@ -145,7 +145,12 @@ export function SettingsScreen() {
           </View>
           <Text style={styles.stateTitle}>{t('settings.loadFailed')}</Text>
           <Text style={styles.stateText}>{t('settings.checkConnection')}</Text>
-          <Pressable onPress={() => settingsQuery.refetch()} style={styles.retryButton}>
+          <Pressable
+            accessibilityLabel={t('settings.retry')}
+            accessibilityRole="button"
+            onPress={() => settingsQuery.refetch()}
+            style={styles.retryButton}
+          >
             <Text style={styles.retryText}>{t('settings.retry')}</Text>
           </Pressable>
         </View>
@@ -161,7 +166,12 @@ export function SettingsScreen() {
                 {session?.user.email ?? t('settings.signedInAccount')}
               </Text>
             </View>
-            <Pressable onPress={() => router.push('/profile-edit')} style={styles.editPill}>
+            <Pressable
+              accessibilityLabel={t('settings.editProfile')}
+              accessibilityRole="button"
+              onPress={() => router.push('/profile-edit')}
+              style={styles.editPill}
+            >
               <Text style={styles.editPillText}>{t('settings.editProfile')}</Text>
             </Pressable>
           </View>
@@ -264,6 +274,12 @@ export function SettingsScreen() {
           </SettingSection>
 
           <Pressable
+            accessibilityLabel={t('settings.signOut')}
+            accessibilityRole="button"
+            accessibilityState={{
+              busy: signingOut,
+              disabled: signingOut || accountBusy,
+            }}
             disabled={signingOut || accountBusy}
             onPress={() => {
               setSignOutError(null);
@@ -295,6 +311,7 @@ export function SettingsScreen() {
         <View style={styles.modalBackdrop}>
           <Pressable
             accessibilityLabel={t('settings.cancel')}
+            accessibilityRole="button"
             disabled={signingOut}
             onPress={() => setSignOutOpen(false)}
             style={StyleSheet.absoluteFill}
@@ -312,6 +329,9 @@ export function SettingsScreen() {
             ) : null}
             <View style={styles.signOutActions}>
               <Pressable
+                accessibilityLabel={t('settings.cancel')}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: signingOut }}
                 disabled={signingOut}
                 onPress={() => setSignOutOpen(false)}
                 style={[styles.modalAction, styles.cancelAction]}
@@ -319,6 +339,9 @@ export function SettingsScreen() {
                 <Text style={styles.cancelActionText}>{t('settings.cancel')}</Text>
               </Pressable>
               <Pressable
+                accessibilityLabel={t('settings.signOut')}
+                accessibilityRole="button"
+                accessibilityState={{ busy: signingOut, disabled: signingOut }}
                 disabled={signingOut}
                 onPress={() => void signOut()}
                 style={[styles.modalAction, styles.confirmSignOutAction]}
@@ -344,6 +367,7 @@ export function SettingsScreen() {
         <View style={styles.modalBackdrop}>
           <Pressable
             accessibilityLabel={t('settings.cancel')}
+            accessibilityRole="button"
             disabled={accountBusy}
             onPress={() => setAccountAction(null)}
             style={StyleSheet.absoluteFill}
@@ -369,6 +393,9 @@ export function SettingsScreen() {
             ) : null}
             <View style={styles.signOutActions}>
               <Pressable
+                accessibilityLabel={t('settings.cancel')}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: accountBusy }}
                 disabled={accountBusy}
                 onPress={() => setAccountAction(null)}
                 style={[styles.modalAction, styles.cancelAction]}
@@ -376,6 +403,11 @@ export function SettingsScreen() {
                 <Text style={styles.cancelActionText}>{t('settings.cancel')}</Text>
               </Pressable>
               <Pressable
+                accessibilityLabel={t(
+                  accountAction === 'delete' ? 'settings.deleteRequest' : 'settings.deactivate',
+                )}
+                accessibilityRole="button"
+                accessibilityState={{ busy: accountBusy, disabled: accountBusy }}
                 disabled={accountBusy}
                 onPress={() => void submitAccountAction()}
                 style={[styles.modalAction, styles.confirmSignOutAction]}
@@ -423,7 +455,7 @@ function SettingToggle({
   value: boolean;
 }) {
   return (
-    <View style={styles.row}>
+    <View accessibilityLabel={`${label}. ${description}`} style={styles.row}>
       <View style={styles.rowIcon}>
         {illustration ? (
           <IllustratedIcon size={31} source={illustration} />
@@ -436,6 +468,8 @@ function SettingToggle({
         <Text style={styles.rowDescription}>{description}</Text>
       </View>
       <Switch
+        accessibilityLabel={label}
+        accessibilityRole="switch"
         ios_backgroundColor="#DADADF"
         onValueChange={onValueChange}
         thumbColor={palette.white}
@@ -466,6 +500,7 @@ function SettingLink({
   const color = danger ? palette.danger : palette.ink;
   return (
     <Pressable
+      accessibilityLabel={value ? `${label}, ${value}` : label}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}

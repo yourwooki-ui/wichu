@@ -95,7 +95,12 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
   return (
     <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
       <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable
+          accessibilityLabel="탐색 조건 닫기"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.header}>
@@ -105,6 +110,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
             </View>
             <Pressable
               accessibilityLabel="탐색 조건 닫기"
+              accessibilityRole="button"
               hitSlop={8}
               onPress={onClose}
               style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
@@ -191,6 +197,9 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
           </ScrollView>
           <View style={styles.footer}>
             <Pressable
+              accessibilityLabel="이 조건으로 탐색"
+              accessibilityRole="button"
+              accessibilityState={{ busy: saving, disabled: saving }}
               disabled={saving}
               onPress={save}
               style={({ pressed }) => [styles.save, (pressed || saving) && styles.pressed]}

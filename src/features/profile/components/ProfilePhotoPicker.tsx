@@ -222,7 +222,13 @@ export function ProfilePhotoPicker({
       <View style={styles.grid}>
         {photos.map((photo, index) => (
           <View key={photo.draftId} style={[styles.photoTile, { backgroundColor: surfaceColor }]}>
-            <Image source={{ uri: photo.uri }} contentFit="cover" style={StyleSheet.absoluteFill} />
+            <Image
+              cachePolicy="memory"
+              contentFit="cover"
+              recyclingKey={photo.uri}
+              source={{ uri: photo.uri }}
+              style={StyleSheet.absoluteFill}
+            />
             {photo.reviewStatus === 'pending' || photo.reviewStatus === 'rejected' ? (
               <View
                 style={[

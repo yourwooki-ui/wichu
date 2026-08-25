@@ -13,7 +13,10 @@ import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
+import { QueryLifecycleManager } from '@/components/QueryLifecycleManager';
+import { StateView } from '@/components/StateView';
 import { palette } from '@/constants/theme';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
@@ -23,6 +26,7 @@ import { PostProfileOnboardingCoordinator } from '@/features/onboarding/componen
 import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
 import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
 import { productAnalyticsService } from '@/services/product-analytics-service';
+import { useTranslation } from 'react-i18next';
 
 SplashScreen.setOptions({ duration: 240, fade: true });
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -44,7 +48,9 @@ function AppLaunchSurface() {
 
 function RootNavigator() {
   const theme = useAppTheme();
-  const { session, profileCompleted, adminRole, isLoading } = useAuthSession();
+  const { session, profileCompleted, profileLoadError, refreshProfile, adminRole, isLoading } =
+    useAuthSession();
+  const { t } = useTranslation();
   const openedForUserRef = useRef<string | null>(null);
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
@@ -62,6 +68,21 @@ function RootNavigator() {
   }, [profileCompleted, session?.user.id]);
 
   if (isLoading) return <AppLaunchSurface />;
+
+  if (session && profileLoadError) {
+    return (
+      <View style={[styles.recoverySurface, { backgroundColor: theme.colors.background }]}>
+        <StateView
+          actionLabel={t('reliability.retry')}
+          body={t('reliability.authBody')}
+          illustration={illustratedIcons.connectionError}
+          onAction={() => void refreshProfile()}
+          title={t('reliability.authTitle')}
+          tone="error"
+        />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -114,6 +135,7 @@ function RootNavigator() {
 const styles = StyleSheet.create({
   launchIndicator: { marginTop: 22, opacity: 0.78 },
   launchSurface: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  recoverySurface: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
 });
 
 export default function RootLayout() {
@@ -143,6 +165,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ direction: getAppTextDirection(language), flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
+          <QueryLifecycleManager />
           <AuthProvider>
             <ThemeProvider>
               <AppErrorBoundary>

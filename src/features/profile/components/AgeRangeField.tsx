@@ -87,6 +87,7 @@ export function AgeRangeField({ minAge, maxAge, onChangeMin, onChangeMax }: AgeR
         <Text style={styles.value}>{t('profileSetup.ageRange.maximumValue', { age: maxAge })}</Text>
       </View>
       <Pressable
+        accessible={false}
         onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
         onPress={(event) => moveNearestHandle(event.nativeEvent.locationX)}
         style={styles.touchTrack}

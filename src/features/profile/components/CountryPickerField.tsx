@@ -102,6 +102,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
         >
           <Pressable
             accessibilityLabel={t('profileSetup.countryPicker.close')}
+            accessibilityRole="button"
             onPress={closePicker}
             style={styles.scrim}
           />
@@ -140,6 +141,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
               {query ? (
                 <Pressable
                   accessibilityLabel={t('profileSetup.countryPicker.clearSearch')}
+                  accessibilityRole="button"
                   hitSlop={8}
                   onPress={() => setQuery('')}
                 >

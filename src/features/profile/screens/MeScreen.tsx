@@ -12,6 +12,7 @@ import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { StateView } from '@/components/StateView';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
@@ -122,14 +123,15 @@ export function MeScreen() {
   if (profileQuery.isError) {
     return (
       <Screen edges={['top', 'left', 'right']} style={styles.centered}>
-        <View style={styles.emptyIcon}>
-          <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
-        </View>
-        <Text style={styles.emptyTitle}>프로필을 불러오지 못했어요.</Text>
-        <Text style={styles.emptyText}>저장된 프로필은 그대로예요. 연결 상태를 확인해 주세요.</Text>
-        <Pressable onPress={() => profileQuery.refetch()} style={styles.emptyAction}>
-          <Text style={styles.emptyActionText}>다시 시도</Text>
-        </Pressable>
+        <StateView
+          actionLabel={t('reliability.retry')}
+          body={t('reliability.profileBody')}
+          container="plain"
+          illustration={illustratedIcons.connectionError}
+          onAction={() => void profileQuery.refetch()}
+          title={t('reliability.profileTitle')}
+          tone="error"
+        />
       </Screen>
     );
   }
@@ -142,7 +144,12 @@ export function MeScreen() {
         </View>
         <Text style={styles.emptyTitle}>프로필이 아직 준비되지 않았어요.</Text>
         <Text style={styles.emptyText}>WICHU를 이용하려면 프로필 설정을 완료해주세요.</Text>
-        <Pressable onPress={() => router.push('/profile-setup')} style={styles.emptyAction}>
+        <Pressable
+          accessibilityLabel="프로필 완성하기"
+          accessibilityRole="button"
+          onPress={() => router.push('/profile-setup')}
+          style={styles.emptyAction}
+        >
           <Text style={styles.emptyActionText}>프로필 완성하기</Text>
         </Pressable>
       </Screen>
@@ -208,10 +215,8 @@ export function MeScreen() {
       const { error } = await profileService.submitForReview();
       if (error) throw error;
       await Promise.all([profileQuery.refetch(), refreshProfile()]);
-    } catch (error) {
-      setPhotoRepairError(
-        error instanceof Error ? error.message : '프로필 사진을 저장하지 못했어요.',
-      );
+    } catch {
+      setPhotoRepairError(t('reliability.profileBody'));
     } finally {
       setPhotoRepairing(false);
     }
@@ -431,6 +436,9 @@ export function MeScreen() {
             ) : null}
             {!photos.length ? (
               <Pressable
+                accessibilityLabel="사진 추가하기"
+                accessibilityRole="button"
+                accessibilityState={{ busy: photoRepairing, disabled: photoRepairing }}
                 disabled={photoRepairing}
                 onPress={repairMissingPhotos}
                 style={({ pressed }) => [styles.attentionAction, pressed && styles.pressed]}
@@ -495,6 +503,8 @@ export function MeScreen() {
           <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
         </Pressable>
         <Pressable
+          accessibilityLabel="계정 및 개인정보 설정"
+          accessibilityRole="button"
           onPress={() => router.push('/settings')}
           style={({ pressed }) => [styles.settingsAction, pressed && styles.pressed]}
         >

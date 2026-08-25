@@ -19,7 +19,12 @@ export function PlaceholderScreen({ icon, title, description }: PlaceholderScree
   return (
     <Screen>
       <View style={styles.header}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
+        <Pressable
+          accessibilityLabel="뒤로"
+          accessibilityRole="button"
+          hitSlop={12}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={26} color={theme.colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{title}</Text>

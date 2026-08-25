@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { additionalResources } from './additional-resources';
 import { experienceResources } from './experience-resources';
 import { operationalResources } from './operational-resources';
+import { reliabilityResources } from './reliability-resources';
 import {
   type AppLanguage,
   getAppTextDirection,
@@ -601,6 +602,7 @@ const resources = {
       ...baseResources.en.translation,
       ...additionalResources.en.translation,
       ...operationalResources.en.translation,
+      ...reliabilityResources.en.translation,
       ...experienceResources.en.translation,
     },
   },
@@ -609,6 +611,7 @@ const resources = {
       ...baseResources.ko.translation,
       ...additionalResources.ko.translation,
       ...operationalResources.ko.translation,
+      ...reliabilityResources.ko.translation,
       ...experienceResources.ko.translation,
     },
   },
@@ -616,6 +619,7 @@ const resources = {
     translation: {
       ...additionalResources.vi.translation,
       ...operationalResources.vi.translation,
+      ...reliabilityResources.vi.translation,
       ...experienceResources.vi.translation,
     },
   },
@@ -623,6 +627,7 @@ const resources = {
     translation: {
       ...additionalResources.ja.translation,
       ...operationalResources.ja.translation,
+      ...reliabilityResources.ja.translation,
       ...experienceResources.ja.translation,
     },
   },
@@ -630,6 +635,7 @@ const resources = {
     translation: {
       ...additionalResources.fr.translation,
       ...operationalResources.fr.translation,
+      ...reliabilityResources.fr.translation,
       ...experienceResources.fr.translation,
     },
   },
@@ -637,6 +643,7 @@ const resources = {
     translation: {
       ...additionalResources.es.translation,
       ...operationalResources.es.translation,
+      ...reliabilityResources.es.translation,
       ...experienceResources.es.translation,
     },
   },
@@ -644,6 +651,7 @@ const resources = {
     translation: {
       ...additionalResources['pt-BR'].translation,
       ...operationalResources['pt-BR'].translation,
+      ...reliabilityResources['pt-BR'].translation,
       ...experienceResources['pt-BR'].translation,
     },
   },
@@ -651,6 +659,7 @@ const resources = {
     translation: {
       ...additionalResources['zh-TW'].translation,
       ...operationalResources['zh-TW'].translation,
+      ...reliabilityResources['zh-TW'].translation,
       ...experienceResources['zh-TW'].translation,
     },
   },
@@ -658,6 +667,7 @@ const resources = {
     translation: {
       ...additionalResources.id.translation,
       ...operationalResources.id.translation,
+      ...reliabilityResources.id.translation,
       ...experienceResources.id.translation,
     },
   },
@@ -665,6 +675,7 @@ const resources = {
     translation: {
       ...additionalResources.fa.translation,
       ...operationalResources.fa.translation,
+      ...reliabilityResources.fa.translation,
       ...experienceResources.fa.translation,
     },
   },

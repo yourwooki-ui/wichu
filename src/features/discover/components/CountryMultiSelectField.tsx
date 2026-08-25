@@ -45,7 +45,12 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
     <View>
       <Text style={styles.label}>국가</Text>
       <Text style={styles.hint}>선택하지 않으면 모든 국가의 프로필을 보여줘요.</Text>
-      <Pressable onPress={() => setVisible(true)} style={styles.trigger}>
+      <Pressable
+        accessibilityLabel="탐색 국가 선택"
+        accessibilityRole="button"
+        onPress={() => setVisible(true)}
+        style={styles.trigger}
+      >
         <View style={styles.triggerCopy}>
           <Text style={styles.triggerTitle}>
             {selected.length ? `${selected.length}개 국가 선택` : '모든 국가'}
@@ -59,7 +64,12 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
 
       <AppModal animationType="slide" onRequestClose={close} transparent visible={visible}>
         <View style={styles.overlay}>
-          <Pressable onPress={close} style={StyleSheet.absoluteFill} />
+          <Pressable
+            accessibilityLabel="국가 선택 닫기"
+            accessibilityRole="button"
+            onPress={close}
+            style={StyleSheet.absoluteFill}
+          />
           <SafeAreaView edges={['bottom']} style={styles.sheet}>
             <View style={styles.handle} />
             <View style={styles.header}>
@@ -69,6 +79,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
               </View>
               <Pressable
                 accessibilityLabel="국가 선택 닫기"
+                accessibilityRole="button"
                 hitSlop={8}
                 onPress={close}
                 style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
@@ -88,12 +99,22 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
                 value={query}
               />
               {query ? (
-                <Pressable onPress={() => setQuery('')}>
+                <Pressable
+                  accessibilityLabel="검색어 지우기"
+                  accessibilityRole="button"
+                  onPress={() => setQuery('')}
+                >
                   <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
                 </Pressable>
               ) : null}
             </View>
-            <Pressable onPress={() => onChange([])} style={styles.allCountries}>
+            <Pressable
+              accessibilityLabel="모든 국가"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: value.length === 0 }}
+              onPress={() => onChange([])}
+              style={styles.allCountries}
+            >
               <View style={styles.globe}>
                 <Ionicons color={palette.pink} name="globe-outline" size={20} />
               </View>
@@ -107,7 +128,13 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
               keyboardShouldPersistTaps="handled"
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
-                <Pressable onPress={() => toggle(item.code)} style={styles.countryRow}>
+                <Pressable
+                  accessibilityLabel={item.name}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: value.includes(item.code) }}
+                  onPress={() => toggle(item.code)}
+                  style={styles.countryRow}
+                >
                   <CountryFlag compact countryCode={item.code} label={item.name} />
                   <Text style={styles.countryName}>{item.name}</Text>
                   <Text style={styles.code}>{item.code}</Text>
@@ -116,6 +143,8 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
               )}
             />
             <Pressable
+              accessibilityLabel="선택 완료"
+              accessibilityRole="button"
               onPress={close}
               style={({ pressed }) => [styles.done, pressed && pressFeedback.control]}
             >

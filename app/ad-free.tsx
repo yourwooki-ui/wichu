@@ -124,7 +124,12 @@ function PassDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="뒤로" onPress={() => router.back()} style={styles.back}>
+        <Pressable
+          accessibilityLabel="뒤로"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.back}
+        >
           <Ionicons color={palette.ink} name="chevron-back" size={22} />
         </Pressable>
         <Text style={styles.headerTitle}>{adFreeOnly ? 'Ad-Free' : 'Gold Pass'}</Text>
@@ -183,6 +188,9 @@ function PassDetailScreen() {
           />
         </View>
         <Pressable
+          accessibilityLabel="구매 내역 복원"
+          accessibilityRole="button"
+          accessibilityState={{ busy: purchasePending, disabled: purchasePending }}
           disabled={purchasePending}
           hitSlop={touchSlop.link}
           onPress={handleRestore}

@@ -107,9 +107,9 @@ export function AppPermissionOnboarding() {
   const isLocation = step === 'location';
 
   return (
-    <AppModal animationType="fade" transparent visible>
+    <AppModal animationType="fade" onRequestClose={() => void finish()} transparent visible>
       <SafeAreaView style={styles.overlay}>
-        <View style={styles.card}>
+        <View accessibilityViewIsModal style={styles.card}>
           <View style={styles.progressRow}>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: isLocation ? '50%' : '100%' }]} />
@@ -160,6 +160,9 @@ export function AppPermissionOnboarding() {
           </View>
           {message ? <Text style={styles.message}>{message}</Text> : null}
           <Pressable
+            accessibilityLabel={t('permissionOnboarding.allowContinue')}
+            accessibilityRole="button"
+            accessibilityState={{ busy: working, disabled: working }}
             disabled={working}
             onPress={requestCurrentPermission}
             style={({ pressed }) => [styles.primary, (pressed || working) && styles.pressed]}
@@ -169,6 +172,9 @@ export function AppPermissionOnboarding() {
             </Text>
           </Pressable>
           <Pressable
+            accessibilityLabel={t('permissionOnboarding.later')}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: working }}
             disabled={working}
             onPress={skip}
             style={({ pressed }) => [styles.secondary, pressed && pressFeedback.control]}

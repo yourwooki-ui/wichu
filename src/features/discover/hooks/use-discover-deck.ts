@@ -20,7 +20,7 @@ type MatchedProfile = { matchId: string; profile: Profile };
 
 export function useDiscoverDeck() {
   const { session } = useAuthSession();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const queryClient = useQueryClient();
   const [swipeError, setSwipeError] = useState<string | null>(null);
   const [lastMatch, setLastMatch] = useState<MatchedProfile | null>(null);
@@ -106,7 +106,7 @@ export function useDiscoverDeck() {
     onError: (_error, { profile }) => {
       restoreSwipe(profile);
       setUndoStack((current) => current.filter((item) => item.profile.id !== profile.id));
-      setSwipeError('선택을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.');
+      setSwipeError(t('reliability.swipeSaveBody'));
     },
     onSuccess: ({ matchId }, { profile, action }) => {
       productAnalyticsService.track(
@@ -155,7 +155,7 @@ export function useDiscoverDeck() {
     onError: (_error, { profile, action, userId: swipeUserId }) => {
       recordSwipe(profile.id, action);
       setUndoStack((current) => [...current, { profile, action, userId: swipeUserId }]);
-      setSwipeError('선택을 되돌리지 못했어요. 연결을 확인하고 다시 시도해 주세요.');
+      setSwipeError(t('reliability.undoBody'));
     },
     onSuccess: (result) => {
       queryClient.setQueryData(['discover', 'undo-entitlement', userId], {
@@ -257,7 +257,8 @@ export function useDiscoverDeck() {
     retry,
     isLoading: profiles.length === 0 && (preferencesQuery.isLoading || candidatesQuery.isLoading),
     isRefilling: candidatesQuery.isFetching && profiles.length > 0,
-    error: swipeError ?? (queryError instanceof Error ? queryError.message : null),
+    // 서버/RPC 원문은 운영 로그에만 남기고 사용자에게는 복구 가능한 안내만 보여준다.
+    error: swipeError ?? (queryError ? t('reliability.discoverBody') : null),
     lastMatch,
     clearLastMatch,
     preferences: preferencesQuery.data,

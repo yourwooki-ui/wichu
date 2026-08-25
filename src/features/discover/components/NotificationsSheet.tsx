@@ -39,13 +39,19 @@ export function NotificationsSheet({
   return (
     <AppModal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable
+          accessibilityLabel="알림 닫기"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>알림</Text>
             <Pressable
               accessibilityLabel="알림 닫기"
+              accessibilityRole="button"
               hitSlop={8}
               onPress={onClose}
               style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
@@ -85,7 +91,14 @@ export function NotificationsSheet({
                   ]}
                 >
                   {item.photo ? (
-                    <Image source={{ uri: item.photo }} style={styles.avatar} />
+                    <Image
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      recyclingKey={item.id}
+                      source={{ uri: item.photo }}
+                      style={styles.avatar}
+                      transition={140}
+                    />
                   ) : (
                     <View style={styles.avatarFallback}>
                       <IllustratedIcon size={30} source={illustratedIcons.connections} />

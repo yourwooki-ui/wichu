@@ -282,7 +282,7 @@ export function SwipeDeck({
     return (
       <View style={styles.finished}>
         <StateView
-          actionLabel={error ? '다시 시도' : t('experience.discover.refresh')}
+          actionLabel={error ? t('reliability.retry') : t('experience.discover.refresh')}
           body={
             error ?? `${t('experience.discover.emptyBody')}\n${t('experience.discover.relaxHint')}`
           }
@@ -291,7 +291,7 @@ export function SwipeDeck({
           onAction={onRetry}
           onSecondaryAction={onAdjustFilters}
           secondaryActionLabel={t('experience.discover.adjust')}
-          title={error ? '프로필을 불러오지 못했어요' : t('experience.discover.emptyTitle')}
+          title={error ? t('reliability.discoverTitle') : t('experience.discover.emptyTitle')}
           tone={error ? 'error' : 'neutral'}
         />
         {!error ? (
@@ -308,6 +308,8 @@ export function SwipeDeck({
     <View style={styles.container}>
       {error ? (
         <Pressable
+          accessibilityLabel={t('reliability.retry')}
+          accessibilityRole="button"
           onPress={onRetry}
           style={({ pressed }) => [styles.errorBanner, pressed && pressFeedback.surface]}
         >

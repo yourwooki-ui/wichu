@@ -146,7 +146,11 @@ export function ChatListScreen() {
               value={query}
             />
             {query ? (
-              <Pressable accessibilityLabel="검색어 지우기" onPress={() => setQuery('')}>
+              <Pressable
+                accessibilityLabel="검색어 지우기"
+                accessibilityRole="button"
+                onPress={() => setQuery('')}
+              >
                 <Ionicons color={palette.inkMuted} name="close-circle" size={20} />
               </Pressable>
             ) : null}
@@ -168,12 +172,12 @@ export function ChatListScreen() {
           {matchesQuery.isLoading ? <ChatRowsSkeleton /> : null}
           {listError ? (
             <StateView
-              actionLabel="다시 시도"
-              body="대화 내용은 그대로예요. 연결 상태를 확인해주세요."
+              actionLabel={t('reliability.retry')}
+              body={t('reliability.messagesBody')}
               container="plain"
               illustration={illustratedIcons.connectionError}
               onAction={() => matchesQuery.refetch()}
-              title="메시지를 불러오지 못했어요"
+              title={t('reliability.messagesTitle')}
               tone="error"
             />
           ) : null}

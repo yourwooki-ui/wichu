@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, type ComponentProps } from 'react';
+import { memo, type ComponentProps, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -28,6 +28,7 @@ function ProfileCardComponent({
   onPress,
 }: ProfileCardProps) {
   const { t } = useTranslation();
+  const [failedPhotoUri, setFailedPhotoUri] = useState<string | null>(null);
   const age = profile.age;
   const distanceLabel =
     profile.distanceKm != null
@@ -41,6 +42,8 @@ function ProfileCardComponent({
     ...(profile.connectionGoals ?? []).map((goal) => t(`profileSetup.profileTags.values.${goal}`)),
     ...profile.interests,
   ].slice(0, 3);
+  const primaryPhoto = profile.photos[0];
+  const photoFailed = failedPhotoUri === primaryPhoto;
 
   return (
     <Pressable
@@ -56,12 +59,25 @@ function ProfileCardComponent({
       ]}
     >
       <Image
-        source={{ uri: profile.photos[0] }}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
+        accessibilityIgnoresInvertColors
         cachePolicy="memory-disk"
+        contentFit="cover"
+        onError={() => setFailedPhotoUri(primaryPhoto)}
+        priority="high"
+        recyclingKey={profile.id}
+        source={{ uri: primaryPhoto }}
+        style={StyleSheet.absoluteFill}
         transition={180}
       />
+      {photoFailed ? (
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={styles.photoFallback}
+        >
+          <IllustratedIcon size={72} source={illustratedIcons.profilePhotos} />
+        </View>
+      ) : null}
       {profile.photos.length > 1 ? (
         <View style={styles.photoProgress}>
           {profile.photos.map((photo, index) => (
@@ -161,6 +177,16 @@ const styles = StyleSheet.create({
     ...elevation.lg,
   },
   cardPressed: pressFeedback.surface,
+  photoFallback: {
+    alignItems: 'center',
+    backgroundColor: '#F0F0F4',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   goldBadgeSlot: { position: 'absolute', right: 16, top: 19 },
   goldCardBorder: { borderColor: '#E8B936', borderWidth: 3 },
   nonInteractive: { pointerEvents: 'none' },

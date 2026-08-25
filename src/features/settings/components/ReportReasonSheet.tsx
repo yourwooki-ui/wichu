@@ -29,6 +29,7 @@ export function ReportReasonSheet({ busy, onClose, onSelect, visible }: ReportRe
       <View style={styles.backdrop}>
         <Pressable
           accessibilityLabel="신고 창 닫기"
+          accessibilityRole="button"
           onPress={onClose}
           style={StyleSheet.absoluteFill}
         />
@@ -61,6 +62,9 @@ export function ReportReasonSheet({ busy, onClose, onSelect, visible }: ReportRe
             ))}
           </View>
           <Pressable
+            accessibilityLabel="취소"
+            accessibilityRole="button"
+            accessibilityState={{ busy: busy, disabled: busy }}
             disabled={busy}
             onPress={onClose}
             style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}

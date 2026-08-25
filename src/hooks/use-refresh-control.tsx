@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -12,12 +12,18 @@ import { useAppTheme } from '@/components/ThemeProvider';
 export function useRefreshControl(onRefresh: () => Promise<unknown>) {
   const theme = useAppTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const inFlightRef = useRef(false);
 
   const handleRefresh = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setRefreshing(true);
     try {
       await onRefresh();
+    } catch {
+      // 각 화면의 query error state가 재시도 UI를 맡는다. 제스처 Promise는 누출하지 않는다.
     } finally {
+      inFlightRef.current = false;
       setRefreshing(false);
     }
   }, [onRefresh]);

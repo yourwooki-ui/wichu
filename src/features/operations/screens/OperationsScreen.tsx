@@ -70,6 +70,7 @@ export function OperationsScreen() {
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로"
+          accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.iconButton}
         >
@@ -148,6 +149,9 @@ export function OperationsScreen() {
 function Tab({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
   return (
     <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tab,
@@ -213,7 +217,13 @@ function ReviewPhoto({ index, path }: { index: number; path: string }) {
   const photo = useSignedPhoto(path);
   return photo.data ? (
     <View style={styles.reviewPhotoWrap}>
-      <Image contentFit="cover" source={{ uri: photo.data }} style={styles.photo} />
+      <Image
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        source={{ uri: photo.data }}
+        style={styles.photo}
+        transition={140}
+      />
       <Text style={styles.reviewPhotoIndex}>{index + 1}</Text>
     </View>
   ) : (
@@ -240,7 +250,13 @@ function ReportCard({
   return (
     <View style={styles.card}>
       {photo.data ? (
-        <Image contentFit="cover" source={{ uri: photo.data }} style={styles.photo} />
+        <Image
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          source={{ uri: photo.data }}
+          style={styles.photo}
+          transition={140}
+        />
       ) : (
         <View style={[styles.photo, styles.photoEmpty]}>
           <Ionicons color={palette.inkMuted} name="flag" size={28} />
@@ -275,6 +291,9 @@ function Action({
 }) {
   return (
     <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

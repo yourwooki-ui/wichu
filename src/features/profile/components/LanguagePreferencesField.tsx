@@ -129,6 +129,7 @@ export function LanguagePreferencesField({
               </Text>
               <Pressable
                 accessibilityLabel={t('profileSetup.language.remove')}
+                accessibilityRole="button"
                 hitSlop={8}
                 onPress={() =>
                   onChangeSpoken(spokenLanguages.filter((item) => item.code !== language.code))
@@ -169,7 +170,12 @@ export function LanguagePreferencesField({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
-          <Pressable onPress={closePicker} style={styles.scrim} />
+          <Pressable
+            accessibilityLabel={t('experience.common.cancel')}
+            accessibilityRole="button"
+            onPress={closePicker}
+            style={styles.scrim}
+          />
           <SafeAreaView edges={['bottom']} style={styles.sheet}>
             <View style={styles.handle} />
             <View style={styles.sheetHeader}>
@@ -182,6 +188,8 @@ export function LanguagePreferencesField({
                 <Text style={styles.sheetSubtitle}>{t('profileSetup.language.searchHint')}</Text>
               </View>
               <Pressable
+                accessibilityLabel={t('experience.common.cancel')}
+                accessibilityRole="button"
                 hitSlop={8}
                 onPress={closePicker}
                 style={({ pressed }) => [styles.closeButton, pressed && pressFeedback.icon]}

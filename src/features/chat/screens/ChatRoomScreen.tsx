@@ -295,11 +295,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       }));
       await chatMediaService.validateDrafts(additions);
       setSelectedImages((current) => [...current, ...additions].slice(0, CHAT_IMAGE_LIMIT));
-    } catch (error) {
-      Alert.alert(
-        '사진을 추가하지 못했어요',
-        error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.',
-      );
+    } catch {
+      Alert.alert('사진을 추가하지 못했어요', t('reliability.messagesBody'));
     }
   };
 
@@ -502,6 +499,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         <View style={styles.header}>
           <Pressable
             accessibilityLabel="뒤로"
+            accessibilityRole="button"
             hitSlop={8}
             onPress={() => router.back()}
             style={styles.headerButton}
@@ -510,6 +508,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           </Pressable>
           <Pressable
             accessibilityLabel={`${profile.name} 프로필 열기`}
+            accessibilityRole="button"
             onPress={() => router.push(`/profile/${profile.id}`)}
             style={styles.person}
           >
@@ -533,6 +532,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           </Pressable>
           <Pressable
             accessibilityLabel="대화 안전 메뉴"
+            accessibilityRole="button"
             hitSlop={8}
             onPress={() => setSafetyOpen(true)}
             style={styles.headerButton}
@@ -548,7 +548,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         >
           <View style={styles.matchMoment}>
             <View style={styles.matchPhotos}>
-              <Image source={{ uri: profile.photo }} style={styles.matchPhotoLeft} />
+              <Image
+                cachePolicy="memory-disk"
+                contentFit="cover"
+                source={{ uri: profile.photo }}
+                style={styles.matchPhotoLeft}
+                transition={140}
+              />
               <View style={styles.matchMark}>
                 <Ionicons color={palette.white} name="checkmark" size={14} />
               </View>
@@ -567,6 +573,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           {!isMock && messagesQuery.hasNextPage ? (
             <Pressable
               accessibilityLabel="이전 메시지 불러오기"
+              accessibilityRole="button"
+              accessibilityState={{
+                busy: messagesQuery.isFetchingNextPage,
+                disabled: messagesQuery.isFetchingNextPage,
+              }}
               disabled={messagesQuery.isFetchingNextPage}
               onPress={() => void messagesQuery.fetchNextPage()}
               style={styles.loadOlderButton}
@@ -593,6 +604,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               <IllustratedIcon size={56} source={illustratedIcons.connectionError} />
               <Text style={styles.stateTitle}>대화를 불러오지 못했어요</Text>
               <Pressable
+                accessibilityLabel={t('reliability.retry')}
+                accessibilityRole="button"
                 onPress={() => {
                   void connectionQuery.refetch();
                   void messagesQuery.refetch();
@@ -613,6 +626,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                   <View style={styles.starterList}>
                     {CONVERSATION_STARTERS.map((starter) => (
                       <Pressable
+                        accessibilityLabel={`${starter} 입력`}
+                        accessibilityRole="button"
                         key={starter}
                         onPress={() => setDraft(starter)}
                         style={({ pressed }) => [
@@ -675,6 +690,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                       normalizeLanguage(i18n.language) ? (
                     <Pressable
                       accessibilityLabel="메시지 번역 보기"
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        busy: message.translationStatus === 'translating',
+                        disabled: message.translationStatus === 'translating',
+                      }}
                       disabled={message.translationStatus === 'translating'}
                       onPress={() => void translate(message)}
                       style={styles.translationAction}
@@ -703,6 +723,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                       accessibilityLabel={
                         message.status === 'failed' ? '메시지 다시 보내기' : undefined
                       }
+                      accessibilityRole="button"
                       disabled={message.status !== 'failed'}
                       onPress={() => void deliver(message)}
                       style={[
@@ -747,9 +768,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               >
                 {selectedImages.map((image, index) => (
                   <View key={image.draftId} style={styles.attachmentPreviewWrap}>
-                    <Image source={{ uri: image.uri }} style={styles.attachmentPreview} />
+                    <Image
+                      cachePolicy="memory"
+                      contentFit="cover"
+                      recyclingKey={image.uri}
+                      source={{ uri: image.uri }}
+                      style={styles.attachmentPreview}
+                    />
                     <Pressable
                       accessibilityLabel={`${index + 1}번째 사진 제거`}
+                      accessibilityRole="button"
                       hitSlop={8}
                       onPress={() =>
                         setSelectedImages((current) =>
@@ -768,6 +796,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           <View style={styles.composerArea}>
             <Pressable
               accessibilityLabel={hasGoldPass ? '사진 추가' : 'Gold Pass 사진 전송 기능 알아보기'}
+              accessibilityRole="button"
+              accessibilityState={{
+                busy: entitlement.isLoading,
+                disabled: failed || entitlement.isLoading,
+              }}
               disabled={failed || entitlement.isLoading}
               hitSlop={4}
               onPress={() => void pickImages()}
@@ -790,6 +823,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             </View>
             <Pressable
               accessibilityLabel="메시지 보내기"
+              accessibilityRole="button"
+              accessibilityState={{
+                disabled: (!draft.trim() && !selectedImages.length) || failed,
+              }}
               disabled={(!draft.trim() && !selectedImages.length) || failed}
               onPress={send}
               hitSlop={6}
@@ -814,6 +851,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         <View style={styles.modalBackdrop}>
           <Pressable
             accessibilityLabel="대화 안전 메뉴 닫기"
+            accessibilityRole="button"
             onPress={() => setSafetyOpen(false)}
             style={StyleSheet.absoluteFill}
           />
@@ -862,6 +900,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               onPress={confirmBlock}
             />
             <Pressable
+              accessibilityLabel="대화 안전 메뉴 닫기"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: safetyBusy }}
               disabled={safetyBusy}
               onPress={() => setSafetyOpen(false)}
               style={styles.cancelButton}
@@ -990,6 +1031,7 @@ function MessageImageGrid({
       {images.map((image, index) => (
         <Pressable
           accessibilityLabel={`${index + 1}번째 사진 크게 보기`}
+          accessibilityRole="button"
           disabled={!image.uri}
           key={image.key}
           onPress={() => onPress(index)}
@@ -1045,7 +1087,12 @@ function ImageViewer({
           <Text style={styles.viewerCount}>
             {activeIndex + 1} / {images.length}
           </Text>
-          <Pressable accessibilityLabel="사진 닫기" hitSlop={8} onPress={onClose}>
+          <Pressable
+            accessibilityLabel="사진 닫기"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={onClose}
+          >
             <Ionicons color={palette.white} name="close" size={30} />
           </Pressable>
         </View>
@@ -1085,6 +1132,9 @@ function SafetyAction({
   const color = danger ? '#D52C47' : palette.ink;
   return (
     <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.safetyAction, pressed && styles.pressed]}

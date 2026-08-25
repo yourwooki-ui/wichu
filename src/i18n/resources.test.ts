@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { operationalResources } from './operational-resources';
+import { reliabilityResources } from './reliability-resources';
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
@@ -64,6 +65,17 @@ describe('translation coverage', () => {
           placeholders(value),
         );
       }
+    }
+  });
+
+  it('keeps recovery messages complete in all ten languages', () => {
+    const reference = flatten(reliabilityResources.en.translation);
+
+    for (const { code } of languages) {
+      const translated = flatten(reliabilityResources[code].translation);
+      expect(Object.keys(translated).sort(), `${code} reliability keys`).toEqual(
+        Object.keys(reference).sort(),
+      );
     }
   });
 

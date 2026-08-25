@@ -29,7 +29,12 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
   return (
     <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
       <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable
+          accessibilityLabel={t('experience.common.cancel')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.heading}>
@@ -52,14 +57,28 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
             value={message}
           />
           <Text style={styles.count}>{message.length} / 300</Text>
-          <Pressable onPress={submit} style={styles.primary}>
+          <Pressable
+            accessibilityLabel={
+              message.trim()
+                ? t('experience.pickMessage.send')
+                : t('experience.pickMessage.without')
+            }
+            accessibilityRole="button"
+            onPress={submit}
+            style={styles.primary}
+          >
             <Text style={styles.primaryText}>
               {message.trim()
                 ? t('experience.pickMessage.send')
                 : t('experience.pickMessage.without')}
             </Text>
           </Pressable>
-          <Pressable onPress={onClose} style={styles.cancel}>
+          <Pressable
+            accessibilityLabel={t('experience.common.cancel')}
+            accessibilityRole="button"
+            onPress={onClose}
+            style={styles.cancel}
+          >
             <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
           </Pressable>
         </SafeAreaView>

@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -95,6 +96,7 @@ function includeReviewSamples(
 }
 
 export function MatchesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const entitlement = usePassEntitlement();
   const { session } = useAuthSession();
@@ -283,6 +285,8 @@ export function MatchesScreen() {
             </View>
             {MONETIZATION_ENABLED ? (
               <Pressable
+                accessibilityLabel="Gold Pass 보기"
+                accessibilityRole="button"
                 onPress={() => router.push('/(tabs)/shop')}
                 style={styles.visitorLockAction}
               >
@@ -296,15 +300,15 @@ export function MatchesScreen() {
           <ConnectionGridSkeleton />
         ) : categoryError ? (
           <StateView
-            actionLabel="다시 시도"
-            body="저장된 연결은 그대로예요. 잠시 후 다시 확인해주세요."
+            actionLabel={t('reliability.retry')}
+            body={t('reliability.connectionsBody')}
             illustration={illustratedIcons.connectionError}
             onAction={() => {
               if (category === 'picked-me') void incomingLikesQuery.refetch();
               if (category === 'matched') void matchesQuery.refetch();
               if (category === 'visitors') void visitorsQuery.refetch();
             }}
-            title="연결을 불러오지 못했어요"
+            title={t('reliability.connectionsTitle')}
             tone="error"
           />
         ) : !profiles.length ? (

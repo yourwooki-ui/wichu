@@ -131,6 +131,8 @@ export function ShopScreen() {
         <Text style={styles.sectionTitle}>나에게 맞는 이용권</Text>
         <View style={styles.planRow}>
           <Pressable
+            accessibilityLabel="Ad-Free 자세히 보기"
+            accessibilityRole="button"
             onPress={() => router.push('/ad-free?product=ad-free')}
             style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
           >
@@ -147,6 +149,8 @@ export function ShopScreen() {
           </Pressable>
 
           <Pressable
+            accessibilityLabel="Gold Pass 자세히 보기"
+            accessibilityRole="button"
             onPress={() => router.push('/ad-free')}
             style={({ pressed }) => [
               styles.planCard,
@@ -214,6 +218,8 @@ export function ShopScreen() {
         </View>
 
         <Pressable
+          accessibilityLabel="구매 복원 및 이용권 관리"
+          accessibilityRole="button"
           onPress={() => router.push('/ad-free')}
           style={({ pressed }) => [styles.purchaseManagement, pressed && styles.pressed]}
         >

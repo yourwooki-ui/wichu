@@ -223,6 +223,7 @@ function DiscoverVisual({ height }: { height: number }) {
   return (
     <View style={[styles.visual, styles.discoverVisual, { height }]}>
       <Image
+        cachePolicy="memory-disk"
         contentFit="cover"
         source={{ uri: TUTORIAL_PHOTOS.lina }}
         style={StyleSheet.absoluteFill}
@@ -278,6 +279,7 @@ function MatchVisual({ height }: { height: number }) {
       <View style={styles.matchPortraits}>
         <View style={[styles.matchPortrait, styles.matchPortraitLeft]}>
           <Image
+            cachePolicy="memory-disk"
             contentFit="cover"
             source={{ uri: TUTORIAL_PHOTOS.lina }}
             style={styles.matchImage}
@@ -286,6 +288,7 @@ function MatchVisual({ height }: { height: number }) {
         </View>
         <View style={[styles.matchPortrait, styles.matchPortraitRight]}>
           <Image
+            cachePolicy="memory-disk"
             contentFit="cover"
             source={{ uri: TUTORIAL_PHOTOS.mia }}
             style={styles.matchImage}
@@ -310,6 +313,7 @@ function ChatVisual({ height }: { height: number }) {
     <LinearGradient colors={['#EDF7F3', '#F4F2FF', '#FFFFFF']} style={[styles.visual, { height }]}>
       <View style={styles.chatHeader}>
         <Image
+          cachePolicy="memory-disk"
           contentFit="cover"
           source={{ uri: TUTORIAL_PHOTOS.mia }}
           style={styles.chatAvatar}

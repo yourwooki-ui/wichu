@@ -82,7 +82,14 @@ export function BlockedUsersScreen() {
                 style={styles.row}
               >
                 {item.photoUrl ? (
-                  <Image contentFit="cover" source={{ uri: item.photoUrl }} style={styles.avatar} />
+                  <Image
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    recyclingKey={item.profile_id}
+                    source={{ uri: item.photoUrl }}
+                    style={styles.avatar}
+                    transition={140}
+                  />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback]}>
                     <Ionicons color={palette.inkMuted} name="person" size={22} />

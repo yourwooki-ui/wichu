@@ -81,7 +81,12 @@ export function LanguagePickerModal({
   return (
     <AppModal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.modalRoot}>
-        <Pressable accessibilityLabel={t('auth.back')} onPress={onClose} style={styles.backdrop} />
+        <Pressable
+          accessibilityLabel={t('auth.back')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.backdrop}
+        />
         <SafeAreaView
           edges={['bottom']}
           style={[styles.sheet, { backgroundColor: sheetBackground }]}

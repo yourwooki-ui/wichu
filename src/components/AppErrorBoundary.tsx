@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { reportOperationalError } from '@/services/operational-error-service';
+import i18n from '@/i18n';
 
 type Props = { children: ReactNode };
 type State = { failed: boolean };
@@ -27,11 +28,11 @@ export class AppErrorBoundary extends Component<Props, State> {
     return (
       <View style={styles.fallback}>
         <StateView
-          actionLabel="다시 열기"
-          body="입력한 내용은 가능한 한 그대로 유지됩니다. 같은 문제가 반복되면 설정의 문의하기로 알려주세요."
+          actionLabel={i18n.t('reliability.reopen')}
+          body={i18n.t('reliability.appBody')}
           illustration={illustratedIcons.connectionError}
           onAction={this.retry}
-          title="화면을 여는 중 문제가 생겼어요"
+          title={i18n.t('reliability.appTitle')}
           tone="error"
         />
       </View>
