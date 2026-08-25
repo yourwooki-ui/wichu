@@ -31,6 +31,7 @@ export type Profile = {
   distanceKm?: number;
   bio: string;
   interests: string[];
+  connectionGoals?: string[];
   photos: string[];
   lastActiveAt: string | null;
   isPhotoReviewed?: boolean;

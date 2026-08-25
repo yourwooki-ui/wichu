@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
@@ -10,6 +11,7 @@ import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-i
 import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const goldBenefits: {
   illustration: (typeof illustratedIcons)[keyof typeof illustratedIcons];
@@ -62,6 +64,10 @@ export function ShopScreen() {
   const entitlement = usePassEntitlement();
   const tier = entitlement.data?.tier ?? 'free';
   const tierLabel = tier === 'gold' ? 'Gold Pass' : tier === 'ad_free' ? 'Ad-Free' : 'Free';
+
+  useEffect(() => {
+    productAnalyticsService.track('purchase_viewed', { surface: 'shop', tier }, '/shop');
+  }, [tier]);
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>

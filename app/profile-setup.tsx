@@ -44,6 +44,7 @@ import {
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTagSelections } from '@/features/profile/types/profile-tag';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const TOTAL_STEPS = 4;
 const GENDER_VALUES = ['woman', 'man', 'nonbinary', 'other'] as const;
@@ -489,6 +490,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       uploadedPaths = [];
       if (!requestedEditMode) {
         await tutorialState.requireProductTutorial(session.user.id).catch(() => undefined);
+        productAnalyticsService.track('profile_completed', undefined, '/profile-setup');
       }
       await refreshProfile().catch(() => undefined);
       router.replace(requestedEditMode ? '/(tabs)/me' : '/tutorial');

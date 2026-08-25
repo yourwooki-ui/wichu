@@ -4,6 +4,7 @@ import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -60,6 +61,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 export function MeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { profileReviewStatus, refreshProfile, session } = useAuthSession();
   const entitlement = usePassEntitlement();
@@ -226,8 +228,8 @@ export function MeScreen() {
       >
         <View style={styles.profileHeroHeader}>
           <View style={styles.profileHeroHeading}>
-            <Text style={styles.profileHeroEyebrow}>PUBLIC PROFILE</Text>
-            <Text style={styles.profileHeroTitle}>내 공개 프로필</Text>
+            <Text style={styles.profileHeroEyebrow}>WICHU PROFILE</Text>
+            <Text style={styles.profileHeroTitle}>{t('experience.profile.publicProfile')}</Text>
             <Text style={styles.profileHeroAccount}>공개 사진과 프로필 정보를 관리합니다</Text>
           </View>
           <Pressable

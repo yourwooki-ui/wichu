@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -23,6 +23,7 @@ import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { purchaseService } from '@/features/monetization/services/purchase-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const GOLD_BENEFITS = [
   { label: '골드 다이아몬드 배지와 프로필 테두리', icon: illustratedIcons.goldPremium },
@@ -48,6 +49,14 @@ function PassDetailScreen() {
   const adFreeOnly = product === 'ad-free';
   const [purchasePending, setPurchasePending] = useState(false);
   const selectedProduct = adFreeOnly ? AD_FREE_PRODUCT : GOLD_PRODUCT;
+
+  useEffect(() => {
+    productAnalyticsService.track(
+      'purchase_viewed',
+      { product: adFreeOnly ? 'ad_free' : 'gold', surface: 'detail' },
+      '/ad-free',
+    );
+  }, [adFreeOnly]);
   const alreadyIncluded =
     entitlement.data?.tier === 'gold' || (adFreeOnly && entitlement.data?.tier === 'ad_free');
   const products = useQuery({

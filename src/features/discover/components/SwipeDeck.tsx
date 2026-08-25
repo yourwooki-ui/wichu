@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
@@ -51,6 +52,7 @@ export function SwipeDeck({
   onRetry,
 }: SwipeDeckProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const theme = useAppTheme();
   const { height, width } = useAppViewport();
   const reduceMotion = useReducedMotion();
@@ -267,10 +269,10 @@ export function SwipeDeck({
           </View>
         </View>
         <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>
-          새로운 사람을 찾고 있어요
+          {t('experience.discover.loadingTitle')}
         </Text>
         <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>
-          사진을 미리 준비해 바로 넘길 수 있게 할게요.
+          {t('experience.discover.loadingBody')}
         </Text>
       </View>
     );
@@ -280,19 +282,24 @@ export function SwipeDeck({
     return (
       <View style={styles.finished}>
         <StateView
-          actionLabel={error ? '다시 시도' : '다시 확인'}
+          actionLabel={error ? '다시 시도' : t('experience.discover.refresh')}
           body={
-            error ??
-            '현재 조건에서 보여드릴 새 프로필이 아직 없어요. 새로운 카드가 준비되면 바로 나타나요.'
+            error ?? `${t('experience.discover.emptyBody')}\n${t('experience.discover.relaxHint')}`
           }
           container="plain"
           illustration={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
           onAction={onRetry}
           onSecondaryAction={onAdjustFilters}
-          secondaryActionLabel="탐색 조건 조정"
-          title={error ? '프로필을 불러오지 못했어요' : '새로운 카드가 아직 없어요'}
+          secondaryActionLabel={t('experience.discover.adjust')}
+          title={error ? '프로필을 불러오지 못했어요' : t('experience.discover.emptyTitle')}
           tone={error ? 'error' : 'neutral'}
         />
+        {!error ? (
+          <View style={styles.availabilityPill}>
+            <View style={styles.availabilityDot} />
+            <Text style={styles.availabilityText}>{t('experience.discover.availability')}</Text>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -505,6 +512,18 @@ const styles = StyleSheet.create({
   likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  availabilityPill: {
+    alignItems: 'center',
+    backgroundColor: '#F1F8F4',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 7,
+    marginTop: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  availabilityDot: { backgroundColor: '#31A66A', borderRadius: 4, height: 8, width: 8 },
+  availabilityText: { color: '#276845', fontSize: 11, fontWeight: '800' },
   loadingCard: {
     borderRadius: 28,
     bottom: 0,

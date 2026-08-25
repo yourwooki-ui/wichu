@@ -2,11 +2,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
+import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -16,6 +17,7 @@ import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
 import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
 import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -23,6 +25,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 function RootNavigator() {
   const theme = useAppTheme();
   const { session, profileCompleted, adminRole, isLoading } = useAuthSession();
+  const openedForUserRef = useRef<string | null>(null);
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
   useMonetizationBootstrap(session?.user.id);
@@ -30,6 +33,13 @@ function RootNavigator() {
   useEffect(() => {
     if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);
   }, [isLoading]);
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!profileCompleted || !userId || openedForUserRef.current === userId) return;
+    openedForUserRef.current = userId;
+    productAnalyticsService.track('app_opened', undefined, '/');
+  }, [profileCompleted, session?.user.id]);
 
   if (isLoading) return null;
 
@@ -110,9 +120,11 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ThemeProvider>
-              <NativePreviewFrame>
-                <RootNavigator />
-              </NativePreviewFrame>
+              <AppErrorBoundary>
+                <NativePreviewFrame>
+                  <RootNavigator />
+                </NativePreviewFrame>
+              </AppErrorBoundary>
             </ThemeProvider>
           </AuthProvider>
         </QueryClientProvider>

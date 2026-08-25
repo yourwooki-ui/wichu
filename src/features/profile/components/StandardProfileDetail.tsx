@@ -279,9 +279,14 @@ export function StandardProfileDetail({
                 {profile.name}, {age}
               </Text>
               {profile.isPhotoReviewed ? (
-                <View accessibilityLabel="운영진 사진 인증 완료" style={styles.reviewedBadge}>
+                <View
+                  accessibilityLabel={t('experience.trust.photoReviewedA11y')}
+                  style={styles.reviewedBadge}
+                >
                   <IllustratedIcon size={17} source={illustratedIcons.safety} />
-                  <Text style={styles.reviewedBadgeText}>인증 완료</Text>
+                  <Text style={styles.reviewedBadgeText}>
+                    {t('experience.trust.photoReviewed')}
+                  </Text>
                 </View>
               ) : null}
             </View>
@@ -322,17 +327,33 @@ export function StandardProfileDetail({
               style={styles.contextFlag}
             />
             <View style={styles.contextCopy}>
-              <Text style={[styles.contextLabel, { color: theme.colors.textMuted }]}>국가</Text>
+              <Text style={[styles.contextLabel, { color: theme.colors.textMuted }]}>
+                {t('profileDetail.basedIn')}
+              </Text>
               <Text style={[styles.contextValue, { color: theme.colors.text }]}>
                 {profile.countryLabel}
               </Text>
             </View>
             {profile.isNew ? (
               <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>NEW</Text>
+                <Text style={styles.newBadgeText}>{t('experience.discover.newProfile')}</Text>
               </View>
             ) : null}
           </View>
+
+          {profile.connectionGoals?.length ? (
+            <DetailSection title={t('profileSetup.profileTags.categories.connection_goal.label')}>
+              <View style={styles.chips}>
+                {profile.connectionGoals.map((goal) => (
+                  <View key={goal} style={styles.connectionGoalChip}>
+                    <Text style={styles.connectionGoalText}>
+                      {t(`profileSetup.profileTags.values.${goal}`)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </DetailSection>
+          ) : null}
 
           {profile.bio ? (
             <DetailSection title={t('profileDetail.about')}>
@@ -643,6 +664,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   interestText: { color: palette.pinkPressed, fontSize: 12, fontWeight: '800' },
+  connectionGoalChip: {
+    backgroundColor: palette.ink,
+    borderRadius: radius.pill,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+  connectionGoalText: { color: palette.white, fontSize: 12, fontWeight: '900' },
   photoGallery: { gap: 14 },
   galleryPhotoFrame: {
     aspectRatio: 0.8,

@@ -5,6 +5,7 @@ import { initReactI18next } from 'react-i18next';
 import { Platform } from 'react-native';
 
 import { additionalResources } from './additional-resources';
+import { experienceResources } from './experience-resources';
 import { operationalResources } from './operational-resources';
 import {
   type AppLanguage,
@@ -600,6 +601,7 @@ const resources = {
       ...baseResources.en.translation,
       ...additionalResources.en.translation,
       ...operationalResources.en.translation,
+      ...experienceResources.en.translation,
     },
   },
   ko: {
@@ -607,54 +609,63 @@ const resources = {
       ...baseResources.ko.translation,
       ...additionalResources.ko.translation,
       ...operationalResources.ko.translation,
+      ...experienceResources.ko.translation,
     },
   },
   vi: {
     translation: {
       ...additionalResources.vi.translation,
       ...operationalResources.vi.translation,
+      ...experienceResources.vi.translation,
     },
   },
   ja: {
     translation: {
       ...additionalResources.ja.translation,
       ...operationalResources.ja.translation,
+      ...experienceResources.ja.translation,
     },
   },
   fr: {
     translation: {
       ...additionalResources.fr.translation,
       ...operationalResources.fr.translation,
+      ...experienceResources.fr.translation,
     },
   },
   es: {
     translation: {
       ...additionalResources.es.translation,
       ...operationalResources.es.translation,
+      ...experienceResources.es.translation,
     },
   },
   'pt-BR': {
     translation: {
       ...additionalResources['pt-BR'].translation,
       ...operationalResources['pt-BR'].translation,
+      ...experienceResources['pt-BR'].translation,
     },
   },
   'zh-TW': {
     translation: {
       ...additionalResources['zh-TW'].translation,
       ...operationalResources['zh-TW'].translation,
+      ...experienceResources['zh-TW'].translation,
     },
   },
   id: {
     translation: {
       ...additionalResources.id.translation,
       ...operationalResources.id.translation,
+      ...experienceResources.id.translation,
     },
   },
   fa: {
     translation: {
       ...additionalResources.fa.translation,
       ...operationalResources.fa.translation,
+      ...experienceResources.fa.translation,
     },
   },
 } as const;

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -29,7 +30,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ChatListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { session } = useAuthSession();
+  const currentUserId = session?.user.id;
   const [query, setQuery] = useState('');
   const [now] = useState(() => Date.now());
   const matchesQuery = useQuery({
@@ -58,8 +61,10 @@ export function ChatListScreen() {
         message: connection.lastMessage?.content ?? '새로운 매치예요. 먼저 인사해보세요.',
         time: formatRelativeTime(connection.lastMessage?.created_at ?? connection.matchedAt, now),
         unreadCount: connection.unreadCount,
+        isYourTurn:
+          Boolean(connection.lastMessage) && connection.lastMessage?.sender_id !== currentUserId,
       })),
-    [matchesQuery.data, now],
+    [currentUserId, matchesQuery.data, now],
   );
   const sourceConversations =
     realConversations.length || !__DEV__ ? realConversations : mockConversations;
@@ -226,6 +231,14 @@ export function ChatListScreen() {
                         <Text style={styles.translatedText}>번역 가능</Text>
                       </View>
                     ) : null}
+                    {conversation.isYourTurn && conversation.unreadCount === 0 ? (
+                      <View style={styles.yourTurnRow}>
+                        <Ionicons color="#986A00" name="sparkles" size={13} />
+                        <Text style={styles.yourTurnText}>
+                          {t('experience.chatSafety.yourTurn')}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
                 </AnimatedPressable>
               ))
@@ -347,4 +360,6 @@ const styles = StyleSheet.create({
   unreadCountText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   translatedRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
   translatedText: { color: palette.inkMuted, fontSize: 11, fontWeight: '700' },
+  yourTurnRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
+  yourTurnText: { color: '#7B5909', fontSize: 11, fontWeight: '800' },
 });

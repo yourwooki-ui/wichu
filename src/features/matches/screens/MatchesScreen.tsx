@@ -156,6 +156,7 @@ export function MatchesScreen() {
       Boolean(like.lastActiveAt) && now - new Date(like.lastActiveAt!).getTime() <= 5 * 60 * 1000,
     isNew: now - new Date(like.likedAt).getTime() <= 24 * 60 * 60 * 1000,
     isGoldPass: like.isGoldPass,
+    introMessage: like.introMessage,
   }));
   const matchedProfiles = includeReviewSamples(realMatches, profilesByCategory.matched);
   const pickedProfiles = prioritizeGoldProfiles(
@@ -329,6 +330,7 @@ export function MatchesScreen() {
                       : visitorTimes[profile.id]
                 }
                 category={category}
+                introMessage={profile.introMessage}
                 index={index}
                 key={`${category}-${profile.id}`}
                 locked={visitorsLocked}
@@ -354,6 +356,7 @@ type ProfileTileProps = {
   activityTime?: string;
   category: MatchCategory;
   index: number;
+  introMessage?: string | null;
   locked?: boolean;
   onChat: () => void;
   onPress: () => void;
@@ -364,6 +367,7 @@ function ProfileTile({
   activityTime,
   category,
   index,
+  introMessage,
   locked = false,
   onChat,
   onPress,
@@ -454,6 +458,14 @@ function ProfileTile({
                 {category === 'picked-me' ? ` · Pick ${activityTime ?? '24시간 남음'}` : ''}
               </Text>
             </View>
+            {category === 'picked-me' && introMessage ? (
+              <View style={styles.pickMessagePreview}>
+                <Ionicons color={palette.pink} name="chatbubble-ellipses" size={12} />
+                <Text numberOfLines={2} style={styles.pickMessagePreviewText}>
+                  {introMessage}
+                </Text>
+              </View>
+            ) : null}
           </View>
         )}
       </Pressable>
@@ -603,6 +615,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+  },
+  pickMessagePreview: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  pickMessagePreviewText: {
+    color: palette.ink,
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
   },
   cardTop: {
     alignItems: 'center',

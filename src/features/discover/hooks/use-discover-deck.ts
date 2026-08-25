@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
@@ -11,6 +11,7 @@ import { adsService } from '@/features/monetization/services/ads-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 import type { Profile, SwipeAction } from '@/types/profile';
 
 type UndoableSwipe = { profile: Profile; action: SwipeAction; userId: string };
@@ -23,6 +24,7 @@ export function useDiscoverDeck() {
   const [swipeError, setSwipeError] = useState<string | null>(null);
   const [lastMatch, setLastMatch] = useState<MatchedProfile | null>(null);
   const [undoStack, setUndoStack] = useState<UndoableSwipe[]>([]);
+  const trackedEmpty = useRef(false);
   const userId = session?.user.id;
   const passEntitlement = usePassEntitlement();
   const undoEntitlementQuery = useQuery({
@@ -64,13 +66,33 @@ export function useDiscoverDeck() {
 
   useEffect(() => {
     clearDeck();
+    trackedEmpty.current = false;
   }, [clearDeck, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    productAnalyticsService.track('discover_viewed', undefined, '/discover');
+  }, [userId]);
 
   useEffect(() => {
     if (!candidatesQuery.data) return;
     if (reviewSamplesEnabled) recycleProfiles(candidatesQuery.data);
     else mergeProfiles(candidatesQuery.data);
   }, [candidatesQuery.data, mergeProfiles, recycleProfiles]);
+
+  useEffect(() => {
+    if (!candidatesQuery.isSuccess || profiles.length > 0 || trackedEmpty.current) return;
+    trackedEmpty.current = true;
+    productAnalyticsService.track(
+      'discover_empty',
+      {
+        country_filter_count: preferencesQuery.data?.countryCodes?.length ?? 0,
+        goal_filter_count: preferencesQuery.data?.connectionGoals.length ?? 0,
+        unlimited_distance: preferencesQuery.data?.maxDistanceKm === 0,
+      },
+      '/discover',
+    );
+  }, [candidatesQuery.isSuccess, preferencesQuery.data, profiles.length]);
 
   const swipeMutation = useMutation({
     mutationFn: ({ profile, action }: { profile: Profile; action: SwipeAction }) =>
@@ -85,8 +107,17 @@ export function useDiscoverDeck() {
       setUndoStack((current) => current.filter((item) => item.profile.id !== profile.id));
       setSwipeError('선택을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.');
     },
-    onSuccess: ({ matchId }, { profile }) => {
+    onSuccess: ({ matchId }, { profile, action }) => {
+      productAnalyticsService.track(
+        'swipe_recorded',
+        {
+          action,
+          has_intro: false,
+        },
+        '/discover',
+      );
       if (matchId) {
+        productAnalyticsService.track('match_created', undefined, '/discover');
         setLastMatch({ matchId, profile });
         // A completed match is a hard boundary: older swipes cannot skip past it.
         setUndoStack([]);
@@ -137,6 +168,15 @@ export function useDiscoverDeck() {
     mutationFn: (filters: Parameters<typeof discoveryService.updatePreferences>[1]) =>
       discoveryService.updatePreferences(userId!, filters),
     onSuccess: (filters) => {
+      productAnalyticsService.track(
+        'discovery_filters_saved',
+        {
+          country_count: filters.countryCodes?.length ?? 0,
+          goal_count: filters.connectionGoals.length,
+          unlimited_distance: filters.maxDistanceKm === 0,
+        },
+        '/discover',
+      );
       queryClient.setQueryData(['discover', 'preferences', userId], filters);
       clearDeck();
       void queryClient.invalidateQueries({ queryKey: ['discover', 'candidates', userId] });

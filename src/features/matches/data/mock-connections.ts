@@ -9,6 +9,7 @@ export type ConnectionProfile = {
   isOnline: boolean;
   isNew: boolean;
   isGoldPass?: boolean;
+  introMessage?: string | null;
 };
 
 export type ConversationPreview = {
@@ -19,6 +20,7 @@ export type ConversationPreview = {
   unreadCount: number;
   isTyping?: boolean;
   isTranslated?: boolean;
+  isYourTurn?: boolean;
 };
 
 export const mockConnections: ConnectionProfile[] = [
@@ -34,6 +36,7 @@ export const mockConnections: ConnectionProfile[] = [
     isOnline: true,
     isNew: true,
     isGoldPass: true,
+    introMessage: '주말에 좋아하는 동네를 같이 걸어보고 싶어요.',
   },
   {
     id: 'mock-mia',
@@ -46,6 +49,7 @@ export const mockConnections: ConnectionProfile[] = [
     matchedAt: '12분 전',
     isOnline: true,
     isNew: true,
+    introMessage: '음악 취향이 비슷해 보여서 Pick했어요!',
   },
   {
     id: 'mock-sofia',
@@ -109,6 +113,7 @@ export const mockConversations: ConversationPreview[] = [
     message: 'You: I would love to see your ceramics.',
     time: '1시간',
     unreadCount: 0,
+    isYourTurn: true,
   },
   {
     matchId: 'mock-match-yuna',

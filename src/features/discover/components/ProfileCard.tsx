@@ -29,11 +29,18 @@ function ProfileCardComponent({
 }: ProfileCardProps) {
   const { t } = useTranslation();
   const age = profile.age;
-  const distanceLabel = profile.distanceKm != null ? `${profile.distanceKm}km 거리` : null;
+  const distanceLabel =
+    profile.distanceKm != null
+      ? t('experience.discover.distanceKm', { distance: profile.distanceKm })
+      : null;
   const presence = getProfilePresence(profile.lastActiveAt, now);
   const presenceLabel = presence
     ? t(`discover.presence.${presence.kind}`, { count: presence.count })
     : null;
+  const profileSignals = [
+    ...(profile.connectionGoals ?? []).map((goal) => t(`profileSetup.profileTags.values.${goal}`)),
+    ...profile.interests,
+  ].slice(0, 3);
 
   return (
     <Pressable
@@ -78,7 +85,7 @@ function ProfileCardComponent({
         {profile.isNew ? (
           <View style={styles.badge}>
             <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>신규</Text>
+            <Text style={styles.badgeText}>{t('experience.discover.newProfile')}</Text>
           </View>
         ) : null}
       </View>
@@ -99,9 +106,12 @@ function ProfileCardComponent({
             style={styles.nameFlag}
           />
           {profile.isPhotoReviewed && (
-            <View accessibilityLabel="운영진 사진 인증 완료" style={styles.reviewedBadge}>
+            <View
+              accessibilityLabel={t('experience.trust.photoReviewedA11y')}
+              style={styles.reviewedBadge}
+            >
               <IllustratedIcon size={17} source={illustratedIcons.safety} />
-              <Text style={styles.reviewedBadgeText}>인증 완료</Text>
+              <Text style={styles.reviewedBadgeText}>{t('experience.trust.photoReviewed')}</Text>
             </View>
           )}
         </View>
@@ -129,7 +139,7 @@ function ProfileCardComponent({
           {profile.bio}
         </Text>
         <View style={styles.interests}>
-          {profile.interests.slice(0, 3).map((interest) => (
+          {profileSignals.map((interest) => (
             <View key={interest} style={styles.interest}>
               <Text style={styles.interestText}>{interest}</Text>
             </View>

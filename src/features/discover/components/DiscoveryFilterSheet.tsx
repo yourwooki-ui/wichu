@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +21,8 @@ const GENDERS = [
   { value: 'other', label: '기타' },
 ];
 
+const CONNECTION_GOALS = ['dating', 'friends', 'language_exchange', 'travel_buddy'] as const;
+
 type Props = {
   visible: boolean;
   value?: DiscoveryFilters;
@@ -33,7 +36,7 @@ export function DiscoveryFilterSheet({ visible, value, saving, onClose, onSave }
 
   return (
     <DiscoveryFilterForm
-      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}-${value?.excludeSameCountry ?? false}`}
+      key={`${value?.minAge ?? 18}-${value?.maxAge ?? 29}-${value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM}-${value?.genders.join(',') ?? ''}-${value?.countryCodes?.join(',') ?? ''}-${value?.excludeSameCountry ?? false}-${value?.connectionGoals.join(',') ?? ''}`}
       onClose={onClose}
       onSave={onSave}
       saving={saving}
@@ -43,6 +46,7 @@ export function DiscoveryFilterSheet({ visible, value, saving, onClose, onSave }
 }
 
 function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'visible'>) {
+  const { t } = useTranslation();
   const [minAge, setMinAge] = useState(value?.minAge ?? 18);
   const [maxAge, setMaxAge] = useState(value?.maxAge ?? 29);
   const [genders, setGenders] = useState<string[]>(value?.genders ?? ['woman']);
@@ -51,6 +55,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
     value?.maxDistanceKm ?? UNLIMITED_DISCOVERY_DISTANCE_KM,
   );
   const [excludeSameCountry, setExcludeSameCountry] = useState(value?.excludeSameCountry ?? false);
+  const [connectionGoals, setConnectionGoals] = useState<string[]>(value?.connectionGoals ?? []);
   const [error, setError] = useState<string | null>(null);
 
   const toggleGender = (gender: string) => {
@@ -60,6 +65,12 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
           ? current.filter((item) => item !== gender)
           : current
         : [...current, gender],
+    );
+  };
+
+  const toggleConnectionGoal = (goal: string) => {
+    setConnectionGoals((current) =>
+      current.includes(goal) ? current.filter((item) => item !== goal) : [...current, goal],
     );
   };
 
@@ -73,6 +84,7 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
         countryCodes,
         maxDistanceKm,
         excludeSameCountry,
+        connectionGoals,
       });
       onClose();
     } catch {
@@ -117,6 +129,30 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
                     >
                       <Text style={[styles.genderText, selected && styles.genderTextSelected]}>
                         {gender.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View>
+              <Text style={styles.sectionTitle}>
+                {t('profileSetup.profileTags.categories.connection_goal.label')}
+              </Text>
+              <Text style={styles.hint}>{t('experience.discover.connectionGoalHint')}</Text>
+              <View style={styles.genderOptions}>
+                {CONNECTION_GOALS.map((goal) => {
+                  const selected = connectionGoals.includes(goal);
+                  return (
+                    <Pressable
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      key={goal}
+                      onPress={() => toggleConnectionGoal(goal)}
+                      style={[styles.goalOption, selected && styles.goalOptionSelected]}
+                    >
+                      <Text style={[styles.goalText, selected && styles.goalTextSelected]}>
+                        {t(`profileSetup.profileTags.values.${goal}`)}
                       </Text>
                     </Pressable>
                   );
@@ -220,6 +256,17 @@ const styles = StyleSheet.create({
   genderOptionSelected: { backgroundColor: palette.ink, borderColor: palette.ink },
   genderText: { color: palette.ink, fontSize: 11, fontWeight: '800' },
   genderTextSelected: { color: palette.white },
+  goalOption: {
+    backgroundColor: '#FFF0F5',
+    borderColor: '#FFD0DF',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  goalOptionSelected: { backgroundColor: palette.pink, borderColor: palette.pink },
+  goalText: { color: palette.pinkPressed, fontSize: 11, fontWeight: '800' },
+  goalTextSelected: { color: palette.white },
   preferenceCard: {
     alignItems: 'center',
     backgroundColor: palette.white,

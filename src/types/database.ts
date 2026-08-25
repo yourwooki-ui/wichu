@@ -245,6 +245,7 @@ export type Database = {
           swiper_id: string;
           target_id: string;
           action: Database['public']['Enums']['swipe_action'];
+          intro_message: string | null;
           created_at: string;
           expires_at: string;
         },
@@ -253,6 +254,7 @@ export type Database = {
           swiper_id?: string;
           target_id: string;
           action: Database['public']['Enums']['swipe_action'];
+          intro_message?: string | null;
           created_at?: string;
           expires_at?: string;
         },
@@ -261,6 +263,7 @@ export type Database = {
           swiper_id?: string;
           target_id?: string;
           action?: Database['public']['Enums']['swipe_action'];
+          intro_message?: string | null;
           created_at?: string;
           expires_at?: string;
         }
@@ -384,6 +387,7 @@ export type Database = {
           max_age: number;
           max_distance_km: number;
           country_codes: string[];
+          connection_goals: string[];
           exclude_same_country: boolean;
           discovery_enabled: boolean;
           push_matches: boolean;
@@ -397,6 +401,7 @@ export type Database = {
           max_age?: number;
           max_distance_km?: number;
           country_codes?: string[];
+          connection_goals?: string[];
           exclude_same_country?: boolean;
           discovery_enabled?: boolean;
           push_matches?: boolean;
@@ -410,6 +415,7 @@ export type Database = {
           max_age?: number;
           max_distance_km?: number;
           country_codes?: string[];
+          connection_goals?: string[];
           exclude_same_country?: boolean;
           discovery_enabled?: boolean;
           push_matches?: boolean;
@@ -451,6 +457,35 @@ export type Database = {
           provider_reference?: string | null;
           created_at?: string;
           updated_at?: string;
+        }
+      >;
+      product_events: Table<
+        {
+          id: number;
+          user_id: string;
+          event_name: string;
+          route: string | null;
+          session_id: string | null;
+          properties: Json;
+          created_at: string;
+        },
+        {
+          id?: number;
+          user_id?: string;
+          event_name: string;
+          route?: string | null;
+          session_id?: string | null;
+          properties?: Json;
+          created_at?: string;
+        },
+        {
+          id?: number;
+          user_id?: string;
+          event_name?: string;
+          route?: string | null;
+          session_id?: string | null;
+          properties?: Json;
+          created_at?: string;
         }
       >;
       profile_visits: Table<
@@ -597,6 +632,7 @@ export type Database = {
         Args: {
           p_target_id: string;
           p_action: Database['public']['Enums']['swipe_action'];
+          p_intro_message?: string | null;
         };
         Returns: { swipe_id: string; match_id: string | null }[];
       };
@@ -771,6 +807,7 @@ export type Database = {
           last_active_at: string | null;
           distance_km: number | null;
           is_gold_pass: boolean;
+          intro_message: string | null;
           liked_at: string;
           expires_at: string;
           photo_path: string | null;

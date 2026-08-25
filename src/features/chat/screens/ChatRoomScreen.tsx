@@ -32,9 +32,11 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
+import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
+import { assessMessageSafety } from '@/features/chat/utils/message-safety';
 import {
   chatService,
   type ChatMessage,
@@ -54,6 +56,7 @@ import {
 } from '@/features/settings/components/ReportReasonSheet';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 
 type ChatRoomScreenProps = { matchId: string };
 
@@ -81,7 +84,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const userId = session?.user.id;
@@ -95,12 +98,18 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [viewerIndex, setViewerIndex] = useState(0);
   const [now] = useState(() => Date.now());
   const [safetyOpen, setSafetyOpen] = useState(false);
+  const [dateShareOpen, setDateShareOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
+  const [revealedImageMessages, setRevealedImageMessages] = useState<Set<string>>(() => new Set());
   const [messages, setMessages] = useState<LocalMessage[]>(() =>
     isMock ? createMockMessages(mockConversation) : [],
   );
   const hasGoldPass = entitlement.data?.tier === 'gold';
+
+  useEffect(() => {
+    productAnalyticsService.track('chat_opened', { is_mock: isMock }, `/chat/${matchId}`);
+  }, [isMock, matchId]);
 
   const connectionQuery = useQuery({
     enabled: !isMock && Boolean(userId),
@@ -225,6 +234,14 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             message.originalLanguage ?? '',
           );
       setMessages((current) => mergeMessage(current, toLocalMessage(saved, userId, i18n.language)));
+      productAnalyticsService.track(
+        'message_sent',
+        {
+          has_image: attachments.length > 0,
+          has_text: Boolean(message.content),
+        },
+        `/chat/${matchId}`,
+      );
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
     } catch {
       setMessages((current) =>
@@ -286,7 +303,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     }
   };
 
-  const send = () => {
+  const commitSend = () => {
     const content = draft.trim();
     if ((!content && !selectedImages.length) || !userId) return;
     const optimisticId = randomUUID();
@@ -304,6 +321,24 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     hapticsService.selection();
     if (isMock) return;
     void deliver(optimisticMessage);
+  };
+
+  const send = () => {
+    const warning = assessMessageSafety(draft);
+    if (!warning) {
+      commitSend();
+      return;
+    }
+
+    productAnalyticsService.track('message_safety_warning', { warning }, `/chat/${matchId}`);
+    Alert.alert(
+      t(`experience.chatSafety.${warning}Title`),
+      t(`experience.chatSafety.${warning}Body`),
+      [
+        { text: t('experience.chatSafety.edit'), style: 'cancel' },
+        { text: t('experience.chatSafety.sendAnyway'), onPress: commitSend },
+      ],
+    );
   };
 
   const openImageViewer = (message: LocalMessage, index: number) => {
@@ -389,6 +424,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       error ? '신고하지 못했어요' : '신고가 접수됐어요',
       error ? '잠시 후 다시 시도해주세요.' : '운영진이 내용을 확인할게요.',
     );
+    if (!error) productAnalyticsService.track('profile_reported', undefined, `/chat/${matchId}`);
   };
 
   const confirmBlock = () => {
@@ -411,6 +447,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             return;
           }
           setSafetyOpen(false);
+          productAnalyticsService.track('profile_blocked', undefined, `/chat/${matchId}`);
           router.replace('/(tabs)/chat');
         },
       },
@@ -602,9 +639,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 >
                   {getMessageImageItems(message).length ? (
                     <MessageImageGrid
+                      hidden={!message.mine && !revealedImageMessages.has(message.id)}
                       images={getMessageImageItems(message)}
                       mine={message.mine}
-                      onPress={(index) => openImageViewer(message, index)}
+                      onPress={(index) => {
+                        if (!message.mine && !revealedImageMessages.has(message.id)) {
+                          setRevealedImageMessages((current) => new Set(current).add(message.id));
+                          return;
+                        }
+                        openImageViewer(message, index);
+                      }}
                     />
                   ) : null}
                   {message.content ? (
@@ -778,6 +822,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             <Text style={styles.sheetTitle}>{profile.name}님과의 대화</Text>
             <SafetyAction
               disabled={safetyBusy}
+              icon="share-social-outline"
+              label={t('experience.dateShare.action')}
+              onPress={() => {
+                setSafetyOpen(false);
+                setDateShareOpen(true);
+              }}
+            />
+            <SafetyAction
+              disabled={safetyBusy}
               icon="person-outline"
               label="프로필 보기"
               onPress={() => {
@@ -824,6 +877,12 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         onClose={() => setReportOpen(false)}
         onSelect={(reason) => void submitReport(reason)}
         visible={reportOpen}
+      />
+
+      <DatePlanShareSheet
+        matchName={profile.name}
+        onClose={() => setDateShareOpen(false)}
+        visible={dateShareOpen}
       />
 
       <ImageViewer
@@ -914,14 +973,17 @@ function mergeMessage(current: LocalMessage[], incoming: LocalMessage) {
 }
 
 function MessageImageGrid({
+  hidden,
   images,
   mine,
   onPress,
 }: {
+  hidden: boolean;
   images: MessageImageItem[];
   mine: boolean;
   onPress: (index: number) => void;
 }) {
+  const { t } = useTranslation();
   const single = images.length === 1;
   return (
     <View style={[styles.imageGrid, mine ? styles.imageGridMine : styles.imageGridTheirs]}>
@@ -935,6 +997,7 @@ function MessageImageGrid({
         >
           {image.uri ? (
             <Image
+              blurRadius={hidden ? 26 : 0}
               cachePolicy="memory-disk"
               contentFit="cover"
               source={{ uri: image.uri }}
@@ -947,6 +1010,13 @@ function MessageImageGrid({
               <Text style={styles.messageImageFallbackText}>사진을 불러오지 못했어요</Text>
             </View>
           )}
+          {hidden && image.uri ? (
+            <View pointerEvents="none" style={styles.hiddenImageOverlay}>
+              <IllustratedIcon size={30} source={illustratedIcons.safety} />
+              <Text style={styles.hiddenImageTitle}>{t('experience.chatSafety.imageHidden')}</Text>
+              <Text style={styles.hiddenImageBody}>{t('experience.chatSafety.revealImage')}</Text>
+            </View>
+          ) : null}
         </Pressable>
       ))}
     </View>
@@ -1008,7 +1078,7 @@ function SafetyAction({
 }: {
   danger?: boolean;
   disabled: boolean;
-  icon: 'person-outline' | 'flag-outline' | 'exit-outline' | 'ban-outline';
+  icon: 'person-outline' | 'flag-outline' | 'exit-outline' | 'ban-outline' | 'share-social-outline';
   label: string;
   onPress: () => void;
 }) {
@@ -1211,6 +1281,25 @@ const styles = StyleSheet.create({
     color: palette.inkMuted,
     fontSize: 10,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  hiddenImageOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,20,0.34)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    paddingHorizontal: 12,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  hiddenImageTitle: { color: palette.white, fontSize: 13, fontWeight: '900', marginTop: 5 },
+  hiddenImageBody: {
+    color: 'rgba(255,255,255,0.86)',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
     textAlign: 'center',
   },
   composerShell: {

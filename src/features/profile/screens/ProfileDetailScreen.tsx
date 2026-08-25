@@ -24,6 +24,7 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
+import { PickMessageSheet } from '@/features/discover/components/PickMessageSheet';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { discoveryService } from '@/features/discover/services/discovery-service';
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
@@ -37,6 +38,7 @@ import {
 import { safetyService } from '@/features/settings/services/safety-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { productAnalyticsService } from '@/services/product-analytics-service';
 import type { SwipeAction } from '@/types/profile';
 
 type ProfileDetailScreenProps = {
@@ -85,6 +87,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [decisionAction, setDecisionAction] = useState<SwipeAction | null>(null);
   const [matchedMatchId, setMatchedMatchId] = useState<string | null>(null);
+  const [pickMessageOpen, setPickMessageOpen] = useState(false);
   const decisionX = useSharedValue(0);
   const decisionOpacity = useSharedValue(1);
   const decisionFeedback = useSharedValue(0);
@@ -194,7 +197,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     ]);
   };
 
-  const handleDecision = async (action: SwipeAction) => {
+  const handleDecision = async (action: SwipeAction, introMessage?: string) => {
     if (decisionBusy || !session?.user.id || isPreview) return;
     setDecisionBusy(true);
     setDecisionAction(action);
@@ -205,9 +208,15 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     try {
       const result = profile.id.startsWith('mock-')
         ? { matchId: null }
-        : await discoveryService.swipe(session.user.id, profile.id, action);
+        : await discoveryService.swipe(session.user.id, profile.id, action, introMessage);
+      productAnalyticsService.track(
+        'swipe_recorded',
+        { action, has_intro: Boolean(introMessage) },
+        `/profile/${profile.id}`,
+      );
       if (__DEV__) recycleProfiles([profile]);
       if (result.matchId) {
+        productAnalyticsService.track('match_created', undefined, `/profile/${profile.id}`);
         decisionFeedback.set(withTiming(0, { duration: 120 }));
         setDecisionAction(null);
         setDecisionBusy(false);
@@ -278,6 +287,20 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         ]}
       >
         <Ionicons color={theme.colors.text} name="close" size={25} />
+      </Pressable>
+      <Pressable
+        accessibilityLabel={t('experience.pickMessage.action')}
+        accessibilityRole="button"
+        disabled={decisionBusy}
+        hitSlop={6}
+        onPress={() => setPickMessageOpen(true)}
+        style={({ pressed }) => [
+          styles.messagePickButton,
+          { borderColor: theme.colors.border },
+          (pressed || decisionBusy) && styles.pressed,
+        ]}
+      >
+        <Ionicons color={palette.pink} name="chatbubble-ellipses" size={21} />
       </Pressable>
       <Pressable
         accessibilityLabel="이 프로필 픽"
@@ -399,6 +422,12 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             onClose={() => setReportOpen(false)}
             onSelect={(reason) => void handleReport(reason)}
             visible={reportOpen}
+          />
+          <PickMessageSheet
+            name={profile.name}
+            onClose={() => setPickMessageOpen(false)}
+            onPick={(message) => void handleDecision('like', message)}
+            visible={pickMessageOpen}
           />
           <MatchCelebration
             onChat={() => {
@@ -539,6 +568,15 @@ const styles = StyleSheet.create({
   passButton: {
     alignItems: 'center',
     backgroundColor: palette.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  messagePickButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
     borderRadius: 24,
     borderWidth: 1,
     height: 48,

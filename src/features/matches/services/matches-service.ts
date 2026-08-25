@@ -21,6 +21,7 @@ export type IncomingLike = {
   lastActiveAt: string | null;
   distanceKm: number | null;
   isGoldPass: boolean;
+  introMessage: string | null;
   likedAt: string;
   expiresAt: string;
   photo: string;
@@ -56,6 +57,7 @@ export const matchesService = {
           lastActiveAt: like.last_active_at,
           distanceKm: like.distance_km,
           isGoldPass: like.is_gold_pass,
+          introMessage: like.intro_message,
           likedAt: like.liked_at,
           expiresAt: like.expires_at,
           photo,

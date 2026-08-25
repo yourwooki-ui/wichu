@@ -16,6 +16,7 @@ export type DiscoveryFilters = {
   genders: string[];
   countryCodes?: string[];
   excludeSameCountry: boolean;
+  connectionGoals: string[];
 };
 
 const PHOTO_BUCKET = 'profile-photos';
@@ -115,6 +116,14 @@ function isMissingSameCountryPreference(error: { code?: string; message?: string
   );
 }
 
+function isMissingConnectionGoalsPreference(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return (
+    ['42703', 'PGRST204'].includes(error.code ?? '') &&
+    (error.message ?? '').includes('connection_goals')
+  );
+}
+
 const DEV_LANGUAGE_LEVEL_BY_PROFILE_ID: Record<string, Record<string, ProfileLanguageLevel>> = {
   '10000000-0000-4000-8000-000000000001': { ja: 'native', en: 'advanced' },
   '10000000-0000-4000-8000-000000000002': { fr: 'native', en: 'fluent' },
@@ -146,6 +155,19 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
   const regionNames = new Intl.DisplayNames([locale], { type: 'region' });
   const photoPaths = [...new Set(candidates.flatMap((candidate) => candidate.photo_paths))];
   const signedUrlsByPath = new Map<string, string>();
+  const candidateIds = candidates.map((candidate) => candidate.id);
+  const { data: goalRows, error: goalError } = candidateIds.length
+    ? await supabase
+        .from('profile_tags')
+        .select('profile_id, value')
+        .eq('category', 'connection_goal')
+        .in('profile_id', candidateIds)
+    : { data: [], error: null };
+  if (goalError) throw goalError;
+  const goalsByProfile = new Map<string, string[]>();
+  for (const row of goalRows ?? []) {
+    goalsByProfile.set(row.profile_id, [...(goalsByProfile.get(row.profile_id) ?? []), row.value]);
+  }
 
   if (photoPaths.length > 0) {
     const { data: signedPhotos, error: signedPhotoError } = await supabase.storage
@@ -186,6 +208,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
           (reviewSamplesEnabled && DEVELOPMENT_GOLD_PROFILE_IDS.has(candidate.id)),
         bio: localizedDevCopy?.bio ?? candidate.bio,
         interests: localizedDevCopy?.interests ?? candidate.interests,
+        connectionGoals: goalsByProfile.get(candidate.id) ?? [],
         photos,
         lastActiveAt: candidate.last_active_at,
         isPhotoReviewed: true,
@@ -276,21 +299,38 @@ export const discoveryService = {
       supabase.from('profiles').select('interested_in, country_code').eq('id', userId).single(),
       supabase
         .from('user_settings')
-        .select('min_age, max_age, max_distance_km, country_codes, exclude_same_country')
+        .select(
+          'min_age, max_age, max_distance_km, country_codes, exclude_same_country, connection_goals',
+        )
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
 
     let settingsData = settingsWithExclusionResult.data;
     let settingsError = settingsWithExclusionResult.error;
-    if (isMissingSameCountryPreference(settingsWithExclusionResult.error)) {
+    if (isMissingConnectionGoalsPreference(settingsWithExclusionResult.error)) {
+      const fallbackResult = await supabase
+        .from('user_settings')
+        .select('min_age, max_age, max_distance_km, country_codes, exclude_same_country')
+        .eq('user_id', userId)
+        .maybeSingle();
+      settingsData = fallbackResult.data
+        ? { ...fallbackResult.data, connection_goals: [] as string[] }
+        : fallbackResult.data;
+      settingsError = fallbackResult.error;
+    }
+    if (isMissingSameCountryPreference(settingsError)) {
       const fallbackResult = await supabase
         .from('user_settings')
         .select('min_age, max_age, max_distance_km, country_codes')
         .eq('user_id', userId)
         .maybeSingle();
       settingsData = fallbackResult.data
-        ? { ...fallbackResult.data, exclude_same_country: false }
+        ? {
+            ...fallbackResult.data,
+            exclude_same_country: false,
+            connection_goals: [] as string[],
+          }
         : fallbackResult.data;
       settingsError = fallbackResult.error;
     }
@@ -305,6 +345,7 @@ export const discoveryService = {
       genders: profileResult.data.interested_in,
       countryCodes: settingsData?.country_codes ?? [],
       excludeSameCountry: settingsData?.exclude_same_country ?? false,
+      connectionGoals: settingsData?.connection_goals ?? [],
       viewerCountryCode: profileResult.data.country_code,
     };
   },
@@ -316,12 +357,22 @@ export const discoveryService = {
       p_max_distance_km: filters.maxDistanceKm,
       p_genders: filters.genders,
       p_country_codes: filters.countryCodes?.length ? filters.countryCodes : null,
-      p_limit: DISCOVER_PREPARE_COUNT,
+      p_limit: DISCOVER_PREPARE_COUNT * 3,
       p_offset: offset,
     });
 
     if (error) throw error;
-    return hydrateCandidates((data ?? []) as CandidateRow[], locale);
+    const hydrated = await hydrateCandidates((data ?? []) as CandidateRow[], locale);
+    const preferredGoals = new Set(filters.connectionGoals);
+    return hydrated
+      .map((profile, index) => ({
+        index,
+        profile,
+        score: (profile.connectionGoals ?? []).filter((goal) => preferredGoals.has(goal)).length,
+      }))
+      .sort((left, right) => right.score - left.score || left.index - right.index)
+      .slice(0, DISCOVER_PREPARE_COUNT)
+      .map(({ profile }) => profile);
   },
   async updatePreferences(
     userId: string,
@@ -342,11 +393,23 @@ export const discoveryService = {
         max_distance_km: filters.maxDistanceKm,
         country_codes: filters.countryCodes ?? [],
         exclude_same_country: filters.excludeSameCountry,
+        connection_goals: filters.connectionGoals,
       }),
     ]);
 
     let settingsError = settingsWithExclusionResult.error;
-    if (isMissingSameCountryPreference(settingsWithExclusionResult.error)) {
+    if (isMissingConnectionGoalsPreference(settingsWithExclusionResult.error)) {
+      const fallbackResult = await supabase.from('user_settings').upsert({
+        user_id: userId,
+        min_age: filters.minAge,
+        max_age: filters.maxAge,
+        max_distance_km: filters.maxDistanceKm,
+        country_codes: filters.countryCodes ?? [],
+        exclude_same_country: filters.excludeSameCountry,
+      });
+      settingsError = fallbackResult.error;
+    }
+    if (isMissingSameCountryPreference(settingsError)) {
       const fallbackResult = await supabase.from('user_settings').upsert({
         user_id: userId,
         min_age: filters.minAge,
@@ -426,15 +489,27 @@ export const discoveryService = {
     // leave the review build empty.
     return hydrateCandidates(candidateRows, locale);
   },
-  async swipe(_userId: string, targetId: string, action: SwipeAction) {
+  async swipe(_userId: string, targetId: string, action: SwipeAction, introMessage?: string) {
     if (isDevelopmentSampleProfile(targetId)) return { matchId: null };
 
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase
+    const withMessageResult = await supabase
+      .rpc('record_my_swipe', {
+        p_target_id: targetId,
+        p_action: action,
+        p_intro_message: introMessage ?? null,
+      })
+      .single();
+    if (!withMessageResult.error) return { matchId: withMessageResult.data.match_id };
+
+    const missingNewSignature = ['PGRST202', '42883'].includes(withMessageResult.error.code ?? '');
+    if (!missingNewSignature || introMessage) throw withMessageResult.error;
+
+    const legacyResult = await supabase
       .rpc('record_my_swipe', { p_target_id: targetId, p_action: action })
       .single();
-    if (error) throw error;
-    return { matchId: data.match_id };
+    if (legacyResult.error) throw legacyResult.error;
+    return { matchId: legacyResult.data.match_id };
   },
   async undoSwipe(_userId: string, targetId: string) {
     if (isDevelopmentSampleProfile(targetId)) {
