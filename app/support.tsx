@@ -4,9 +4,8 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
+import { COMPANY_INFO, SUPPORT_EMAIL } from '@/constants/company';
 import { palette, radius } from '@/constants/theme';
-
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'support@wichu.app';
 
 const FAQS = [
   [
@@ -29,6 +28,7 @@ export default function SupportRoute() {
     const subject = encodeURIComponent('[WICHU 문의] 도움이 필요해요');
     void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}`);
   };
+  const openCompanyWebsite = () => void Linking.openURL(COMPANY_INFO.website);
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
@@ -66,8 +66,36 @@ export default function SupportRoute() {
             </View>
           ))}
         </View>
+        <Text style={styles.sectionLabel}>운영 정보</Text>
+        <View style={styles.companyCard}>
+          <CompanyRow label="Google Play 개발자" value={COMPANY_INFO.googleDeveloperName} />
+          <CompanyRow label="운영사" value={COMPANY_INFO.nameKo} />
+          <CompanyRow label="대표자" value={COMPANY_INFO.representative} />
+          <CompanyRow label="사업자등록번호" value={COMPANY_INFO.businessNumber} />
+          <CompanyRow label="통신판매업 신고" value={COMPANY_INFO.mailOrderNumber} />
+          <CompanyRow label="사업장" value={COMPANY_INFO.address} />
+          <Pressable
+            accessibilityLabel="무브먼트 스튜디오 웹사이트 열기"
+            accessibilityRole="link"
+            onPress={openCompanyWebsite}
+            style={styles.websiteButton}
+          >
+            <Ionicons color={palette.ink} name="globe-outline" size={17} />
+            <Text style={styles.websiteText}>movementstudio.kr</Text>
+            <Ionicons color={palette.inkMuted} name="open-outline" size={15} />
+          </Pressable>
+        </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function CompanyRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.companyRow}>
+      <Text style={styles.companyLabel}>{label}</Text>
+      <Text style={styles.companyValue}>{value}</Text>
+    </View>
   );
 }
 
@@ -125,4 +153,32 @@ const styles = StyleSheet.create({
   faq: { borderBottomColor: '#ECECEF', borderBottomWidth: StyleSheet.hairlineWidth, padding: 17 },
   faqTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
   faqBody: { color: palette.inkMuted, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  companyCard: { backgroundColor: palette.white, borderRadius: 22, padding: 18 },
+  companyRow: {
+    flexDirection: 'row',
+    gap: 14,
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  companyLabel: { color: palette.inkMuted, fontSize: 12, fontWeight: '700' },
+  companyValue: {
+    color: palette.ink,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 18,
+    textAlign: 'right',
+  },
+  websiteButton: {
+    alignItems: 'center',
+    borderColor: '#E4E4E8',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    minHeight: 46,
+    paddingHorizontal: 14,
+  },
+  websiteText: { color: palette.ink, flex: 1, fontSize: 13, fontWeight: '900' },
 });

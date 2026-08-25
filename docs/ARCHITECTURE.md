@@ -116,6 +116,15 @@ app routes
 
 환경별 URL, publishable key, IAP 상품 ID를 분리한다. secret/service role은 앱 번들에 절대 포함하지 않는다. EAS Build/Update 채널도 동일하게 분리하고 production update에는 승인과 rollback 절차를 둔다.
 
+## Android 릴리스와 대화면
+
+- Expo SDK 57의 `expo-build-properties`로 production Android 빌드에서 R8 코드 축소와 미사용 리소스 제거를 활성화한다.
+- SDK 57의 AGP 8.12에서는 `android.r8.optimizedResourceShrinking=true`를 config plugin으로 주입한다. 이 설정은 debug 개발 흐름에는 적용하지 않는다.
+- R8 활성 빌드는 로그인, OAuth callback, 사진 선택·업로드, 위치·알림 권한, Realtime 채팅, 광고와 구매 SDK를 실기기에서 smoke test한 뒤 배포한다.
+- Play Console 장애 분석을 위해 해당 versionCode의 `mapping.txt`를 보관하고 업로드한다.
+- Android 16(API 36)은 600dp 이상 화면에서 세로 고정을 무시할 수 있다. 모든 핵심 화면은 회전·폴더블 전환·멀티윈도우에서도 기능이 유지되어야 한다.
+- 기본 화면과 하단 내비게이션은 `layout.maxContentWidth` 안에서 중앙 정렬한다. 태블릿 전용 다중 패널은 실사용 가치가 큰 Match·Chat 목록부터 별도 단계로 확장한다.
+
 ## 운영 품질
 
 - 타입체크, ESLint, 포맷, 단위 테스트, DB/RLS 통합 테스트를 CI gate로 사용

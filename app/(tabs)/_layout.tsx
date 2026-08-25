@@ -8,6 +8,7 @@ import { useAppViewport } from '@/components/NativePreviewFrame';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
+import { layout } from '@/constants/theme';
 
 export default function TabLayout() {
   const theme = useAppTheme();
@@ -34,10 +35,13 @@ export default function TabLayout() {
           <Pressable {...props} style={[props.style, styles.tabBarButton]} />
         ),
         tabBarStyle: {
+          alignSelf: 'center',
           height: (compactWebPreview ? 70 : 90) + bottomInset,
+          maxWidth: layout.maxContentWidth,
           paddingTop: compactWebPreview ? 4 : 8,
           paddingBottom: bottomInset,
           paddingHorizontal: 8,
+          width: '100%',
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,

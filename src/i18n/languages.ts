@@ -12,6 +12,13 @@ export const supportedLanguages = [
   { code: 'fr', label: 'Français', englishLabel: 'French', countryCode: 'FR', direction: 'ltr' },
   { code: 'es', label: 'Español', englishLabel: 'Spanish', countryCode: 'ES', direction: 'ltr' },
   {
+    code: 'pt-BR',
+    label: 'Português (Brasil)',
+    englishLabel: 'Portuguese (Brazil)',
+    countryCode: 'BR',
+    direction: 'ltr',
+  },
+  {
     code: 'zh-TW',
     label: '繁體中文',
     englishLabel: 'Chinese (Taiwan)',
@@ -43,6 +50,7 @@ export function resolveAppLanguage(languageTag: string | null | undefined): AppL
   const normalized = languageTag.trim().replaceAll('_', '-');
   if (!normalized) return null;
   if (/^zh(?:-(?:hant|tw|hk|mo))?/i.test(normalized)) return 'zh-TW';
+  if (/^pt(?:-|$)/i.test(normalized)) return 'pt-BR';
 
   const baseLanguage = normalized.split('-')[0]?.toLowerCase();
   return isAppLanguage(baseLanguage) ? baseLanguage : null;

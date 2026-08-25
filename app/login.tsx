@@ -169,13 +169,13 @@ export default function LoginRoute() {
                   loading && styles.disabled,
                 ]}
               >
-                <Ionicons name="arrow-back" size={20} color={palette.white} />
+                <Ionicons name="arrow-back" size={20} color={palette.ink} />
               </Pressable>
-              <LanguagePicker dark />
+              <LanguagePicker />
             </View>
 
             <View style={styles.hero}>
-              <BrandWordmark size={27} />
+              <BrandWordmark color={palette.ink} size={27} />
               <Text style={styles.title}>
                 {t(isSignUp ? 'auth.signUpTitle' : 'auth.signInTitle')}
               </Text>
@@ -188,7 +188,6 @@ export default function LoginRoute() {
               {isSignUp ? (
                 <>
                   <FormField
-                    tone="dark"
                     label={t('auth.birthDate')}
                     value={birthDate}
                     onChangeText={(value) => {
@@ -241,7 +240,6 @@ export default function LoginRoute() {
               </View>
 
               <FormField
-                tone="dark"
                 label={t('auth.email')}
                 value={email}
                 onChangeText={(value) => {
@@ -255,7 +253,6 @@ export default function LoginRoute() {
                 autoComplete="email"
               />
               <FormField
-                tone="dark"
                 label={t('auth.password')}
                 value={password}
                 onChangeText={(value) => {
@@ -331,28 +328,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#08080A',
+    backgroundColor: '#E9E7E4',
   },
   page: {
     flex: 1,
     width: '100%',
     maxWidth: 430,
     maxHeight: Platform.select({ web: 900 }),
-    backgroundColor: '#08080A',
+    backgroundColor: '#F8F7F5',
   },
   flex: { flex: 1 },
   content: {
     flexGrow: 1,
     width: '100%',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingHorizontal: 18,
+    paddingTop: 14,
     paddingBottom: 24,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 42,
+    marginBottom: 26,
   },
   backButton: {
     width: 40,
@@ -360,53 +357,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   pressed: { opacity: 0.58 },
   disabled: { opacity: 0.42 },
-  hero: { marginBottom: 28 },
+  hero: { marginBottom: 22, paddingHorizontal: 2 },
   title: {
     maxWidth: 400,
-    marginTop: 26,
-    color: palette.white,
-    fontSize: 31,
-    lineHeight: 37,
+    marginTop: 22,
+    color: palette.ink,
+    fontSize: 29,
+    lineHeight: 35,
     fontWeight: '900',
     letterSpacing: -0.9,
   },
   subtitle: {
     maxWidth: 390,
     marginTop: 6,
-    color: '#9898A2',
+    color: palette.inkMuted,
     fontSize: 13,
     lineHeight: 19,
   },
-  formPanel: { gap: spacing.md },
+  formPanel: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.md,
+    padding: 18,
+  },
   policyLinks: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   policyLink: {
-    color: '#B8B8C0',
+    color: palette.inkMuted,
     fontSize: 10,
     fontWeight: '800',
     textDecorationLine: 'underline',
   },
-  policyDot: { color: '#5F5F68', fontSize: 10 },
+  policyDot: { color: palette.inkMuted, fontSize: 10 },
   forgotButton: { alignSelf: 'flex-end', marginTop: -5 },
-  forgotText: { color: '#B8B8C0', fontSize: 11, fontWeight: '800' },
+  forgotText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#2A2A30' },
-  dividerLabel: { color: '#74747D', fontSize: 10, fontWeight: '800' },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: palette.line },
+  dividerLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   messageRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 6 },
   message: { color: '#FF769F', flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '700' },
   noticeRow: {
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(201,255,46,0.09)',
-    borderColor: 'rgba(201,255,46,0.32)',
+    backgroundColor: '#F4FBE4',
+    borderColor: '#D5E9A7',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 7,
     padding: spacing.sm,
   },
-  notice: { color: '#DCFF87', flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  notice: { color: '#496300', flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   switchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -415,6 +422,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 2,
   },
-  switchPrompt: { color: '#85858F', fontSize: 12 },
+  switchPrompt: { color: palette.inkMuted, fontSize: 12 },
   switchAction: { color: palette.pink, fontSize: 12, fontWeight: '900' },
 });

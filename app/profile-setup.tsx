@@ -668,12 +668,16 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     style={[styles.progressFill, { width: `${((step + 1) / TOTAL_STEPS) * 100}%` }]}
                   />
                 </View>
-                <View style={styles.onboardingStepBadge}>
-                  <IllustratedIcon size={22} source={activeOnboardingSection.illustration} />
-                  <Text style={styles.onboardingStepText}>{activeOnboardingSection.label}</Text>
+                <View style={styles.onboardingHero}>
+                  <View style={styles.onboardingStepIcon}>
+                    <IllustratedIcon size={44} source={activeOnboardingSection.illustration} />
+                  </View>
+                  <View style={styles.onboardingStepCopy}>
+                    <Text style={styles.onboardingStepText}>{activeOnboardingSection.label}</Text>
+                    <Text style={styles.title}>{t(`profileSetup.steps.${step}.title`)}</Text>
+                    <Text style={styles.subtitle}>{t(`profileSetup.steps.${step}.body`)}</Text>
+                  </View>
                 </View>
-                <Text style={styles.title}>{t(`profileSetup.steps.${step}.title`)}</Text>
-                <Text style={styles.subtitle}>{t(`profileSetup.steps.${step}.body`)}</Text>
               </>
             )}
           </View>
@@ -685,7 +689,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             showsVerticalScrollIndicator={false}
           >
             {activeSection === 'basic' ? (
-              <View style={styles.form}>
+              <View style={[styles.form, styles.formCard]}>
                 <FormField
                   label={t('profileSetup.displayName')}
                   value={displayName}
@@ -730,15 +734,17 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             ) : null}
 
             {activeSection === 'additional' ? (
-              <ProfileAdditionalInfoFields
-                section="additional"
-                value={profileDetails}
-                onChange={setProfileDetails}
-              />
+              <View style={styles.formCard}>
+                <ProfileAdditionalInfoFields
+                  section="additional"
+                  value={profileDetails}
+                  onChange={setProfileDetails}
+                />
+              </View>
             ) : null}
 
             {activeSection === 'preferences' ? (
-              <View style={styles.form}>
+              <View style={[styles.form, styles.formCard]}>
                 <SelectionGroup
                   label={t('profileSetup.showMe')}
                   hint={t('profileSetup.showMeHint')}
@@ -771,7 +777,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             ) : null}
 
             {activeSection === 'about' ? (
-              <View style={styles.form}>
+              <View style={[styles.form, styles.formCard]}>
                 <ProfileTagPicker value={profileTags} onChange={setProfileTags} />
                 <LanguagePreferencesField
                   nativeLanguage={nativeLanguage}
@@ -794,7 +800,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             ) : null}
 
             {activeSection === 'photos' ? (
-              <View style={styles.form}>
+              <View style={[styles.form, styles.formCard]}>
                 <ProfilePhotoPicker
                   disabled={loading}
                   photos={photos}
@@ -932,14 +938,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F6F6F8',
+    backgroundColor: '#E9E7E4',
   },
   page: {
     flex: 1,
     width: '100%',
     maxWidth: 430,
     maxHeight: Platform.select({ web: 900 }),
-    backgroundColor: '#F6F6F8',
+    backgroundColor: '#F8F7F5',
   },
   flex: { flex: 1 },
   editState: {
@@ -982,7 +988,7 @@ const styles = StyleSheet.create({
   },
   editStateSecondaryLabel: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   editStatePrimaryLabel: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 18 },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
   headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   editHeaderTopRow: {
     alignItems: 'center',
@@ -1056,52 +1062,70 @@ const styles = StyleSheet.create({
   stepCounter: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
   stepCounterCurrent: { color: palette.pink, fontSize: 13 },
   progressTrack: {
-    height: 3,
-    marginTop: 20,
+    height: 4,
+    marginTop: 18,
     overflow: 'hidden',
     borderRadius: 2,
     backgroundColor: '#DFDFE4',
   },
   progressFill: { height: '100%', borderRadius: 2, backgroundColor: palette.pink },
-  onboardingStepBadge: {
+  onboardingHero: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF0F5',
-    borderRadius: radius.pill,
     flexDirection: 'row',
-    gap: 6,
+    gap: 14,
     marginTop: 18,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
-  onboardingStepText: { color: palette.pink, fontSize: 10, fontWeight: '900' },
+  onboardingStepIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
+    borderColor: '#FFD6E3',
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
+  },
+  onboardingStepCopy: { flex: 1, minWidth: 0 },
+  onboardingStepText: {
+    color: palette.pink,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+  },
   title: {
-    marginTop: 14,
+    marginTop: 4,
     color: palette.ink,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 23,
+    lineHeight: 28,
     fontWeight: '900',
     letterSpacing: -0.7,
   },
-  subtitle: { marginTop: 6, color: palette.inkMuted, fontSize: 13, lineHeight: 19 },
-  content: { paddingHorizontal: 20, paddingBottom: 32 },
+  subtitle: { marginTop: 4, color: palette.inkMuted, fontSize: 12, lineHeight: 17 },
+  content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 2 },
   form: { gap: 22 },
-  label: { color: palette.ink, fontSize: 12, fontWeight: '900' },
-  hint: { marginTop: -2, color: palette.inkMuted, fontSize: 11, lineHeight: 16 },
+  formCard: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 18,
+  },
+  label: { color: palette.ink, fontSize: 13, fontWeight: '900' },
+  hint: { marginTop: -2, color: palette.inkMuted, fontSize: 12, lineHeight: 17 },
   loadingLabel: { color: palette.inkMuted, fontSize: 12 },
   choiceSection: { gap: 8 },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radius.pill,
-    backgroundColor: palette.white,
+    backgroundColor: '#FAFAFB',
   },
   choiceSelected: { borderColor: palette.pink, backgroundColor: 'rgba(255,45,111,0.08)' },
   choiceLabel: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
@@ -1116,7 +1140,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 14,
     borderTopWidth: StyleSheet.hairlineWidth,

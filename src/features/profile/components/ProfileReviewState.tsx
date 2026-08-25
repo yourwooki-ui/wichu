@@ -44,30 +44,34 @@ export function ProfileReviewState({
       <View style={styles.page}>
         <BrandWordmark color={palette.ink} size={25} />
         <View style={styles.content}>
-          <IllustratedIcon
-            size={82}
-            source={isPending ? illustratedIcons.photoReview : illustratedIcons.photoRejected}
-          />
-          <Text style={styles.eyebrow}>{t(`profileReview.${status}.eyebrow`)}</Text>
-          <Text style={styles.title}>{t(`profileReview.${status}.title`)}</Text>
-          <Text style={styles.body}>{t(`profileReview.${status}.body`)}</Text>
-
-          {note ? (
-            <View style={styles.noteCard}>
-              <Text style={styles.noteLabel}>{t('profileReview.note')}</Text>
-              <Text style={styles.note}>{note}</Text>
+          <View style={styles.statusCard}>
+            <View style={styles.illustrationShell}>
+              <IllustratedIcon
+                size={88}
+                source={isPending ? illustratedIcons.photoReview : illustratedIcons.photoRejected}
+              />
             </View>
-          ) : null}
+            <Text style={styles.eyebrow}>{t(`profileReview.${status}.eyebrow`)}</Text>
+            <Text style={styles.title}>{t(`profileReview.${status}.title`)}</Text>
+            <Text style={styles.body}>{t(`profileReview.${status}.body`)}</Text>
 
-          {isPending ? (
-            <View style={styles.steps}>
-              <ReviewStep done label={t('profileReview.steps.submitted')} />
-              <View style={styles.stepLine} />
-              <ReviewStep label={t('profileReview.steps.reviewing')} />
-              <View style={styles.stepLine} />
-              <ReviewStep label={t('profileReview.steps.result')} />
-            </View>
-          ) : null}
+            {note ? (
+              <View style={styles.noteCard}>
+                <Text style={styles.noteLabel}>{t('profileReview.note')}</Text>
+                <Text style={styles.note}>{note}</Text>
+              </View>
+            ) : null}
+
+            {isPending ? (
+              <View style={styles.steps}>
+                <ReviewStep done label={t('profileReview.steps.submitted')} />
+                <View style={styles.stepLine} />
+                <ReviewStep label={t('profileReview.steps.reviewing')} />
+                <View style={styles.stepLine} />
+                <ReviewStep label={t('profileReview.steps.result')} />
+              </View>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -118,18 +122,37 @@ function ReviewStep({ done, label }: { done?: boolean; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, alignItems: 'center', backgroundColor: '#F6F6F8' },
+  safeArea: { flex: 1, alignItems: 'center', backgroundColor: '#E9E7E4' },
   page: {
     flex: 1,
     width: '100%',
     maxWidth: 430,
-    paddingHorizontal: 22,
+    backgroundColor: '#F8F7F5',
+    paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 20,
   },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 30 },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  statusCard: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 30,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
+    paddingVertical: 26,
+    width: '100%',
+  },
+  illustrationShell: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
+    borderRadius: 32,
+    height: 104,
+    justifyContent: 'center',
+    width: 104,
+  },
   eyebrow: {
-    marginTop: 22,
+    marginTop: 18,
     color: palette.pink,
     fontSize: 11,
     fontWeight: '900',
@@ -180,7 +203,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: palette.line,
     borderRadius: 12,
-    backgroundColor: '#F6F6F8',
+    backgroundColor: '#F8F7F5',
   },
   stepDotDone: { borderColor: palette.pink, backgroundColor: palette.pink },
   stepLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '800', textAlign: 'center' },

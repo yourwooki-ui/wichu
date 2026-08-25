@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
+import { COMPANY_INFO, SUPPORT_EMAIL } from '@/constants/company';
 import { LEGAL_DOCUMENTS, POLICY_EFFECTIVE_DATE, POLICY_STATUS } from '@/constants/legal-documents';
 import { palette, radius } from '@/constants/theme';
 
@@ -49,7 +50,18 @@ export default function LegalDocumentRoute() {
             </View>
           </View>
         ))}
-        <Text style={styles.notice}>정책 문의 · support@wichu.app</Text>
+        <Pressable
+          accessibilityLabel={`${SUPPORT_EMAIL}로 정책 문의 메일 보내기`}
+          accessibilityRole="link"
+          onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+          style={styles.notice}
+        >
+          <Ionicons color={palette.inkMuted} name="mail-outline" size={15} />
+          <Text style={styles.noticeText}>정책 문의 · {SUPPORT_EMAIL}</Text>
+        </Pressable>
+        <Text style={styles.companyNotice}>
+          {COMPANY_INFO.googleDeveloperName} · {COMPANY_INFO.nameKo}
+        </Text>
       </ScrollView>
     </Screen>
   );
@@ -99,5 +111,14 @@ const styles = StyleSheet.create({
   sectionCopy: { flex: 1 },
   sectionTitle: { color: palette.ink, fontSize: 15, fontWeight: '900' },
   sectionBody: { color: palette.inkMuted, fontSize: 12, lineHeight: 20, marginTop: 7 },
-  notice: { color: '#909098', fontSize: 10, lineHeight: 16, marginTop: 20, textAlign: 'center' },
+  notice: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 20,
+    minHeight: 44,
+  },
+  noticeText: { color: '#909098', fontSize: 11, fontWeight: '800', lineHeight: 16 },
+  companyNotice: { color: '#909098', fontSize: 10, textAlign: 'center' },
 });

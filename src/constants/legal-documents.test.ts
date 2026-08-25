@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { COMPANY_INFO, SUPPORT_EMAIL } from './company';
 import { LEGAL_DOCUMENTS, POLICY_STATUS, TBD_MARKER, type LegalDocument } from './legal-documents';
 
 const documents = Object.values(LEGAL_DOCUMENTS) as LegalDocument[];
@@ -33,7 +34,12 @@ describe('정책 문서', () => {
 
   it('권리 행사 연락처를 제공한다', () => {
     const body = LEGAL_DOCUMENTS.privacy.sections.map((s) => s.body).join('\n');
-    expect(body).toContain('support@wichu.app');
+    expect(body).toContain(SUPPORT_EMAIL);
+    expect(body).toContain(COMPANY_INFO.googleDeveloperName);
+    expect(body).toContain(COMPANY_INFO.nameKo);
+    expect(body).toContain(COMPANY_INFO.businessNumber);
+    expect(body).toContain(COMPANY_INFO.website);
+    expect(body).not.toContain('support@wichu.app');
   });
 
   it('운영 보존 기간과 국내 저장 리전을 명시한다', () => {

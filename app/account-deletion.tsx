@@ -4,6 +4,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { COMPANY_INFO, SUPPORT_EMAIL } from '@/constants/company';
 import {
   layout,
   palette,
@@ -13,8 +14,6 @@ import {
   touchSlop,
   typography,
 } from '@/constants/theme';
-
-const SUPPORT_EMAIL = 'support@wichu.app';
 
 /**
  * 계정·데이터 삭제 안내 (공개 페이지).
@@ -115,6 +114,10 @@ export default function AccountDeletionRoute() {
           </Text>
         </View>
 
+        <Text style={styles.operatorText}>
+          운영사 {COMPANY_INFO.nameKo} · {COMPANY_INFO.website.replace('https://', '')}
+        </Text>
+
         <Pressable
           accessibilityRole="button"
           hitSlop={touchSlop.link}
@@ -205,6 +208,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   noticeText: { ...typography.caption, color: palette.ink, flex: 1 },
+  operatorText: {
+    ...typography.caption,
+    color: palette.inkMuted,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
   homeLink: {
     alignItems: 'center',
     justifyContent: 'center',

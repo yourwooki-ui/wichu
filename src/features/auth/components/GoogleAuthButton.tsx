@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: '#DFDFE4',
     borderRadius: radius.md,
     backgroundColor: '#FFFFFF',
   },

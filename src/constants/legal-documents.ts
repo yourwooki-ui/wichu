@@ -4,6 +4,8 @@
  * 화면과 분리해 두어 문구만 검토·수정할 수 있고, 테스트로 상태를 검증할 수 있다.
  */
 
+import { COMPANY_INFO, SUPPORT_EMAIL } from './company';
+
 export type LegalDocument = {
   title: string;
   summary: string;
@@ -12,7 +14,7 @@ export type LegalDocument = {
 
 /** 운영 책임자의 공개 승인 전에는 draft로 유지한다. */
 export const POLICY_STATUS: 'draft' | 'effective' = 'effective';
-export const POLICY_EFFECTIVE_DATE = '2026.08.24';
+export const POLICY_EFFECTIVE_DATE = '2026.08.25';
 
 export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
   terms: {
@@ -38,6 +40,10 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       {
         title: '계정 종료',
         body: '사용자는 설정에서 계정을 비활성화하거나 삭제를 요청할 수 있습니다. 중대한 정책 위반 또는 안전 위험이 확인되면 서비스 이용이 제한될 수 있습니다.',
+      },
+      {
+        title: '운영 주체',
+        body: `Google Play 개발자 표시는 ${COMPANY_INFO.googleDeveloperName}이며, WICHU의 국내 사업 운영 주체는 ${COMPANY_INFO.nameKo}(대표자 ${COMPANY_INFO.representative}, 사업자등록번호 ${COMPANY_INFO.businessNumber})입니다. 서비스와 약관 관련 문의는 ${SUPPORT_EMAIL} 또는 ${COMPANY_INFO.website}를 이용해 주세요.`,
       },
     ],
   },
@@ -79,7 +85,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '이용자 권리와 행사 방법',
-        body: '이용자는 자신의 개인정보에 대해 열람, 정정, 삭제, 처리정지를 요청할 수 있습니다. 앱에서는 마이 → 설정에서 프로필 노출, 알림, 차단 목록, 계정 비활성화와 삭제를 직접 관리할 수 있습니다. 앱을 사용할 수 없는 경우 support@wichu.app으로 요청하시면 본인 확인 후 처리합니다.',
+        body: `이용자는 자신의 개인정보에 대해 열람, 정정, 삭제, 처리정지를 요청할 수 있습니다. 앱에서는 마이 → 설정에서 프로필 노출, 알림, 차단 목록, 계정 비활성화와 삭제를 직접 관리할 수 있습니다. 앱을 사용할 수 없는 경우 ${SUPPORT_EMAIL}으로 요청하시면 본인 확인 후 처리합니다.`,
       },
       {
         title: '만 18세 미만 이용 제한',
@@ -87,7 +93,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '개인정보 보호 담당',
-        body: '운영사: Movement Studio, Inc. 개인정보 보호 및 고충처리 담당부서: WICHU 개인정보보호팀. 개인정보 처리 문의와 열람·정정·삭제·처리정지 요청은 support@wichu.app으로 보내 주세요. 본인 확인 후 지체 없이 처리합니다.',
+        body: `Google Play 개발자 표시: ${COMPANY_INFO.googleDeveloperName}. 국내 사업 운영사: ${COMPANY_INFO.nameKo}. 대표자: ${COMPANY_INFO.representative}. 사업자등록번호: ${COMPANY_INFO.businessNumber}. 사업장 주소: ${COMPANY_INFO.address}. 개인정보 보호 및 고충처리 담당: WICHU 운영팀. 개인정보 처리 문의와 열람·정정·삭제·처리정지 요청은 ${SUPPORT_EMAIL}으로 보내 주세요. 본인 확인 후 지체 없이 처리합니다. 운영사 정보는 ${COMPANY_INFO.website}에서도 확인할 수 있습니다.`,
       },
       {
         title: '안전성 확보 조치',
@@ -109,7 +115,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '아동 성적 학대·착취 무관용',
-        body: 'WICHU와 운영사 Movement Studio, Inc.는 아동 성적 학대 및 착취(CSAE), 아동 성착취물(CSAM), 아동을 성적으로 유인하는 행위, 성착취 목적의 협박·인신매매·접촉 시도와 이를 조장하거나 배포하는 행위를 명시적으로 금지합니다. 실제 인물뿐 아니라 합성·생성·변형된 아동 성착취물도 허용하지 않습니다.',
+        body: `WICHU와 개발사 ${COMPANY_INFO.googleDeveloperName}, 국내 사업 운영사 ${COMPANY_INFO.nameKo}는 아동 성적 학대 및 착취(CSAE), 아동 성착취물(CSAM), 아동을 성적으로 유인하는 행위, 성착취 목적의 협박·인신매매·접촉 시도와 이를 조장하거나 배포하는 행위를 명시적으로 금지합니다. 실제 인물뿐 아니라 합성·생성·변형된 아동 성착취물도 허용하지 않습니다.`,
       },
       {
         title: '신고와 긴급 대응',
@@ -117,7 +123,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '아동 안전 담당 연락처',
-        body: 'WICHU 아동 안전 담당부서는 Google Play와 이용자의 CSAE·CSAM 관련 통지를 접수하고 집행·검토 절차를 운영합니다. 아동 안전 관련 신고와 문의는 support@wichu.app으로 보내 주세요. 일반 신고는 앱 내 신고 기능을 우선 이용할 수 있습니다.',
+        body: `WICHU 아동 안전 담당부서는 Google Play와 이용자의 CSAE·CSAM 관련 통지를 접수하고 집행·검토 절차를 운영합니다. 아동 안전 관련 신고와 문의는 ${SUPPORT_EMAIL}으로 보내 주세요. 일반 신고는 앱 내 신고 기능을 우선 이용할 수 있습니다.`,
       },
       {
         title: '동의와 존중',

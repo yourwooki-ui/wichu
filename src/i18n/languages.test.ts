@@ -8,7 +8,7 @@ import {
 } from './languages';
 
 describe('app language metadata', () => {
-  it('exposes the nine supported interface languages', () => {
+  it('exposes the ten supported interface languages', () => {
     expect(supportedLanguages.map(({ code }) => code)).toEqual([
       'ko',
       'en',
@@ -16,6 +16,7 @@ describe('app language metadata', () => {
       'ja',
       'fr',
       'es',
+      'pt-BR',
       'zh-TW',
       'id',
       'fa',
@@ -25,6 +26,8 @@ describe('app language metadata', () => {
   it('normalizes device locale tags', () => {
     expect(resolveAppLanguage('ko-KR')).toBe('ko');
     expect(resolveAppLanguage('vi_VN')).toBe('vi');
+    expect(resolveAppLanguage('pt-BR')).toBe('pt-BR');
+    expect(resolveAppLanguage('pt-PT')).toBe('pt-BR');
     expect(resolveAppLanguage('zh-Hant-TW')).toBe('zh-TW');
     expect(resolveAppLanguage('zh-HK')).toBe('zh-TW');
     expect(resolveAppLanguage('fa-IR')).toBe('fa');
@@ -36,5 +39,6 @@ describe('app language metadata', () => {
     expect(isAppLanguage('zh-tw')).toBe(false);
     expect(getAppTextDirection('fa')).toBe('rtl');
     expect(getAppTextDirection('ja')).toBe('ltr');
+    expect(getAppTextDirection('pt-BR')).toBe('ltr');
   });
 });

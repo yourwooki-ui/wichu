@@ -25,6 +25,16 @@ const baseConfig = {
   },
   plugins: [
     [
+      'expo-build-properties',
+      {
+        android: {
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+        },
+      },
+    ],
+    './plugins/with-android-performance',
+    [
       'expo-router',
       {
         asyncRoutes: {
