@@ -50,7 +50,8 @@ const baseConfig = {
     [
       'expo-image-picker',
       {
-        photosPermission: 'WICHU accesses your photos so you can build your profile.',
+        photosPermission:
+          'WICHU accesses your photos so you can build your profile and share images in chats.',
         cameraPermission: 'WICHU uses your camera so you can take a profile photo.',
         microphonePermission: false,
       },

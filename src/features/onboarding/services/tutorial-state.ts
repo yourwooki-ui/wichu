@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TUTORIAL_VERSION = 'v1';
 const DISCOVER_COACH_VERSION = 'v2';
+const UNDO_COACH_VERSION = 'v1';
 
 export const tutorialState = {
   requireProductTutorial(userId: string) {
@@ -23,6 +24,14 @@ export const tutorialState = {
   async hasCompletedDiscoverCoach(userId: string) {
     return (await AsyncStorage.getItem(discoverCoachKey(userId))) === 'done';
   },
+
+  completeUndoCoach(userId: string) {
+    return AsyncStorage.setItem(undoCoachKey(userId), 'done');
+  },
+
+  async hasCompletedUndoCoach(userId: string) {
+    return (await AsyncStorage.getItem(undoCoachKey(userId))) === 'done';
+  },
 };
 
 function productTutorialKey(userId: string) {
@@ -31,4 +40,8 @@ function productTutorialKey(userId: string) {
 
 function discoverCoachKey(userId: string) {
   return `wichu:discover-coach:${DISCOVER_COACH_VERSION}:${userId}`;
+}
+
+function undoCoachKey(userId: string) {
+  return `wichu:undo-coach:${UNDO_COACH_VERSION}:${userId}`;
 }

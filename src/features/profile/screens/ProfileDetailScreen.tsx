@@ -3,16 +3,26 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { useAppViewport } from '@/components/NativePreviewFrame';
 import { Screen } from '@/components/Screen';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { layout, palette, radius, typography } from '@/constants/theme';
+import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { discoveryService } from '@/features/discover/services/discovery-service';
@@ -26,6 +36,7 @@ import {
 } from '@/features/settings/components/ReportReasonSheet';
 import { safetyService } from '@/features/settings/services/safety-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { hapticsService } from '@/services/haptics-service';
 import type { SwipeAction } from '@/types/profile';
 
 type ProfileDetailScreenProps = {
@@ -41,6 +52,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const theme = useAppTheme();
   const { session } = useAuthSession();
   const insets = useSafeAreaInsets();
+  const viewport = useAppViewport();
   const { i18n, t } = useTranslation();
   const entitlement = usePassEntitlement();
   const deckProfile = useDiscoverStore((state) =>
@@ -71,7 +83,30 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionAction, setDecisionAction] = useState<SwipeAction | null>(null);
   const [matchedMatchId, setMatchedMatchId] = useState<string | null>(null);
+  const decisionX = useSharedValue(0);
+  const decisionOpacity = useSharedValue(1);
+  const decisionFeedback = useSharedValue(0);
+
+  const decisionSurfaceStyle = useAnimatedStyle(() => ({
+    opacity: decisionOpacity.get(),
+    transform: [
+      { translateX: decisionX.get() },
+      {
+        scale: interpolate(
+          Math.abs(decisionX.get()),
+          [0, viewport.width],
+          [1, 0.985],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+  const decisionFeedbackStyle = useAnimatedStyle(() => ({
+    opacity: decisionFeedback.get(),
+    transform: [{ scale: interpolate(decisionFeedback.get(), [0, 1], [0.76, 1]) }],
+  }));
 
   useEffect(() => {
     if (isPreview || !id || !session?.user.id) return;
@@ -162,6 +197,9 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const handleDecision = async (action: SwipeAction) => {
     if (decisionBusy || !session?.user.id || isPreview) return;
     setDecisionBusy(true);
+    setDecisionAction(action);
+    hapticsService.swipe(action);
+    decisionFeedback.set(withSpring(1, { damping: 16, stiffness: 230 }));
     recordSwipe(profile.id, action);
 
     try {
@@ -170,13 +208,36 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         : await discoveryService.swipe(session.user.id, profile.id, action);
       if (__DEV__) recycleProfiles([profile]);
       if (result.matchId) {
+        decisionFeedback.set(withTiming(0, { duration: 120 }));
+        setDecisionAction(null);
+        setDecisionBusy(false);
         setMatchedMatchId(result.matchId);
         return;
       }
+
+      const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled();
+      if (reduceMotion) {
+        router.replace('/(tabs)/discover');
+        return;
+      }
+
+      decisionOpacity.set(withTiming(0.88, { duration: 230 }));
+      decisionX.set(
+        withTiming(action === 'like' ? viewport.width * 1.12 : -viewport.width * 1.12, {
+          duration: 230,
+          easing: Easing.out(Easing.cubic),
+        }),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 230));
       router.replace('/(tabs)/discover');
     } catch {
       restoreSwipe(profile);
+      hapticsService.error();
       setDecisionBusy(false);
+      setDecisionAction(null);
+      decisionFeedback.set(withTiming(0, { duration: 120 }));
+      decisionOpacity.set(withTiming(1, { duration: 160 }));
+      decisionX.set(withSpring(0, { damping: 18, stiffness: 210 }));
       Alert.alert('선택을 저장하지 못했어요', '연결을 확인하고 다시 시도해주세요.');
     }
   };
@@ -208,6 +269,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         accessibilityLabel="이 프로필 패스"
         accessibilityRole="button"
         disabled={decisionBusy}
+        hitSlop={6}
         onPress={() => handleDecision('pass')}
         style={({ pressed }) => [
           styles.passButton,
@@ -232,23 +294,54 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
 
   return (
     <Screen edges={['left', 'right', 'bottom']} padded={false} style={styles.screen}>
-      <StandardProfileDetail
-        footer={footer}
-        headerLeft={{
-          accessibilityLabel: t('profileDetail.back'),
-          icon: 'chevron-back',
-          onPress: () => router.back(),
-        }}
-        headerRight={{
-          accessibilityLabel: isPreview ? '프로필 수정' : t('profileDetail.safetyOptions'),
-          icon: isPreview ? 'pencil' : 'ellipsis-horizontal',
-          onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
-        }}
-        onSafety={isPreview ? undefined : () => setSafetyOpen(true)}
-        photoBlurRadius={isPreview && !profile.isPhotoReviewed ? 18 : 0}
-        photoStatusLabel={isPreview && !profile.isPhotoReviewed ? '공개 사진 심사 중' : undefined}
-        profile={profile}
-      />
+      <Animated.View
+        pointerEvents={decisionBusy ? 'none' : 'auto'}
+        style={[styles.detailSurface, decisionSurfaceStyle]}
+      >
+        <StandardProfileDetail
+          footer={footer}
+          headerLeft={{
+            accessibilityLabel: t('profileDetail.back'),
+            icon: 'chevron-back',
+            onPress: () => router.back(),
+          }}
+          headerRight={{
+            accessibilityLabel: isPreview ? '프로필 수정' : t('profileDetail.safetyOptions'),
+            icon: isPreview ? 'pencil' : 'ellipsis-horizontal',
+            onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
+          }}
+          onSafety={isPreview ? undefined : () => setSafetyOpen(true)}
+          photoBlurRadius={isPreview && !profile.isPhotoReviewed ? 18 : 0}
+          photoStatusLabel={isPreview && !profile.isPhotoReviewed ? '공개 사진 심사 중' : undefined}
+          profile={profile}
+        />
+        {decisionAction ? (
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            pointerEvents="none"
+            style={[styles.decisionFeedback, decisionFeedbackStyle]}
+          >
+            <View
+              style={[
+                styles.decisionFeedbackMark,
+                decisionAction === 'like'
+                  ? styles.decisionFeedbackPick
+                  : styles.decisionFeedbackPass,
+              ]}
+            >
+              <Ionicons
+                color={decisionAction === 'like' ? palette.white : palette.ink}
+                name={decisionAction === 'like' ? 'heart' : 'close'}
+                size={32}
+              />
+            </View>
+            <Text style={styles.decisionFeedbackText}>
+              {decisionAction === 'like' ? 'PICK' : 'PASS'}
+            </Text>
+          </Animated.View>
+        ) : null}
+      </Animated.View>
 
       {!isPreview ? (
         <>
@@ -355,6 +448,42 @@ function SafetyAction({
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
+  detailSurface: { flex: 1 },
+  decisionFeedback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    left: 0,
+    pointerEvents: 'none',
+    position: 'absolute',
+    right: 0,
+    top: '38%',
+  },
+  decisionFeedbackMark: {
+    alignItems: 'center',
+    borderRadius: 38,
+    height: 76,
+    justifyContent: 'center',
+    width: 76,
+    ...elevation.md,
+  },
+  decisionFeedbackPass: {
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderColor: 'rgba(17,17,17,0.12)',
+    borderWidth: 1,
+  },
+  decisionFeedbackPick: { backgroundColor: palette.pink },
+  decisionFeedbackText: {
+    backgroundColor: 'rgba(17,17,17,0.72)',
+    borderRadius: radius.pill,
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+    marginTop: 9,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   modalBackdrop: { backgroundColor: 'rgba(12,12,16,0.46)', flex: 1, justifyContent: 'flex-end' },
   safetySheet: {
     borderTopLeftRadius: 28,

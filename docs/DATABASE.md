@@ -52,6 +52,8 @@
 
 Gold 권한은 `subscriptions.product_id = 'wichu_gold_monthly'`의 활성 상태와 만료일로만 판정한다. client는 구독을 쓸 수 없고, 비공개 DB 함수는 외부에 만료일을 노출하지 않은 채 활성 여부만 반환한다. 방문자 목록 RPC는 Gold가 유효한 본인에게만 결과를 반환한다.
 
+채팅 이미지는 private `chat-media` Storage bucket에 `sender/match/client-message/file` 경로로 저장한다. Storage RLS가 Gold 발신자의 활성 매치 업로드만 허용하고, 조회는 차단되지 않은 활성 매치 참여자에게만 허용한다. `send_my_image_message`는 메시지당 1~5장, 허용 MIME, 실제 업로드 객체, idempotency key와 전송 속도를 서버에서 다시 검증한다. 메시지 행에는 immutable attachment metadata만 저장하며 앱은 조회 시 짧은 만료의 signed URL을 발급한다.
+
 RevenueCat webhook은 service-role 전용 `process_revenuecat_subscription_event`로만 구독을 반영한다. `private.monetization_provider_events`는 provider event ID를 중복 방지 키로 삼고, `private.subscription_provider_state`는 상품·플랫폼별 최신 event 시각을 저장해 느리게 도착한 이전 webhook이 권한을 되돌리지 못하게 한다.
 
 `touch_presence()`는 인증된 사용자가 자신의 `last_active_at`만 갱신하는 `security invoker` 함수다. 앱이 활성 상태일 때 진입 즉시와 2분 간격으로 호출하고, 백그라운드에서는 중지한다. 5분 이내는 온라인, 이후 1시간 미만은 분, 24시간 미만은 시간, 7일 이내는 일 단위로 표시한다.

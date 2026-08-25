@@ -41,6 +41,11 @@ const goldBenefits: {
     title: '무제한 되돌리기',
     detail: '광고 시청 없이 되돌릴 수 있습니다',
   },
+  {
+    illustration: illustratedIcons.profilePhotos,
+    title: '채팅 사진 전송',
+    detail: '사진을 한 번에 최대 5장 보낼 수 있습니다',
+  },
 ];
 
 const planComparison = [
@@ -48,6 +53,7 @@ const planComparison = [
   { label: '자동 광고 제거', free: 'no', adFree: 'yes', gold: 'yes' },
   { label: '방문자 확인', free: 'no', adFree: 'no', gold: 'yes' },
   { label: '우선 노출', free: 'no', adFree: 'no', gold: 'yes' },
+  { label: '채팅 사진', free: 'no', adFree: 'no', gold: '최대 5장' },
   { label: '되돌리기', free: '광고 1회', adFree: '광고 1회', gold: '무제한' },
 ];
 

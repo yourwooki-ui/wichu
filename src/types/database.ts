@@ -295,6 +295,7 @@ export type Database = {
           sender_id: string;
           client_id: string | null;
           content: string;
+          attachments: Json;
           original_language: string | null;
           translated_content: Json;
           created_at: string;
@@ -305,6 +306,7 @@ export type Database = {
           sender_id?: string;
           client_id?: string | null;
           content: string;
+          attachments?: Json;
           original_language?: string | null;
           translated_content?: Json;
           created_at?: string;
@@ -315,6 +317,7 @@ export type Database = {
           sender_id?: string;
           client_id?: string | null;
           content?: string;
+          attachments?: Json;
           original_language?: string | null;
           translated_content?: Json;
           created_at?: string;
@@ -629,6 +632,16 @@ export type Database = {
           p_client_id: string;
           p_content: string;
           p_original_language?: string;
+        };
+        Returns: Database['public']['Tables']['messages']['Row'];
+      };
+      send_my_image_message: {
+        Args: {
+          p_match_id: string;
+          p_client_id: string;
+          p_content: string;
+          p_original_language?: string;
+          p_attachments?: Json;
         };
         Returns: Database['public']['Tables']['messages']['Row'];
       };

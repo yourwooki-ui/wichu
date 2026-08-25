@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { randomUUID } from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +21,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +31,10 @@ import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, radius } from '@/constants/theme';
+import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
+import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
 import {
   chatService,
   type ChatMessage,
@@ -41,6 +46,7 @@ import {
 } from '@/features/chat/services/translation-service';
 import { getMockConversation, mockConversations } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { safetyService } from '@/features/settings/services/safety-service';
 import {
   ReportReasonSheet,
@@ -66,6 +72,9 @@ type LocalMessage = {
   translated?: string;
   translationStatus?: 'translating' | 'failed';
   status?: 'sending' | 'failed';
+  attachments?: ChatImageAttachment[];
+  imageDrafts?: ChatImageDraft[];
+  uploadProgress?: { completed: number; total: number };
 };
 
 export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
@@ -74,12 +83,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const insets = useSafeAreaInsets();
   const { i18n } = useTranslation();
   const { session } = useAuthSession();
+  const entitlement = usePassEntitlement();
   const userId = session?.user.id;
   const scrollRef = useRef<ScrollView>(null);
   const previousMessageCount = useRef(0);
   const mockConversation = getMockConversation(matchId) ?? mockConversations[0];
   const isMock = matchId.startsWith('mock-');
   const [draft, setDraft] = useState('');
+  const [selectedImages, setSelectedImages] = useState<ChatImageDraft[]>([]);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const [now] = useState(() => Date.now());
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -87,6 +100,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [messages, setMessages] = useState<LocalMessage[]>(() =>
     isMock ? createMockMessages(mockConversation) : [],
   );
+  const hasGoldPass = entitlement.data?.tier === 'gold';
 
   const connectionQuery = useQuery({
     enabled: !isMock && Boolean(userId),
@@ -172,12 +186,44 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       current.map((item) => (item.id === message.id ? { ...item, status: 'sending' } : item)),
     );
     try {
-      const saved = await chatService.sendMessage(
-        matchId,
-        message.id,
-        message.content,
-        message.originalLanguage ?? '',
-      );
+      let attachments = message.attachments ?? [];
+      if (!attachments.length && message.imageDrafts?.length) {
+        attachments = await chatMediaService.uploadImages(
+          userId,
+          matchId,
+          message.id,
+          message.imageDrafts,
+          (completed, total) => {
+            setMessages((current) =>
+              current.map((item) =>
+                item.id === message.id ? { ...item, uploadProgress: { completed, total } } : item,
+              ),
+            );
+          },
+        );
+        setMessages((current) =>
+          current.map((item) =>
+            item.id === message.id
+              ? { ...item, attachments, imageDrafts: undefined, uploadProgress: undefined }
+              : item,
+          ),
+        );
+      }
+
+      const saved = attachments.length
+        ? await chatService.sendImageMessage(
+            matchId,
+            message.id,
+            message.content,
+            attachments,
+            message.originalLanguage ?? '',
+          )
+        : await chatService.sendMessage(
+            matchId,
+            message.id,
+            message.content,
+            message.originalLanguage ?? '',
+          );
       setMessages((current) => mergeMessage(current, toLocalMessage(saved, userId, i18n.language)));
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
     } catch {
@@ -187,21 +233,84 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     }
   };
 
+  const pickImages = async () => {
+    if (entitlement.isLoading) return;
+    if (entitlement.isError) {
+      Alert.alert('이용권을 확인하지 못했어요', '연결 상태를 확인한 뒤 다시 시도해주세요.');
+      return;
+    }
+    if (!hasGoldPass) {
+      const actions = MONETIZATION_ENABLED
+        ? [
+            { text: '나중에', style: 'cancel' as const },
+            { text: 'Gold Pass 보기', onPress: () => router.push('/(tabs)/shop') },
+          ]
+        : [{ text: '확인' }];
+      Alert.alert(
+        'Gold Pass 전용 기능이에요',
+        'Gold 회원은 사진을 한 번에 최대 5장까지 안전하게 보낼 수 있어요.',
+        actions,
+      );
+      return;
+    }
+
+    const remaining = CHAT_IMAGE_LIMIT - selectedImages.length;
+    if (remaining <= 0) {
+      Alert.alert('사진은 5장까지', '선택한 사진을 지운 뒤 다른 사진을 추가해주세요.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsMultipleSelection: true,
+        exif: false,
+        mediaTypes: ['images'],
+        orderedSelection: true,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.82,
+        selectionLimit: remaining,
+      });
+      if (result.canceled) return;
+      const additions = result.assets.slice(0, remaining).map((asset) => ({
+        ...asset,
+        draftId: randomUUID(),
+      }));
+      await chatMediaService.validateDrafts(additions);
+      setSelectedImages((current) => [...current, ...additions].slice(0, CHAT_IMAGE_LIMIT));
+    } catch (error) {
+      Alert.alert(
+        '사진을 추가하지 못했어요',
+        error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.',
+      );
+    }
+  };
+
   const send = () => {
     const content = draft.trim();
-    if (!content || !userId) return;
+    if ((!content && !selectedImages.length) || !userId) return;
     const optimisticId = randomUUID();
     const optimisticMessage: LocalMessage = {
       id: optimisticId,
       content,
+      imageDrafts: selectedImages.length ? selectedImages : undefined,
       mine: true,
+      originalLanguage: normalizeLanguage(i18n.language),
       status: isMock ? undefined : 'sending',
     };
     setDraft('');
+    setSelectedImages([]);
     setMessages((current) => [...current, optimisticMessage]);
     hapticsService.selection();
     if (isMock) return;
     void deliver(optimisticMessage);
+  };
+
+  const openImageViewer = (message: LocalMessage, index: number) => {
+    const images = getMessageImageSources(message);
+    if (!images.length) return;
+    setViewerImages(images);
+    setViewerIndex(Math.min(index, images.length - 1));
   };
 
   const translate = async (message: LocalMessage) => {
@@ -491,13 +600,26 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                   key={message.id}
                   style={[styles.messageBlock, message.mine ? styles.mineBlock : styles.theirBlock]}
                 >
-                  <View
-                    style={[styles.bubble, message.mine ? styles.mineBubble : styles.theirBubble]}
-                  >
-                    <Text style={[styles.bubbleText, message.mine && styles.mineText]}>
-                      {message.content}
-                    </Text>
-                  </View>
+                  {getMessageImageItems(message).length ? (
+                    <MessageImageGrid
+                      images={getMessageImageItems(message)}
+                      mine={message.mine}
+                      onPress={(index) => openImageViewer(message, index)}
+                    />
+                  ) : null}
+                  {message.content ? (
+                    <View
+                      style={[
+                        styles.bubble,
+                        message.mine ? styles.mineBubble : styles.theirBubble,
+                        getMessageImageItems(message).length ? styles.bubbleAfterMedia : null,
+                      ]}
+                    >
+                      <Text style={[styles.bubbleText, message.mine && styles.mineText]}>
+                        {message.content}
+                      </Text>
+                    </View>
+                  ) : null}
                   {message.translated ? (
                     <View style={styles.translation}>
                       <IllustratedIcon size={18} source={illustratedIcons.translation} />
@@ -550,7 +672,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                           message.status === 'failed' && styles.deliveryFailed,
                         ]}
                       >
-                        {message.status === 'sending' ? '전송 중…' : '전송 실패 · 다시 보내기'}
+                        {message.status === 'sending'
+                          ? message.uploadProgress
+                            ? `사진 올리는 중 ${message.uploadProgress.completed}/${message.uploadProgress.total}`
+                            : '전송 중…'
+                          : '전송 실패 · 다시 보내기'}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -560,28 +686,77 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           ) : null}
         </ScrollView>
 
-        <View style={[styles.composerArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <View style={styles.composer}>
-            <TextInput
-              editable={!failed}
-              maxLength={4000}
-              multiline
-              onChangeText={setDraft}
-              placeholder={`${profile.name}님에게 메시지 보내기`}
-              placeholderTextColor="#93939B"
-              style={styles.input}
-              value={draft}
-            />
+        <View style={[styles.composerShell, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {selectedImages.length ? (
+            <View style={styles.attachmentTray}>
+              <View style={styles.attachmentTrayHeading}>
+                <Text style={styles.attachmentTrayTitle}>보낼 사진</Text>
+                <Text style={styles.attachmentCount}>
+                  {selectedImages.length}/{CHAT_IMAGE_LIMIT}
+                </Text>
+              </View>
+              <ScrollView
+                contentContainerStyle={styles.attachmentPreviewContent}
+                horizontal
+                keyboardShouldPersistTaps="always"
+                showsHorizontalScrollIndicator={false}
+              >
+                {selectedImages.map((image, index) => (
+                  <View key={image.draftId} style={styles.attachmentPreviewWrap}>
+                    <Image source={{ uri: image.uri }} style={styles.attachmentPreview} />
+                    <Pressable
+                      accessibilityLabel={`${index + 1}번째 사진 제거`}
+                      hitSlop={8}
+                      onPress={() =>
+                        setSelectedImages((current) =>
+                          current.filter((item) => item.draftId !== image.draftId),
+                        )
+                      }
+                      style={styles.attachmentRemove}
+                    >
+                      <Ionicons color={palette.white} name="close" size={14} />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+          <View style={styles.composerArea}>
+            <Pressable
+              accessibilityLabel={hasGoldPass ? '사진 추가' : 'Gold Pass 사진 전송 기능 알아보기'}
+              disabled={failed || entitlement.isLoading}
+              hitSlop={4}
+              onPress={() => void pickImages()}
+              style={({ pressed }) => [styles.mediaButton, pressed && styles.pressed]}
+            >
+              <IllustratedIcon size={30} source={illustratedIcons.profilePhotos} />
+              <Text style={styles.goldDiamond}>◆</Text>
+            </Pressable>
+            <View style={styles.composer}>
+              <TextInput
+                editable={!failed}
+                maxLength={4000}
+                multiline
+                onChangeText={setDraft}
+                placeholder={`${profile.name}님에게 메시지 보내기`}
+                placeholderTextColor="#93939B"
+                style={styles.input}
+                value={draft}
+              />
+            </View>
+            <Pressable
+              accessibilityLabel="메시지 보내기"
+              disabled={(!draft.trim() && !selectedImages.length) || failed}
+              onPress={send}
+              hitSlop={6}
+              style={[
+                styles.sendButton,
+                (!draft.trim() && !selectedImages.length) || failed ? styles.sendDisabled : null,
+              ]}
+            >
+              <Ionicons color={palette.white} name="arrow-up" size={20} />
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityLabel="메시지 보내기"
-            disabled={!draft.trim() || failed}
-            onPress={send}
-            hitSlop={6}
-            style={[styles.sendButton, (!draft.trim() || failed) && styles.sendDisabled]}
-          >
-            <Ionicons color={palette.white} name="arrow-up" size={20} />
-          </Pressable>
         </View>
       </KeyboardAvoidingView>
 
@@ -649,6 +824,14 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         onSelect={(reason) => void submitReport(reason)}
         visible={reportOpen}
       />
+
+      <ImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        key={`${viewerIndex}-${viewerImages.join('|')}`}
+        onClose={() => setViewerImages([])}
+        visible={viewerImages.length > 0}
+      />
     </Screen>
   );
 }
@@ -662,6 +845,20 @@ function createMockMessages(conversation: (typeof mockConversations)[number]): L
       content: conversation.message.replace(/^You: /, ''),
       mine: false,
       translated: '내 언어로 번역됨',
+    },
+    {
+      id: '4',
+      content: '여기 정말 좋았어요. 다음에는 같이 가요!',
+      mine: false,
+      attachments: [
+        {
+          path: 'mock/chat-photo.jpg',
+          mimeType: 'image/jpeg',
+          width: 900,
+          height: 1200,
+          url: conversation.profile.photo,
+        },
+      ],
     },
   ];
 }
@@ -680,8 +877,25 @@ function toLocalMessage(message: ChatMessage, userId: string, locale: string): L
     content: message.content,
     mine: message.sender_id === userId,
     originalLanguage: message.original_language ?? undefined,
+    attachments: message.attachments,
     translated: typeof translated === 'string' ? translated : undefined,
   };
+}
+
+type MessageImageItem = { key: string; uri?: string };
+
+function getMessageImageItems(message: LocalMessage): MessageImageItem[] {
+  if (message.attachments?.length) {
+    return message.attachments.map((attachment) => ({
+      key: attachment.path,
+      uri: attachment.url ?? attachment.localUri,
+    }));
+  }
+  return (message.imageDrafts ?? []).map((image) => ({ key: image.draftId, uri: image.uri }));
+}
+
+function getMessageImageSources(message: LocalMessage) {
+  return getMessageImageItems(message).flatMap((image) => (image.uri ? [image.uri] : []));
 }
 
 function isTranslationMap(
@@ -696,6 +910,92 @@ function mergeMessage(current: LocalMessage[], incoming: LocalMessage) {
   const next = [...current];
   next[index] = incoming;
   return next;
+}
+
+function MessageImageGrid({
+  images,
+  mine,
+  onPress,
+}: {
+  images: MessageImageItem[];
+  mine: boolean;
+  onPress: (index: number) => void;
+}) {
+  const single = images.length === 1;
+  return (
+    <View style={[styles.imageGrid, mine ? styles.imageGridMine : styles.imageGridTheirs]}>
+      {images.map((image, index) => (
+        <Pressable
+          accessibilityLabel={`${index + 1}번째 사진 크게 보기`}
+          disabled={!image.uri}
+          key={image.key}
+          onPress={() => onPress(index)}
+          style={[styles.messageImageWrap, single && styles.messageImageWrapSingle]}
+        >
+          {image.uri ? (
+            <Image
+              cachePolicy="memory-disk"
+              contentFit="cover"
+              source={{ uri: image.uri }}
+              style={styles.messageImage}
+              transition={140}
+            />
+          ) : (
+            <View style={styles.messageImageFallback}>
+              <Ionicons color={palette.inkMuted} name="image-outline" size={25} />
+              <Text style={styles.messageImageFallbackText}>사진을 불러오지 못했어요</Text>
+            </View>
+          )}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ImageViewer({
+  images,
+  initialIndex,
+  onClose,
+  visible,
+}: {
+  images: string[];
+  initialIndex: number;
+  onClose: () => void;
+  visible: boolean;
+}) {
+  const { height, width } = useWindowDimensions();
+  const viewerInsets = useSafeAreaInsets();
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+
+  return (
+    <AppModal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View accessibilityViewIsModal style={styles.viewerBackdrop}>
+        <View style={[styles.viewerHeader, { paddingTop: Math.max(viewerInsets.top + 6, 18) }]}>
+          <Text style={styles.viewerCount}>
+            {activeIndex + 1} / {images.length}
+          </Text>
+          <Pressable accessibilityLabel="사진 닫기" hitSlop={8} onPress={onClose}>
+            <Ionicons color={palette.white} name="close" size={30} />
+          </Pressable>
+        </View>
+        <ScrollView
+          contentOffset={{ x: width * initialIndex, y: 0 }}
+          horizontal
+          onMomentumScrollEnd={(event) =>
+            setActiveIndex(Math.round(event.nativeEvent.contentOffset.x / width))
+          }
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+        >
+          {images.map((uri) => (
+            <View key={uri} style={{ height, justifyContent: 'center', width }}>
+              <Image contentFit="contain" source={{ uri }} style={styles.viewerImage} />
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    </AppModal>
+  );
 }
 
 function SafetyAction({
@@ -850,6 +1150,7 @@ const styles = StyleSheet.create({
   mineBlock: { alignItems: 'flex-end', alignSelf: 'flex-end' },
   theirBlock: { alignSelf: 'flex-start' },
   bubble: { borderRadius: 20, paddingHorizontal: 15, paddingVertical: 11 },
+  bubbleAfterMedia: { marginTop: 4 },
   mineBubble: { backgroundColor: palette.ink, borderBottomRightRadius: 6 },
   theirBubble: { backgroundColor: palette.white, borderBottomLeftRadius: 6 },
   bubbleText: { color: palette.ink, fontSize: 14, lineHeight: 20 },
@@ -877,15 +1178,94 @@ const styles = StyleSheet.create({
   deliveryTheirs: { alignSelf: 'flex-start' },
   deliveryText: { color: palette.inkMuted, fontSize: 10, marginRight: 3 },
   deliveryFailed: { color: '#D52C47', fontWeight: '800' },
-  composerArea: {
-    alignItems: 'flex-end',
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    overflow: 'hidden',
+    width: 242,
+  },
+  imageGridMine: { borderBottomRightRadius: 8, borderTopLeftRadius: 19, borderTopRightRadius: 19 },
+  imageGridTheirs: {
+    borderBottomLeftRadius: 8,
+    borderTopLeftRadius: 19,
+    borderTopRightRadius: 19,
+  },
+  messageImageWrap: {
+    backgroundColor: '#E1E1E5',
+    height: 145,
+    overflow: 'hidden',
+    width: 119.5,
+  },
+  messageImageWrapSingle: { height: 292, width: 242 },
+  messageImage: { height: '100%', width: '100%' },
+  messageImageFallback: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 7,
+    justifyContent: 'center',
+    padding: 10,
+  },
+  messageImageFallbackText: {
+    color: palette.inkMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  composerShell: {
     backgroundColor: palette.white,
     borderTopColor: '#E4E4E7',
     borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
+  },
+  composerArea: {
+    alignItems: 'flex-end',
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
     paddingHorizontal: 12,
-    paddingTop: 10,
+  },
+  mediaButton: {
+    alignItems: 'center',
+    height: 42,
+    justifyContent: 'center',
+    position: 'relative',
+    width: 42,
+  },
+  goldDiamond: {
+    color: '#C99500',
+    fontSize: 10,
+    position: 'absolute',
+    right: 1,
+    textShadowColor: 'rgba(255,255,255,0.9)',
+    textShadowOffset: { height: 0, width: 0 },
+    textShadowRadius: 2,
+    top: 0,
+  },
+  attachmentTray: { paddingBottom: 9 },
+  attachmentTrayHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 7,
+    paddingHorizontal: 14,
+  },
+  attachmentTrayTitle: { color: palette.ink, fontSize: 11, fontWeight: '900' },
+  attachmentCount: { color: '#A17500', fontSize: 10, fontWeight: '900' },
+  attachmentPreviewContent: { gap: 8, paddingHorizontal: 12 },
+  attachmentPreviewWrap: { height: 62, position: 'relative', width: 62 },
+  attachmentPreview: { backgroundColor: '#E1E1E5', borderRadius: 13, height: 62, width: 62 },
+  attachmentRemove: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,17,0.82)',
+    borderColor: palette.white,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    height: 20,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    top: -4,
+    width: 20,
   },
   composer: {
     alignItems: 'flex-end',
@@ -915,6 +1295,21 @@ const styles = StyleSheet.create({
     width: 42,
   },
   sendDisabled: { backgroundColor: '#C8C8CE' },
+  viewerBackdrop: { backgroundColor: '#08080A', flex: 1 },
+  viewerHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 0,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 2,
+  },
+  viewerCount: { color: palette.white, fontSize: 13, fontWeight: '800' },
+  viewerImage: { height: '100%', width: '100%' },
   modalBackdrop: { backgroundColor: 'rgba(12,12,16,0.46)', flex: 1, justifyContent: 'flex-end' },
   safetySheet: {
     backgroundColor: palette.white,

@@ -7,6 +7,7 @@ import Animated, {
   interpolate,
   runOnJS,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withSequence,
   withSpring,
@@ -52,6 +53,7 @@ export function SwipeDeck({
   const router = useRouter();
   const theme = useAppTheme();
   const { height, width } = useAppViewport();
+  const reduceMotion = useReducedMotion();
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
   const lastTapRef = useRef(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -89,18 +91,19 @@ export function SwipeDeck({
     (action: SwipeAction) => {
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
-      translateY.set(withTiming(10, { duration: SWIPE_EXIT_DURATION }));
+      const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
+      translateY.set(withTiming(10, { duration: exitDuration }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: SWIPE_EXIT_DURATION },
+          { duration: exitDuration },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
         ),
       );
     },
-    [commitSwipe, interactionLocked, translateX, translateY, width],
+    [commitSwipe, interactionLocked, reduceMotion, translateX, translateY, width],
   );
 
   const handleCardPress = useCallback(() => {
@@ -112,9 +115,11 @@ export function SwipeDeck({
       if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
       singleTapTimerRef.current = null;
       lastTapRef.current = 0;
-      pickPulse.set(
-        withSequence(withTiming(1, { duration: 110 }), withTiming(0, { duration: 150 })),
-      );
+      if (!reduceMotion) {
+        pickPulse.set(
+          withSequence(withTiming(1, { duration: 110 }), withTiming(0, { duration: 150 })),
+        );
+      }
       startSwipe('like');
       return;
     }
@@ -124,7 +129,7 @@ export function SwipeDeck({
       lastTapRef.current = 0;
       openProfile();
     }, DOUBLE_TAP_DELAY);
-  }, [openProfile, pickPulse, startSwipe]);
+  }, [openProfile, pickPulse, reduceMotion, startSwipe]);
 
   useEffect(
     () => () => {
@@ -145,11 +150,12 @@ export function SwipeDeck({
       'worklet';
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
-      translateY.set(withTiming(10, { duration: SWIPE_EXIT_DURATION }));
+      const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
+      translateY.set(withTiming(10, { duration: exitDuration }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: SWIPE_EXIT_DURATION },
+          { duration: exitDuration },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
@@ -177,13 +183,18 @@ export function SwipeDeck({
         if (event.translationX > SWIPE_THRESHOLD || isFastRight) finishSwipe('like');
         else if (event.translationX < -SWIPE_THRESHOLD || isFastLeft) finishSwipe('pass');
         else {
-          translateX.set(withSpring(0, { damping: 18, stiffness: 210 }));
-          translateY.set(withSpring(0, { damping: 18, stiffness: 210 }));
+          if (reduceMotion) {
+            translateX.set(withTiming(0, { duration: 0 }));
+            translateY.set(withTiming(0, { duration: 0 }));
+          } else {
+            translateX.set(withSpring(0, { damping: 18, stiffness: 210 }));
+            translateY.set(withSpring(0, { damping: 18, stiffness: 210 }));
+          }
         }
       });
 
     return Gesture.Simultaneous(pan, Gesture.Native());
-  }, [commitSwipe, interactionLocked, translateX, translateY, width]);
+  }, [commitSwipe, interactionLocked, reduceMotion, translateX, translateY, width]);
 
   const topCardStyle = useAnimatedStyle(() => ({
     opacity: interpolate(

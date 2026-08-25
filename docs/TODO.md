@@ -57,6 +57,7 @@
 - [x] Matches UI: 신규 Match 카드 + 기존 Match 목록 + Say hi 진입
 - [x] Matches 카테고리: 나를 픽함 / 매칭됨 / 프로필 방문자 전환형 화면
 - [x] 프로필 방문 기록 테이블·RLS·조회 서비스 연결 — Gold 전용 조회, RPC 기록, 최소 권한 원격 검증 완료
+- [x] Gold 채팅 사진 묶음 전송 — private Storage, 서버 Gold/매치 검증, 최대 5장 선택·진행·재전송·전체 보기와 채팅 목록 미리보기 연결
 - [x] Chat List UI: 온라인 목록 + 검색 + unread/마지막 메시지/번역 상태
 - [x] Chat Room UI: 실제 메시지 조회·낙관적 전송 + 번역 표시 + 신고/차단 안전 메뉴
 - [x] Matches/Chat 원격 데이터 연결: 매치·메시지·Realtime·unread·실패 재전송 및 선택 번역 Function 배포, DeepL secret 등록과 실번역 QA 완료

@@ -37,4 +37,11 @@ export const hapticsService = {
     }
     safely(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
   },
+  error() {
+    if (Platform.OS === 'android') {
+      safely(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject));
+      return;
+    }
+    safely(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
+  },
 };

@@ -6,4 +6,5 @@ export const hapticsService = {
   selection() {},
   swipe(_action: SwipeAction) {},
   success() {},
+  error() {},
 };

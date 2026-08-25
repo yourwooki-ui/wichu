@@ -1,7 +1,7 @@
 import { Image, type ImageSource } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -11,6 +11,7 @@ import { layout, palette } from '@/constants/theme';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
 import { DiscoverGestureCoach } from '@/features/discover/components/DiscoverGestureCoach';
+import { DiscoverUndoCoach } from '@/features/discover/components/DiscoverUndoCoach';
 import { DiscoveryFilterSheet } from '@/features/discover/components/DiscoveryFilterSheet';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { NotificationsSheet } from '@/features/discover/components/NotificationsSheet';
@@ -18,7 +19,9 @@ import { useDiscoverDeck } from '@/features/discover/hooks/use-discover-deck';
 import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
 import { REWARDED_ADS_ENABLED } from '@/constants/features';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import type { Profile, SwipeAction } from '@/types/profile';
 
 const headerIcons = {
   undo: illustratedIcons.rewind,
@@ -32,9 +35,11 @@ export function DiscoverScreen() {
   const theme = useAppTheme();
   const { session } = useAuthSession();
   const deck = useDiscoverDeck();
-  const { clearLastMatch, lastMatch } = deck;
+  const { clearLastMatch, lastMatch, swipe: swipeDeck } = deck;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [undoCoachAvailable, setUndoCoachAvailable] = useState(false);
+  const [undoCoachVisible, setUndoCoachVisible] = useState(false);
   const notificationsQuery = useQuery({
     enabled: Boolean(session?.user.id),
     queryFn: () => matchesService.listConnections(session!.user.id),
@@ -43,6 +48,38 @@ export function DiscoverScreen() {
   });
   // 시트와 같은 판정을 써야 배지와 내용이 어긋나지 않는다.
   const hasUnreadNotifications = buildNotificationItems(notificationsQuery.data).length > 0;
+
+  useEffect(() => {
+    let active = true;
+    const userId = session?.user.id;
+    if (!userId) return () => undefined;
+
+    void tutorialState.hasCompletedUndoCoach(userId).then((completed) => {
+      if (active) {
+        setUndoCoachAvailable(!completed);
+        setUndoCoachVisible(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [session?.user.id]);
+
+  const handleSwipe = useCallback(
+    (profile: Profile, action: SwipeAction) => {
+      swipeDeck(profile, action);
+      const userId = session?.user.id;
+      if (action !== 'pass' || !undoCoachAvailable || !userId || coach === '1') return;
+
+      // SwipeDeck이 퇴장 애니메이션을 마친 뒤 호출하므로 다음 카드와 되돌리기 버튼이
+      // 준비된 정확한 순간에 한 번만 안내한다.
+      setUndoCoachAvailable(false);
+      setUndoCoachVisible(true);
+      void tutorialState.completeUndoCoach(userId).catch(() => undefined);
+    },
+    [coach, session?.user.id, swipeDeck, undoCoachAvailable],
+  );
 
   const handleUndo = () => {
     if (deck.canUndoWithoutAd) {
@@ -115,7 +152,7 @@ export function DiscoverScreen() {
         isLoading={deck.isLoading}
         onAdjustFilters={() => setFiltersOpen(true)}
         onRetry={deck.retry}
-        onSwipe={deck.swipe}
+        onSwipe={handleSwipe}
         profiles={deck.profiles}
       />
       {filtersOpen ? (
@@ -138,6 +175,7 @@ export function DiscoverScreen() {
         onComplete={() => router.replace('/(tabs)/discover')}
         userId={session?.user.id}
       />
+      <DiscoverUndoCoach onClose={() => setUndoCoachVisible(false)} visible={undoCoachVisible} />
     </Screen>
   );
 }

@@ -5,6 +5,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+} from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
@@ -309,7 +315,7 @@ export function MatchesScreen() {
           />
         ) : (
           <View style={styles.grid}>
-            {profiles.map((profile) => (
+            {profiles.map((profile, index) => (
               <ProfileTile
                 activityTime={
                   category === 'visitors'
@@ -327,7 +333,8 @@ export function MatchesScreen() {
                       : visitorTimes[profile.id]
                 }
                 category={category}
-                key={profile.id}
+                index={index}
+                key={`${category}-${profile.id}`}
                 locked={visitorsLocked}
                 onChat={() => openChat(profile)}
                 onPress={() =>
@@ -350,6 +357,7 @@ export function MatchesScreen() {
 type ProfileTileProps = {
   activityTime?: string;
   category: MatchCategory;
+  index: number;
   locked?: boolean;
   onChat: () => void;
   onPress: () => void;
@@ -359,6 +367,7 @@ type ProfileTileProps = {
 function ProfileTile({
   activityTime,
   category,
+  index,
   locked = false,
   onChat,
   onPress,
@@ -377,7 +386,17 @@ function ProfileTile({
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 5) * 42)
+        .duration(240)
+        .reduceMotion(ReduceMotion.System)}
+      exiting={FadeOut.duration(140).reduceMotion(ReduceMotion.System)}
+      layout={LinearTransition.springify()
+        .damping(20)
+        .stiffness(190)
+        .reduceMotion(ReduceMotion.System)}
+      style={styles.card}
+    >
       <Pressable
         accessibilityLabel={locked ? 'Gold Pass로 방문자 확인' : `${profile.name} 프로필 열기`}
         accessibilityRole="button"
@@ -459,7 +478,7 @@ function ProfileTile({
           <Text style={styles.cardActionText}>메시지</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
