@@ -5,12 +5,15 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import { BrandWordmark } from '@/components/BrandWordmark';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
+import { palette } from '@/constants/theme';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
@@ -21,8 +24,23 @@ import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-mone
 import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
-SplashScreen.setOptions({ duration: 450, fade: true });
+SplashScreen.setOptions({ duration: 240, fade: true });
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+function AppLaunchSurface() {
+  const theme = useAppTheme();
+
+  return (
+    <View
+      accessibilityLabel="WICHU를 여는 중"
+      accessibilityRole="progressbar"
+      style={[styles.launchSurface, { backgroundColor: theme.colors.background }]}
+    >
+      <BrandWordmark color={theme.colors.text} size={34} />
+      <ActivityIndicator color={palette.pink} size="small" style={styles.launchIndicator} />
+    </View>
+  );
+}
 
 function RootNavigator() {
   const theme = useAppTheme();
@@ -43,7 +61,7 @@ function RootNavigator() {
     productAnalyticsService.track('app_opened', undefined, '/');
   }, [profileCompleted, session?.user.id]);
 
-  if (isLoading) return null;
+  if (isLoading) return <AppLaunchSurface />;
 
   return (
     <>
@@ -92,6 +110,11 @@ function RootNavigator() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  launchIndicator: { marginTop: 22, opacity: 0.78 },
+  launchSurface: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+});
 
 export default function RootLayout() {
   const [languageReady, setLanguageReady] = useState(false);

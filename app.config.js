@@ -96,13 +96,13 @@ const baseConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#000000',
-        image: './assets/brand/wichu-splash.png',
-        imageWidth: 320,
+        backgroundColor: '#FFFFFF',
+        image: './assets/brand/wichu-app-icon.png',
+        imageWidth: 168,
         resizeMode: 'contain',
         dark: {
-          backgroundColor: '#000000',
-          image: './assets/brand/wichu-splash.png',
+          backgroundColor: '#FFFFFF',
+          image: './assets/brand/wichu-app-icon.png',
         },
       },
     ],
