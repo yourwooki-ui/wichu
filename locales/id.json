@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "Izinkan WICHU mengakses kamera agar kamu dapat mengambil foto profil dan berbagi gambar dalam chat.",
+    "NSPhotoLibraryUsageDescription": "Izinkan WICHU mengakses foto agar kamu dapat membuat profil dan berbagi gambar dalam chat.",
+    "NSLocationWhenInUseUsageDescription": "Izinkan akses lokasi saat menggunakan WICHU untuk menghitung perkiraan jarak antaprofil. Koordinat persis kamu tidak pernah ditampilkan kepada pengguna lain.",
+    "NSUserTrackingUsageDescription": "Izinkan WICHU menggunakan pengenal perangkat untuk mengukur kinerja iklan dan menampilkan iklan yang lebih relevan."
+  },
+  "android": { "app_name": "WICHU" }
+}

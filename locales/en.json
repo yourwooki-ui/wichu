@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "WICHU uses your camera so you can take profile photos and share images in chats.",
+    "NSPhotoLibraryUsageDescription": "WICHU accesses your photos so you can build your profile and share images in chats.",
+    "NSLocationWhenInUseUsageDescription": "Allow location access while using WICHU so we can calculate approximate distance between profiles. Your exact coordinates are never shown to other users.",
+    "NSUserTrackingUsageDescription": "Allow WICHU to use a device identifier to measure ad performance and show more relevant ads."
+  },
+  "android": { "app_name": "WICHU" }
+}

@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "Cho phép WICHU truy cập máy ảnh để bạn chụp ảnh hồ sơ và chia sẻ ảnh trong cuộc trò chuyện.",
+    "NSPhotoLibraryUsageDescription": "Cho phép WICHU truy cập ảnh để bạn tạo hồ sơ và chia sẻ ảnh trong cuộc trò chuyện.",
+    "NSLocationWhenInUseUsageDescription": "Cho phép truy cập vị trí khi dùng WICHU để tính khoảng cách gần đúng giữa các hồ sơ. Tọa độ chính xác của bạn không bao giờ được hiển thị cho người khác.",
+    "NSUserTrackingUsageDescription": "Cho phép WICHU sử dụng mã nhận dạng thiết bị để đo hiệu quả quảng cáo và hiển thị quảng cáo phù hợp hơn."
+  },
+  "android": { "app_name": "WICHU" }
+}

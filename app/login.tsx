@@ -214,14 +214,14 @@ export default function LoginRoute() {
                   />
                   <View style={styles.policyLinks}>
                     <Pressable hitSlop={touchSlop.link} onPress={() => router.push('/legal/terms')}>
-                      <Text style={styles.policyLink}>이용약관 보기</Text>
+                      <Text style={styles.policyLink}>{t('authExtras.terms')}</Text>
                     </Pressable>
                     <Text style={styles.policyDot}>·</Text>
                     <Pressable
                       hitSlop={touchSlop.link}
                       onPress={() => router.push('/legal/privacy')}
                     >
-                      <Text style={styles.policyLink}>개인정보처리방침 보기</Text>
+                      <Text style={styles.policyLink}>{t('authExtras.privacy')}</Text>
                     </Pressable>
                   </View>
                 </>
@@ -277,7 +277,7 @@ export default function LoginRoute() {
                   onPress={() => router.push('/forgot-password')}
                   style={styles.forgotButton}
                 >
-                  <Text style={styles.forgotText}>비밀번호를 잊으셨나요?</Text>
+                  <Text style={styles.forgotText}>{t('authExtras.forgotPassword')}</Text>
                 </Pressable>
               ) : null}
 

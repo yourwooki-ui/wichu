@@ -5,6 +5,7 @@ import { initReactI18next } from 'react-i18next';
 import { Platform } from 'react-native';
 
 import { additionalResources } from './additional-resources';
+import { operationalResources } from './operational-resources';
 import {
   type AppLanguage,
   getAppTextDirection,
@@ -598,22 +599,64 @@ const resources = {
     translation: {
       ...baseResources.en.translation,
       ...additionalResources.en.translation,
+      ...operationalResources.en.translation,
     },
   },
   ko: {
     translation: {
       ...baseResources.ko.translation,
       ...additionalResources.ko.translation,
+      ...operationalResources.ko.translation,
     },
   },
-  vi: additionalResources.vi,
-  ja: additionalResources.ja,
-  fr: additionalResources.fr,
-  es: additionalResources.es,
-  'pt-BR': additionalResources['pt-BR'],
-  'zh-TW': additionalResources['zh-TW'],
-  id: additionalResources.id,
-  fa: additionalResources.fa,
+  vi: {
+    translation: {
+      ...additionalResources.vi.translation,
+      ...operationalResources.vi.translation,
+    },
+  },
+  ja: {
+    translation: {
+      ...additionalResources.ja.translation,
+      ...operationalResources.ja.translation,
+    },
+  },
+  fr: {
+    translation: {
+      ...additionalResources.fr.translation,
+      ...operationalResources.fr.translation,
+    },
+  },
+  es: {
+    translation: {
+      ...additionalResources.es.translation,
+      ...operationalResources.es.translation,
+    },
+  },
+  'pt-BR': {
+    translation: {
+      ...additionalResources['pt-BR'].translation,
+      ...operationalResources['pt-BR'].translation,
+    },
+  },
+  'zh-TW': {
+    translation: {
+      ...additionalResources['zh-TW'].translation,
+      ...operationalResources['zh-TW'].translation,
+    },
+  },
+  id: {
+    translation: {
+      ...additionalResources.id.translation,
+      ...operationalResources.id.translation,
+    },
+  },
+  fa: {
+    translation: {
+      ...additionalResources.fa.translation,
+      ...operationalResources.fa.translation,
+    },
+  },
 } as const;
 
 const deviceLanguage = resolveAppLanguage(getLocales()[0]?.languageTag) ?? 'en';

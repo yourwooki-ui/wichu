@@ -9,6 +9,9 @@ const baseConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'app.wichu.mobile',
+    infoPlist: {
+      CFBundleAllowMixedLocalizations: true,
+    },
   },
   android: {
     adaptiveIcon: {
@@ -25,6 +28,18 @@ const baseConfig = {
   },
   web: {
     favicon: './assets/brand/wichu-app-icon.png',
+  },
+  locales: {
+    ko: './locales/ko.json',
+    en: './locales/en.json',
+    vi: './locales/vi.json',
+    ja: './locales/ja.json',
+    fr: './locales/fr.json',
+    es: './locales/es.json',
+    'pt-BR': './locales/pt-BR.json',
+    'zh-TW': './locales/zh-TW.json',
+    id: './locales/id.json',
+    fa: './locales/fa.json',
   },
   plugins: [
     [
@@ -56,7 +71,13 @@ const baseConfig = {
         microphonePermission: false,
       },
     ],
-    'expo-localization',
+    [
+      'expo-localization',
+      {
+        supportedLocales: ['ko', 'en', 'vi', 'ja', 'fr', 'es', 'pt-BR', 'zh-TW', 'id', 'fa'],
+        supportsRTL: true,
+      },
+    ],
     [
       'expo-notifications',
       {

@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "프로필 사진을 촬영하고 채팅에서 이미지를 공유할 수 있도록 WICHU의 카메라 접근을 허용해 주세요.",
+    "NSPhotoLibraryUsageDescription": "프로필을 만들고 채팅에서 이미지를 공유할 수 있도록 WICHU의 사진 접근을 허용해 주세요.",
+    "NSLocationWhenInUseUsageDescription": "프로필 간 대략적인 거리를 계산할 수 있도록 WICHU 사용 중 위치 접근을 허용해 주세요. 정확한 좌표는 다른 사용자에게 공개되지 않습니다.",
+    "NSUserTrackingUsageDescription": "광고 성과를 측정하고 더 관련성 높은 광고를 제공할 수 있도록 WICHU의 기기 식별자 사용을 허용해 주세요."
+  },
+  "android": { "app_name": "WICHU" }
+}

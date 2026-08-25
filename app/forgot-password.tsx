@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,6 +13,7 @@ import { authService } from '@/features/auth/services/auth-service';
 
 export default function ForgotPasswordRoute() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -20,7 +22,7 @@ export default function ForgotPasswordRoute() {
   const submit = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail.includes('@')) {
-      setMessage('올바른 이메일 주소를 입력해 주세요.');
+      setMessage(t('passwordReset.invalidEmail'));
       return;
     }
     setBusy(true);
@@ -28,7 +30,7 @@ export default function ForgotPasswordRoute() {
     const { error } = await authService.requestPasswordReset(normalizedEmail);
     setBusy(false);
     if (error) {
-      setMessage('메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
+      setMessage(t('passwordReset.sendFailed'));
       return;
     }
     setSent(true);
@@ -41,7 +43,7 @@ export default function ForgotPasswordRoute() {
         style={styles.page}
       >
         <Pressable
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('passwordReset.back')}
           accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.back}
@@ -51,22 +53,23 @@ export default function ForgotPasswordRoute() {
         <View style={styles.content}>
           <BrandWordmark size={26} />
           <Text style={styles.title}>
-            {sent ? '메일을 확인해 주세요.' : '비밀번호를 다시 설정해요.'}
+            {t(sent ? 'passwordReset.sentTitle' : 'passwordReset.requestTitle')}
           </Text>
           <Text style={styles.body}>
-            {sent
-              ? '가입한 이메일로 비밀번호 변경 링크를 보냈어요. 링크는 한 번만 사용할 수 있습니다.'
-              : '가입한 이메일을 입력하면 안전한 비밀번호 변경 링크를 보내드려요.'}
+            {t(sent ? 'passwordReset.sentBody' : 'passwordReset.requestBody')}
           </Text>
           {sent ? (
-            <PrimaryButton label="로그인으로 돌아가기" onPress={() => router.replace('/login')} />
+            <PrimaryButton
+              label={t('passwordReset.backToLogin')}
+              onPress={() => router.replace('/login')}
+            />
           ) : (
             <>
               <FormField
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
-                label="이메일"
+                label={t('passwordReset.email')}
                 onChangeText={setEmail}
                 placeholder="you@example.com"
                 tone="dark"
@@ -75,7 +78,7 @@ export default function ForgotPasswordRoute() {
               {message ? <Text style={styles.message}>{message}</Text> : null}
               <PrimaryButton
                 disabled={busy}
-                label="변경 링크 보내기"
+                label={t('passwordReset.sendLink')}
                 loading={busy}
                 onPress={submit}
               />

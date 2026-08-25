@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,6 +14,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 
 export default function ResetPasswordRoute() {
   const router = useRouter();
+  const { t } = useTranslation();
   const url = Linking.useURL();
   const { session } = useAuthSession();
   const [password, setPassword] = useState('');
@@ -25,21 +27,21 @@ export default function ResetPasswordRoute() {
     if (!url || session) return;
     void authService
       .createSessionFromUrl(url)
-      .catch(() => setMessage('변경 링크가 만료되었거나 이미 사용됐어요.'))
+      .catch(() => setMessage(t('passwordReset.invalidLink')))
       .finally(() => setPreparing(false));
-  }, [session, url]);
+  }, [session, t, url]);
 
   const submit = async () => {
-    if (!session) return setMessage('이메일의 변경 링크를 다시 열어 주세요.');
-    if (password.length < 8) return setMessage('새 비밀번호는 8자 이상이어야 해요.');
-    if (password !== confirmation) return setMessage('두 비밀번호가 서로 달라요.');
+    if (!session) return setMessage(t('passwordReset.reopenLink'));
+    if (password.length < 8) return setMessage(t('passwordReset.shortPassword'));
+    if (password !== confirmation) return setMessage(t('passwordReset.mismatch'));
 
     setBusy(true);
     setMessage(null);
     const { error } = await authService.updatePassword(password);
     if (error) {
       setBusy(false);
-      setMessage('비밀번호를 변경하지 못했어요. 새 링크를 요청해 주세요.');
+      setMessage(t('passwordReset.updateFailed'));
       return;
     }
     await authService.clearLocalSession();
@@ -51,51 +53,49 @@ export default function ResetPasswordRoute() {
       <View style={styles.page}>
         <View style={styles.content}>
           <BrandWordmark size={26} />
-          <Text style={styles.title}>새 비밀번호를 정해요.</Text>
-          <Text style={styles.body}>
-            다른 서비스에서 사용하지 않는 8자 이상의 비밀번호를 권장해요.
-          </Text>
+          <Text style={styles.title}>{t('passwordReset.title')}</Text>
+          <Text style={styles.body}>{t('passwordReset.body')}</Text>
           {preparing ? (
             <View style={styles.preparing}>
               <ActivityIndicator color={palette.pink} />
-              <Text style={styles.preparingText}>안전한 변경 링크를 확인하는 중…</Text>
+              <Text style={styles.preparingText}>{t('passwordReset.preparing')}</Text>
             </View>
           ) : (
             <>
               <FormField
                 autoCapitalize="none"
                 autoComplete="new-password"
-                hidePasswordLabel="비밀번호 숨기기"
-                label="새 비밀번호"
+                hidePasswordLabel={t('passwordReset.hidePassword')}
+                label={t('passwordReset.newPassword')}
                 onChangeText={setPassword}
-                placeholder="8자 이상 입력"
+                placeholder={t('passwordReset.passwordPlaceholder')}
                 secureTextEntry
-                showPasswordLabel="비밀번호 보기"
+                showPasswordLabel={t('passwordReset.showPassword')}
                 tone="dark"
                 value={password}
               />
               <FormField
                 autoCapitalize="none"
                 autoComplete="new-password"
-                hidePasswordLabel="비밀번호 숨기기"
-                label="새 비밀번호 확인"
+                hidePasswordLabel={t('passwordReset.hidePassword')}
+                label={t('passwordReset.confirmPassword')}
                 onChangeText={setConfirmation}
-                placeholder="한 번 더 입력"
+                placeholder={t('passwordReset.confirmationPlaceholder')}
                 secureTextEntry
-                showPasswordLabel="비밀번호 보기"
+                showPasswordLabel={t('passwordReset.showPassword')}
                 tone="dark"
                 value={confirmation}
               />
               {message ? <Text style={styles.message}>{message}</Text> : null}
               <PrimaryButton
                 disabled={busy || !session}
-                label="비밀번호 변경"
+                label={t('passwordReset.changePassword')}
                 loading={busy}
                 onPress={submit}
               />
               {!session ? (
                 <PrimaryButton
-                  label="새 변경 링크 요청"
+                  label={t('passwordReset.requestNewLink')}
                   onPress={() => router.replace('/forgot-password')}
                   tone="dark"
                   variant="outline"

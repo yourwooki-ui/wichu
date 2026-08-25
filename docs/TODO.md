@@ -78,7 +78,7 @@
 
 - [ ] 광고 provider 연결 및 빈도/배치 정책 — AdMob SDK·UMP·SSV 공개키 검증, 12 Swipe/10분/3회 정책과 Gold/Ad-Free 제외까지 구현; AdMob 앱·unit 생성, app-ads.txt 승인, 실기기 callback QA 대기
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — RevenueCat SDK·현지화 가격·구매/복원·인증 webhook·중복/역순 방지 구현; Play/App Store 상품·RevenueCat 프로젝트 생성과 sandbox 실기기 QA 대기
-- [ ] 접근성 및 10개 출시 locale 실기기 QA — 한국어·영어·베트남어·일본어·프랑스어·스페인어·포르투갈어(브라질)·중국어(대만)·인도네시아어·페르시아어 구조와 핵심 화면 번역, 기기 언어 자동 감지, 설정 변경, RTL 적용 완료. 스크린리더·줄바꿈·전체 잔여 화면 번역 QA 대기
+- [ ] 접근성 및 10개 출시 locale 실기기 QA — 한국어·영어·베트남어·일본어·프랑스어·스페인어·포르투갈어(브라질)·중국어(대만)·인도네시아어·페르시아어의 앱/OS 언어 선언, 권한 문구, 기기 언어 자동 감지, 설정 변경과 RTL 구조 완료. 포르투갈어 관리 키 누락 0건, 10개 언어 로그인·비밀번호 재설정·최초 권한 안내 번역 및 자동 회귀 검사 완료. Discover/Matches/Chat/Shop/Me와 편집·운영 화면의 기존 하드코딩 문구 이전, 스크린리더·줄바꿈 실기기 QA 대기
 - [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB CI 자동 실행 완료, 모바일 E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 - [x] Android R8 코드 축소·리소스 축소·AGP 8.12 최적 리소스 축소 설정과 대화면 하단 내비게이션 폭 제한

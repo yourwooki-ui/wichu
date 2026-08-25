@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "請允許 WICHU 使用相機，以拍攝個人檔案照片並在聊天中分享圖片。",
+    "NSPhotoLibraryUsageDescription": "請允許 WICHU 存取照片，以建立個人檔案並在聊天中分享圖片。",
+    "NSLocationWhenInUseUsageDescription": "請允許 WICHU 在使用期間存取位置，以計算個人檔案之間的大約距離。你的精確座標絕不會顯示給其他使用者。",
+    "NSUserTrackingUsageDescription": "請允許 WICHU 使用裝置識別碼，以衡量廣告成效並顯示更相關的廣告。"
+  },
+  "android": { "app_name": "WICHU" }
+}

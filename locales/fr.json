@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "WICHU",
+    "NSCameraUsageDescription": "Autorisez WICHU à accéder à l’appareil photo pour prendre des photos de profil et partager des images dans les discussions.",
+    "NSPhotoLibraryUsageDescription": "Autorisez WICHU à accéder à vos photos pour créer votre profil et partager des images dans les discussions.",
+    "NSLocationWhenInUseUsageDescription": "Autorisez l’accès à votre position pendant l’utilisation de WICHU afin de calculer la distance approximative entre les profils. Vos coordonnées exactes ne sont jamais affichées aux autres utilisateurs.",
+    "NSUserTrackingUsageDescription": "Autorisez WICHU à utiliser un identifiant d’appareil pour mesurer les performances publicitaires et proposer des annonces plus pertinentes."
+  },
+  "android": { "app_name": "WICHU" }
+}

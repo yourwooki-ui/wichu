@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +21,7 @@ import { notificationsService } from '../services/notifications-service';
 type Step = 'location' | 'notifications';
 
 export function AppPermissionOnboarding() {
+  const { t } = useTranslation();
   const { profileCompleted, session } = useAuthSession();
   const pathname = usePathname();
   const router = useRouter();
@@ -83,7 +85,7 @@ export function AppPermissionOnboarding() {
     setWorking(true);
     try {
       const result = await notificationPermissionService.request(userId);
-      if (result !== 'granted') setMessage('알림은 나중에 기기 설정에서 허용할 수 있어요.');
+      if (result !== 'granted') setMessage(t('permissionOnboarding.notificationDenied'));
       await finish();
     } catch {
       await finish();
@@ -125,21 +127,35 @@ export function AppPermissionOnboarding() {
               />
             </View>
           </LinearGradient>
-          <Text style={styles.eyebrow}>{isLocation ? '정확한 거리 탐색' : '놓치지 않는 연결'}</Text>
+          <Text style={styles.eyebrow}>
+            {t(
+              isLocation
+                ? 'permissionOnboarding.locationEyebrow'
+                : 'permissionOnboarding.notificationEyebrow',
+            )}
+          </Text>
           <Text style={styles.title}>
-            {isLocation
-              ? '내 주변의 사람을\n더 정확하게 찾아요'
-              : '새로운 픽과 메시지를\n바로 알려드릴게요'}
+            {t(
+              isLocation
+                ? 'permissionOnboarding.locationTitle'
+                : 'permissionOnboarding.notificationTitle',
+            )}
           </Text>
           <Text style={styles.description}>
-            {isLocation
-              ? '앱을 사용하는 동안의 위치로 프로필 간 거리만 계산해요. 정확한 좌표는 다른 사용자에게 공개되지 않아요.'
-              : '매치, 메시지와 중요한 계정 알림만 보내요. 마케팅 알림은 기본으로 켜지지 않아요.'}
+            {t(
+              isLocation
+                ? 'permissionOnboarding.locationBody'
+                : 'permissionOnboarding.notificationBody',
+            )}
           </Text>
           <View style={styles.trustRow}>
             <IllustratedIcon size={20} source={illustratedIcons.safety} />
             <Text style={styles.trustText}>
-              {isLocation ? '백그라운드 위치 추적 안 함' : '설정에서 언제든 변경 가능'}
+              {t(
+                isLocation
+                  ? 'permissionOnboarding.locationTrust'
+                  : 'permissionOnboarding.notificationTrust',
+              )}
             </Text>
           </View>
           {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -148,10 +164,12 @@ export function AppPermissionOnboarding() {
             onPress={requestCurrentPermission}
             style={({ pressed }) => [styles.primary, (pressed || working) && styles.pressed]}
           >
-            <Text style={styles.primaryText}>{working ? '확인 중…' : '허용하고 계속'}</Text>
+            <Text style={styles.primaryText}>
+              {t(working ? 'permissionOnboarding.checking' : 'permissionOnboarding.allowContinue')}
+            </Text>
           </Pressable>
           <Pressable disabled={working} onPress={skip} style={styles.secondary}>
-            <Text style={styles.secondaryText}>나중에</Text>
+            <Text style={styles.secondaryText}>{t('permissionOnboarding.later')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
