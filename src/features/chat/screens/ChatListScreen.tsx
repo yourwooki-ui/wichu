@@ -5,11 +5,13 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
+import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
@@ -22,6 +24,8 @@ import {
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ChatListScreen() {
   const router = useRouter();
@@ -165,12 +169,18 @@ export function ChatListScreen() {
             />
           ) : null}
           {!matchesQuery.isLoading && !listError
-            ? conversations.map((conversation) => (
-                <Pressable
+            ? conversations.map((conversation, index) => (
+                <AnimatedPressable
+                  entering={listEntering(index)}
+                  exiting={listExiting()}
+                  layout={listLayout()}
                   accessibilityLabel={`${conversation.profile.name}님과의 대화 열기`}
                   key={conversation.matchId}
                   onPress={() => router.push(`/chat/${conversation.matchId}`)}
-                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                  style={({ pressed }: { pressed: boolean }) => [
+                    styles.row,
+                    pressed && styles.rowPressed,
+                  ]}
                 >
                   <View style={styles.avatarWrap}>
                     <Image
@@ -217,7 +227,7 @@ export function ChatListScreen() {
                       </View>
                     ) : null}
                   </View>
-                </Pressable>
+                </AnimatedPressable>
               ))
             : null}
           {!matchesQuery.isLoading && !listError && !conversations.length ? (

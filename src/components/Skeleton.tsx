@@ -1,37 +1,11 @@
 import { useEffect, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
-  Platform,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { duration, radius, spacing } from '@/constants/theme';
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
-
-/** OS의 "동작 줄이기" 설정을 따른다. 켜져 있으면 shimmer 없이 정적 블록으로 그린다. */
-function useReduceMotion() {
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (active) setReduceMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
-
-  return reduceMotion;
-}
 
 /**
  * 로딩 중 실제 콘텐츠와 같은 골격을 먼저 그려주는 shimmer 블록.

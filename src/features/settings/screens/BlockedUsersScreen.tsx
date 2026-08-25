@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { CountryFlag } from '@/components/CountryFlag';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
+import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { safetyService } from '@/features/settings/services/safety-service';
@@ -71,8 +73,14 @@ export function BlockedUsersScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.helper}>차단한 사용자는 서로의 프로필과 메시지를 볼 수 없어요.</Text>
           <View style={styles.list}>
-            {(blockedQuery.data ?? []).map((item) => (
-              <View key={item.block_id} style={styles.row}>
+            {(blockedQuery.data ?? []).map((item, index) => (
+              <Animated.View
+                entering={listEntering(index)}
+                exiting={listExiting()}
+                key={item.block_id}
+                layout={listLayout()}
+                style={styles.row}
+              >
                 {item.photoUrl ? (
                   <Image contentFit="cover" source={{ uri: item.photoUrl }} style={styles.avatar} />
                 ) : (
@@ -105,7 +113,7 @@ export function BlockedUsersScreen() {
                 >
                   <Text style={styles.unblockText}>해제</Text>
                 </Pressable>
-              </View>
+              </Animated.View>
             ))}
           </View>
         </ScrollView>

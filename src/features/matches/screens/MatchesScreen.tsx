@@ -5,12 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeOut,
-  LinearTransition,
-  ReduceMotion,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
@@ -18,6 +13,7 @@ import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
+import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
@@ -387,14 +383,9 @@ function ProfileTile({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(Math.min(index, 5) * 42)
-        .duration(240)
-        .reduceMotion(ReduceMotion.System)}
-      exiting={FadeOut.duration(140).reduceMotion(ReduceMotion.System)}
-      layout={LinearTransition.springify()
-        .damping(20)
-        .stiffness(190)
-        .reduceMotion(ReduceMotion.System)}
+      entering={listEntering(index)}
+      exiting={listExiting()}
+      layout={listLayout()}
       style={styles.card}
     >
       <Pressable

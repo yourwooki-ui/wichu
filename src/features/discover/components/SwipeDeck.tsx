@@ -21,7 +21,7 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
+import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
 import { hapticsService } from '@/services/haptics-service';
@@ -64,7 +64,8 @@ export function SwipeDeck({
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
   // 헤더와 하단 탭은 또렷하게 남기되, 그 사이의 세로 공간은 카드가 충분히 채운다.
-  const deckHeight = Math.min(600, Math.max(340, height - 276));
+  // 아래 Pass/Pick 액션 행만큼 덱이 차지할 높이를 줄인다.
+  const deckHeight = Math.min(600, Math.max(300, height - 340));
 
   useProfilePrefetch(profiles);
 
@@ -360,11 +361,89 @@ export function SwipeDeck({
           </Animated.View>
         </GestureDetector>
       </View>
+
+      {/*
+        스와이프 외에 Pick/Pass 할 방법이 없다. 카드의 accessibilityActions가
+        스크린리더는 덮지만, 한 손 조작이나 운동 제약이 있는 사용자에게는
+        보이는 버튼이 필요하고 처음 쓰는 사용자에게는 발견 가능성 문제도 있다.
+        제스처와 같은 startSwipe를 호출해 애니메이션·기록 경로를 동일하게 맞춘다.
+      */}
+      <View style={styles.actions}>
+        <DeckAction
+          kind="pass"
+          onPress={() => {
+            hapticsService.selection();
+            startSwipe('pass');
+          }}
+          profileName={currentProfile.name}
+        />
+        <DeckAction
+          kind="pick"
+          onPress={() => {
+            hapticsService.selection();
+            startSwipe('like');
+          }}
+          profileName={currentProfile.name}
+        />
+      </View>
     </View>
   );
 }
 
+function DeckAction({
+  kind,
+  onPress,
+  profileName,
+}: {
+  kind: 'pass' | 'pick';
+  onPress: () => void;
+  profileName: string;
+}) {
+  const isPick = kind === 'pick';
+
+  return (
+    <Pressable
+      accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
+      accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.action,
+        isPick ? styles.actionPick : styles.actionPass,
+        pressed && pressFeedback.control,
+      ]}
+    >
+      <Ionicons
+        color={isPick ? palette.white : palette.ink}
+        name={isPick ? 'heart' : 'close'}
+        size={isPick ? 30 : 28}
+      />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  actions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.lg,
+    justifyContent: 'center',
+    paddingTop: spacing.xs,
+  },
+  action: {
+    alignItems: 'center',
+    borderRadius: 32,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
+    ...elevation.md,
+  },
+  actionPass: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  actionPick: { backgroundColor: palette.pink },
   container: {
     alignItems: 'center',
     flex: 1,
