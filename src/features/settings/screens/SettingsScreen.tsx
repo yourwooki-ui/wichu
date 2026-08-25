@@ -28,6 +28,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { getAppLanguage, getAppLanguageMetadata } from '@/i18n';
 
 type BooleanSetting = 'discovery_enabled' | 'push_matches' | 'push_messages';
+type AccountAction = 'deactivate' | 'delete' | null;
 
 export function SettingsScreen() {
   const router = useRouter();
@@ -38,6 +39,8 @@ export function SettingsScreen() {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [accountAction, setAccountAction] = useState<AccountAction>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [accountBusy, setAccountBusy] = useState(false);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const queryKey = ['settings', userId];
@@ -79,45 +82,41 @@ export function SettingsScreen() {
     router.replace('/login');
   };
 
-  const confirmDeactivation = () =>
-    Alert.alert(t('settings.deactivateTitle'), t('settings.deactivateBody'), [
-      { text: t('settings.cancel'), style: 'cancel' },
-      {
-        text: t('settings.deactivate'),
-        style: 'destructive',
-        onPress: async () => {
-          setAccountBusy(true);
-          try {
-            await settingsService.deactivateMyAccount();
-            await authService.signOut();
-          } catch {
-            Alert.alert(t('settings.deactivateFailed'), t('settings.checkConnection'));
-          } finally {
-            setAccountBusy(false);
-          }
-        },
-      },
-    ]);
+  const openAccountAction = (action: Exclude<AccountAction, null>) => {
+    setAccountError(null);
+    setAccountAction(action);
+  };
 
-  const confirmDeletion = () =>
-    Alert.alert(t('settings.deleteTitle'), t('settings.deleteBody'), [
-      { text: t('settings.cancel'), style: 'cancel' },
-      {
-        text: t('settings.deleteRequest'),
-        style: 'destructive',
-        onPress: async () => {
-          setAccountBusy(true);
-          try {
-            await settingsService.requestAccountDeletion();
-            await authService.clearLocalSession();
-          } catch {
-            Alert.alert(t('settings.deleteFailed'), t('settings.checkConnection'));
-          } finally {
-            setAccountBusy(false);
-          }
-        },
-      },
-    ]);
+  const submitAccountAction = async () => {
+    if (!accountAction) return;
+
+    const action = accountAction;
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      if (action === 'deactivate') {
+        await settingsService.deactivateMyAccount();
+        const { error } = await authService.signOut();
+        if (error) throw error;
+      } else {
+        await settingsService.requestAccountDeletion();
+        const { error } = await authService.clearLocalSession();
+        if (error) throw error;
+      }
+
+      queryClient.clear();
+      setAccountAction(null);
+      router.replace('/login');
+    } catch {
+      setAccountError(
+        `${t(
+          action === 'deactivate' ? 'settings.deactivateFailed' : 'settings.deleteFailed',
+        )} ${t('settings.checkConnection')}`,
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  };
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
@@ -254,13 +253,13 @@ export function SettingsScreen() {
               danger
               icon="pause-circle-outline"
               label={t('settings.deactivate')}
-              onPress={confirmDeactivation}
+              onPress={() => openAccountAction('deactivate')}
             />
             <SettingLink
               danger
               icon="trash-outline"
               label={t('settings.delete')}
-              onPress={confirmDeletion}
+              onPress={() => openAccountAction('delete')}
             />
           </SettingSection>
 
@@ -328,6 +327,67 @@ export function SettingsScreen() {
                   <ActivityIndicator color={palette.white} />
                 ) : (
                   <Text style={styles.confirmSignOutText}>{t('settings.signOut')}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </AppModal>
+      <AppModal
+        animationType="fade"
+        onRequestClose={() => {
+          if (!accountBusy) setAccountAction(null);
+        }}
+        transparent
+        visible={accountAction !== null}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            accessibilityLabel={t('settings.cancel')}
+            disabled={accountBusy}
+            onPress={() => setAccountAction(null)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View accessibilityViewIsModal style={styles.signOutSheet}>
+            <View style={styles.signOutIcon}>
+              <Ionicons
+                color={palette.danger}
+                name={accountAction === 'delete' ? 'trash-outline' : 'pause-circle-outline'}
+                size={25}
+              />
+            </View>
+            <Text style={styles.signOutTitle}>
+              {t(accountAction === 'delete' ? 'settings.deleteTitle' : 'settings.deactivateTitle')}
+            </Text>
+            <Text style={styles.signOutBody}>
+              {t(accountAction === 'delete' ? 'settings.deleteBody' : 'settings.deactivateBody')}
+            </Text>
+            {accountError ? (
+              <View style={styles.signOutErrorBox}>
+                <Text style={styles.signOutErrorText}>{accountError}</Text>
+              </View>
+            ) : null}
+            <View style={styles.signOutActions}>
+              <Pressable
+                disabled={accountBusy}
+                onPress={() => setAccountAction(null)}
+                style={[styles.modalAction, styles.cancelAction]}
+              >
+                <Text style={styles.cancelActionText}>{t('settings.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                disabled={accountBusy}
+                onPress={() => void submitAccountAction()}
+                style={[styles.modalAction, styles.confirmSignOutAction]}
+              >
+                {accountBusy ? (
+                  <ActivityIndicator color={palette.white} />
+                ) : (
+                  <Text style={styles.confirmSignOutText}>
+                    {t(
+                      accountAction === 'delete' ? 'settings.deleteRequest' : 'settings.deactivate',
+                    )}
+                  </Text>
                 )}
               </Pressable>
             </View>
