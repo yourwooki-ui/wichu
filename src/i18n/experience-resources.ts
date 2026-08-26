@@ -62,6 +62,10 @@ const en = {
     messageSafety: 'I shared this plan with someone I trust for safety.',
   },
   profile: { publicProfile: 'My public profile' },
+  chat: {
+    newMessage: 'New message',
+    sendFailed: "Couldn't send the message. Tap the failed message to try again.",
+  },
 };
 
 const ko = {
@@ -124,6 +128,10 @@ const ko = {
     messageSafety: '안전을 위해 이 약속 정보를 신뢰하는 사람에게 공유합니다.',
   },
   profile: { publicProfile: '내 공개 프로필' },
+  chat: {
+    newMessage: '새 메시지',
+    sendFailed: '메시지를 보내지 못했어요. 전송 실패를 눌러 다시 시도하세요.',
+  },
 };
 
 const vi = {
@@ -187,6 +195,10 @@ const vi = {
     messageSafety: 'Tôi chia sẻ kế hoạch này với người tin tưởng để đảm bảo an toàn.',
   },
   profile: { publicProfile: 'Hồ sơ công khai của tôi' },
+  chat: {
+    newMessage: 'Tin nhắn mới',
+    sendFailed: 'Không thể gửi tin nhắn. Nhấn vào tin nhắn lỗi để thử lại.',
+  },
 };
 
 const ja = {
@@ -248,6 +260,10 @@ const ja = {
     messageSafety: '安全のため、この予定を信頼できる人に共有します。',
   },
   profile: { publicProfile: '公開プロフィール' },
+  chat: {
+    newMessage: '新着メッセージ',
+    sendFailed: 'メッセージを送信できませんでした。送信失敗をタップして再試行してください。',
+  },
 };
 
 const fr = {
@@ -316,6 +332,10 @@ const fr = {
     messageSafety: 'Je partage ce rendez-vous avec une personne de confiance pour ma sécurité.',
   },
   profile: { publicProfile: 'Mon profil public' },
+  chat: {
+    newMessage: 'Nouveau message',
+    sendFailed: "Le message n'a pas pu être envoyé. Touchez le message en échec pour réessayer.",
+  },
 };
 
 const es = {
@@ -381,6 +401,10 @@ const es = {
     messageSafety: 'Comparto este plan con alguien de confianza por seguridad.',
   },
   profile: { publicProfile: 'Mi perfil público' },
+  chat: {
+    newMessage: 'Mensaje nuevo',
+    sendFailed: 'No se pudo enviar el mensaje. Toca el mensaje fallido para reintentarlo.',
+  },
 };
 
 const ptBR = {
@@ -445,6 +469,11 @@ const ptBR = {
     messageSafety: 'Compartilho este plano com alguém de confiança por segurança.',
   },
   profile: { publicProfile: 'Meu perfil público' },
+  chat: {
+    newMessage: 'Nova mensagem',
+    sendFailed:
+      'Não foi possível enviar a mensagem. Toque na mensagem com falha para tentar de novo.',
+  },
 };
 
 const zhTW = {
@@ -503,6 +532,10 @@ const zhTW = {
     messageSafety: '為了安全，我把這個計畫分享給信任的人。',
   },
   profile: { publicProfile: '我的公開檔案' },
+  chat: {
+    newMessage: '新訊息',
+    sendFailed: '訊息傳送失敗。請點一下傳送失敗的訊息再試一次。',
+  },
 };
 
 const id = {
@@ -568,6 +601,10 @@ const id = {
     messageSafety: 'Saya membagikan rencana ini kepada orang tepercaya demi keamanan.',
   },
   profile: { publicProfile: 'Profil publik saya' },
+  chat: {
+    newMessage: 'Pesan baru',
+    sendFailed: 'Pesan tidak dapat dikirim. Ketuk pesan yang gagal untuk mencoba lagi.',
+  },
 };
 
 const fa = {
@@ -633,6 +670,10 @@ const fa = {
     messageSafety: 'برای امنیت، این برنامه را با فردی مطمئن به اشتراک می‌گذارم.',
   },
   profile: { publicProfile: 'پروفایل عمومی من' },
+  chat: {
+    newMessage: 'پیام جدید',
+    sendFailed: 'پیام ارسال نشد. برای تلاش دوباره روی پیام ناموفق بزنید.',
+  },
 };
 
 export const experienceResources = {

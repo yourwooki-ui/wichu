@@ -12,9 +12,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -24,6 +27,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
@@ -36,6 +40,7 @@ import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareShee
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
+import { isNearChatBottom, shouldAutoScrollChat } from '@/features/chat/utils/chat-scroll';
 import { assessMessageSafety } from '@/features/chat/utils/message-safety';
 import {
   chatService,
@@ -87,8 +92,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const { i18n, t } = useTranslation();
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
+  const reduceMotion = useReducedMotion();
   const userId = session?.user.id;
   const scrollRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  const isNearBottomRef = useRef(true);
   const previousMessageCount = useRef(0);
   const mockConversation = getMockConversation(matchId) ?? mockConversations[0];
   const isMock = matchId.startsWith('mock-');
@@ -99,6 +107,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [now] = useState(() => Date.now());
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [dateShareOpen, setDateShareOpen] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [revealedImageMessages, setRevealedImageMessages] = useState<Set<string>>(() => new Set());
@@ -167,13 +176,30 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
 
   useEffect(() => {
     const previous = previousMessageCount.current;
+    const next = displayedMessages.length;
+    const latestMessage = displayedMessages[next - 1];
     previousMessageCount.current = displayedMessages.length;
-    if (displayedMessages.length === 0) return;
-    if (previous > 0 && displayedMessages.length > previous + 1) return;
+    if (!next) return;
 
-    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: previous > 0 }), 60);
+    const shouldScroll = shouldAutoScrollChat({
+      isNearBottom: isNearBottomRef.current,
+      latestMessageIsMine: Boolean(latestMessage?.mine),
+      nextCount: next,
+      previousCount: previous,
+    });
+    if (!shouldScroll) {
+      if (next !== previous + 1 || latestMessage?.mine) return;
+      const notificationTimer = setTimeout(() => setShowJumpToLatest(true), 0);
+      return () => clearTimeout(notificationTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setShowJumpToLatest(false);
+      isNearBottomRef.current = true;
+      scrollRef.current?.scrollToEnd({ animated: previous > 0 });
+    }, 60);
     return () => clearTimeout(timer);
-  }, [displayedMessages.length]);
+  }, [displayedMessages]);
 
   const profile = useMemo(() => {
     const real = connectionQuery.data?.profile;
@@ -247,7 +273,33 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       setMessages((current) =>
         current.map((item) => (item.id === message.id ? { ...item, status: 'failed' } : item)),
       );
+      hapticsService.error();
+      AccessibilityInfo.announceForAccessibility(t('experience.chat.sendFailed'));
     }
+  };
+
+  const handleMessageScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const nearBottom = isNearChatBottom({
+      contentHeight: contentSize.height,
+      offsetY: contentOffset.y,
+      viewportHeight: layoutMeasurement.height,
+    });
+    isNearBottomRef.current = nearBottom;
+    if (nearBottom && showJumpToLatest) setShowJumpToLatest(false);
+  };
+
+  const jumpToLatest = () => {
+    isNearBottomRef.current = true;
+    setShowJumpToLatest(false);
+    hapticsService.selection();
+    scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
+  const selectStarter = (starter: string) => {
+    hapticsService.selection();
+    setDraft(starter);
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const pickImages = async () => {
@@ -543,7 +595,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
 
         <ScrollView
           contentContainerStyle={styles.messages}
+          onScroll={handleMessageScroll}
           ref={scrollRef}
+          scrollEventThrottle={80}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.matchMoment}>
@@ -629,7 +683,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                         accessibilityLabel={`${starter} 입력`}
                         accessibilityRole="button"
                         key={starter}
-                        onPress={() => setDraft(starter)}
+                        onPress={() => selectStarter(starter)}
                         style={({ pressed }) => [
                           styles.starterAction,
                           pressed && styles.starterActionPressed,
@@ -751,6 +805,25 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           ) : null}
         </ScrollView>
 
+        {showJumpToLatest ? (
+          <Animated.View
+            entering={reduceMotion ? undefined : FadeInDown.duration(180)}
+            exiting={reduceMotion ? undefined : FadeOutDown.duration(140)}
+            style={[styles.jumpToLatestAnchor, { bottom: selectedImages.length ? 154 : 72 }]}
+          >
+            <Pressable
+              accessibilityLabel={t('experience.chat.newMessage')}
+              accessibilityLiveRegion="polite"
+              accessibilityRole="button"
+              onPress={jumpToLatest}
+              style={({ pressed }) => [styles.jumpToLatest, pressed && pressFeedback.control]}
+            >
+              <Ionicons color={palette.white} name="arrow-down" size={16} />
+              <Text style={styles.jumpToLatestText}>{t('experience.chat.newMessage')}</Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+
         <View style={[styles.composerShell, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {selectedImages.length ? (
             <View style={styles.attachmentTray}>
@@ -817,6 +890,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 onChangeText={setDraft}
                 placeholder={`${profile.name}님에게 메시지 보내기`}
                 placeholderTextColor="#93939B"
+                ref={inputRef}
                 style={styles.input}
                 value={draft}
               />
@@ -1352,6 +1426,24 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
+  jumpToLatest: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: palette.ink,
+    borderColor: 'rgba(255,255,255,0.88)',
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    shadowColor: '#000000',
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.16,
+    shadowRadius: 9,
+  },
+  jumpToLatestAnchor: { alignSelf: 'center', position: 'absolute', zIndex: 4 },
+  jumpToLatestText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   composerShell: {
     backgroundColor: palette.white,
     borderTopColor: '#E4E4E7',

@@ -79,12 +79,17 @@ export function SwipeDeck({
   const commitSwipe = useCallback(
     (action: SwipeAction) => {
       if (currentProfile) {
-        hapticsService.swipe(action);
         onSwipe(currentProfile, action);
       }
     },
     [currentProfile, onSwipe],
   );
+
+  const signalSwipeDecision = useCallback((action: SwipeAction) => {
+    // 손을 놓거나 버튼을 누른 바로 그 순간에 피드백한다. 서버 기록 완료까지
+    // 기다리면 카드가 사라진 뒤 진동이 와서 조작과 반응이 따로 느껴진다.
+    hapticsService.swipe(action);
+  }, []);
 
   const openProfile = useCallback(() => {
     if (currentProfile) router.push(`/profile/${currentProfile.id}`);
@@ -94,6 +99,7 @@ export function SwipeDeck({
     (action: SwipeAction) => {
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
+      signalSwipeDecision(action);
       const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
       translateY.set(withTiming(10, { duration: exitDuration }));
       translateX.set(
@@ -106,7 +112,15 @@ export function SwipeDeck({
         ),
       );
     },
-    [commitSwipe, interactionLocked, reduceMotion, translateX, translateY, width],
+    [
+      commitSwipe,
+      interactionLocked,
+      reduceMotion,
+      signalSwipeDecision,
+      translateX,
+      translateY,
+      width,
+    ],
   );
 
   const handleCardPress = useCallback(() => {
@@ -153,6 +167,7 @@ export function SwipeDeck({
       'worklet';
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
+      runOnJS(signalSwipeDecision)(action);
       const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
       translateY.set(withTiming(10, { duration: exitDuration }));
       translateX.set(
@@ -197,7 +212,15 @@ export function SwipeDeck({
       });
 
     return Gesture.Simultaneous(pan, Gesture.Native());
-  }, [commitSwipe, interactionLocked, reduceMotion, translateX, translateY, width]);
+  }, [
+    commitSwipe,
+    interactionLocked,
+    reduceMotion,
+    signalSwipeDecision,
+    translateX,
+    translateY,
+    width,
+  ]);
 
   const topCardStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -380,18 +403,12 @@ export function SwipeDeck({
       <View style={styles.actions}>
         <DeckAction
           kind="pass"
-          onPress={() => {
-            hapticsService.selection();
-            startSwipe('pass');
-          }}
+          onPress={() => startSwipe('pass')}
           profileName={currentProfile.name}
         />
         <DeckAction
           kind="pick"
-          onPress={() => {
-            hapticsService.selection();
-            startSwipe('like');
-          }}
+          onPress={() => startSwipe('like')}
           profileName={currentProfile.name}
         />
       </View>

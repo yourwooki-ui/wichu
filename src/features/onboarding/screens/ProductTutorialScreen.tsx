@@ -2,8 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -22,6 +30,7 @@ import {
 } from '@/constants/theme';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { hapticsService } from '@/services/haptics-service';
 
 const TUTORIAL_PHOTOS = {
   lina: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85',
@@ -70,26 +79,65 @@ export function ProductTutorialScreen() {
   const { height } = useAppViewport();
   const [stepIndex, setStepIndex] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const transitionProgress = useSharedValue(1);
+  const transitionDirection = useSharedValue(1);
+  const mounted = useRef(false);
   const step = STEPS[stepIndex];
   const isLastStep = stepIndex === STEPS.length - 1;
   const compact = height < 720;
 
-  const finish = async () => {
+  const contentMotionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(transitionProgress.get(), [0, 1], [0.35, 1]),
+    transform: [
+      {
+        translateX: interpolate(
+          transitionProgress.get(),
+          [0, 1],
+          [transitionDirection.get() * 18, 0],
+        ),
+      },
+    ],
+  }));
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    transitionProgress.set(0);
+    transitionProgress.set(
+      withTiming(1, {
+        duration: reduceMotion ? 0 : 220,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
+  }, [reduceMotion, stepIndex, transitionProgress]);
+
+  const finish = async (feedback: 'complete' | 'skip' = 'complete') => {
     if (finishing) return;
     setFinishing(true);
+    if (feedback === 'complete') hapticsService.success();
+    else hapticsService.selection();
     if (session?.user.id) {
       await tutorialState.completeProductTutorial(session.user.id).catch(() => undefined);
     }
     router.replace('/(tabs)/discover?coach=1');
   };
 
-  const back = () => setStepIndex((current) => Math.max(current - 1, 0));
+  const back = () => {
+    transitionDirection.set(-1);
+    hapticsService.selection();
+    setStepIndex((current) => Math.max(current - 1, 0));
+  };
 
   const next = () => {
     if (isLastStep) {
-      void finish();
+      void finish('complete');
       return;
     }
+    transitionDirection.set(1);
+    hapticsService.selection();
     setStepIndex((current) => Math.min(current + 1, STEPS.length - 1));
   };
 
@@ -105,7 +153,7 @@ export function ProductTutorialScreen() {
             accessibilityRole="button"
             disabled={finishing}
             hitSlop={touchSlop.link}
-            onPress={() => void finish()}
+            onPress={() => void finish('skip')}
             style={({ pressed }) => [styles.skip, pressed && pressFeedback.icon]}
           >
             <Text style={styles.skipText}>건너뛰기</Text>
@@ -132,10 +180,10 @@ export function ProductTutorialScreen() {
           ))}
         </View>
 
-        <ScrollView
+        <Animated.ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
-          style={styles.contentScroll}
+          style={[styles.contentScroll, contentMotionStyle]}
         >
           <TutorialVisual compact={compact} kind={step.visual} />
 
@@ -164,7 +212,7 @@ export function ProductTutorialScreen() {
               </View>
             </View>
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
 
         <View style={styles.footer}>
           <View style={styles.footerActions}>
