@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
-import { useEffect } from 'react';
-import { StyleSheet, View, type ModalProps } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, StyleSheet, type ModalProps } from 'react-native';
 
 import { PREVIEW_MODAL_HOST_ID } from '@/components/NativePreviewFrame';
 
@@ -8,9 +8,30 @@ type WebAppModalProps = Omit<ModalProps, 'onRequestClose'> & {
   onRequestClose?: () => void;
 };
 
-export function AppModal({ children, onRequestClose, visible }: WebAppModalProps) {
+export function AppModal({
+  animationType = 'none',
+  children,
+  onRequestClose,
+  visible,
+}: WebAppModalProps) {
+  const [opacity] = useState(() => new Animated.Value(visible && animationType === 'fade' ? 0 : 1));
   const host =
     typeof document === 'undefined' ? null : document.getElementById(PREVIEW_MODAL_HOST_ID);
+
+  useEffect(() => {
+    if (!visible || animationType !== 'fade') {
+      opacity.setValue(1);
+      return;
+    }
+    opacity.setValue(0);
+    const animation = Animated.timing(opacity, {
+      duration: 160,
+      toValue: 1,
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [animationType, opacity, visible]);
 
   useEffect(() => {
     if (!visible || !onRequestClose) return;
@@ -24,9 +45,9 @@ export function AppModal({ children, onRequestClose, visible }: WebAppModalProps
   if (!visible || !host) return null;
 
   return createPortal(
-    <View accessibilityViewIsModal style={styles.layer}>
+    <Animated.View accessibilityViewIsModal style={[styles.layer, { opacity }]}>
       {children}
-    </View>,
+    </Animated.View>,
     host,
   );
 }

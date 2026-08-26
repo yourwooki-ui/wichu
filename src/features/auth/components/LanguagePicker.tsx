@@ -2,9 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppModal } from '@/components/AppModal';
+import { InteractiveBottomSheet } from '@/components/InteractiveBottomSheet';
 import { CountryFlag } from '@/components/CountryFlag';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { radius, spacing, touchSlop, typography } from '@/constants/theme';
@@ -79,77 +78,67 @@ export function LanguagePickerModal({
   }
 
   return (
-    <AppModal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <View style={styles.modalRoot}>
-        <Pressable
-          accessibilityLabel={t('auth.back')}
-          accessibilityRole="button"
-          onPress={onClose}
-          style={styles.backdrop}
-        />
-        <SafeAreaView
-          edges={['bottom']}
-          style={[styles.sheet, { backgroundColor: sheetBackground }]}
-        >
-          <View style={[styles.handle, { backgroundColor: sheetBorder }]} />
-          <Text style={[styles.title, { color: sheetText }]}>{t('auth.chooseLanguage')}</Text>
-          <Text style={[styles.hint, { color: sheetMuted }]}>{t('auth.languageHint')}</Text>
+    <InteractiveBottomSheet
+      accessibilityLabel={t('auth.chooseLanguage')}
+      contentStyle={styles.sheetContent}
+      handleColor={sheetBorder}
+      onClose={onClose}
+      sheetStyle={[styles.sheet, { backgroundColor: sheetBackground }]}
+      visible={visible}
+    >
+      <Text style={[styles.title, { color: sheetText }]}>{t('auth.chooseLanguage')}</Text>
+      <Text style={[styles.hint, { color: sheetMuted }]}>{t('auth.languageHint')}</Text>
 
-          <FlatList
-            contentContainerStyle={styles.options}
-            data={supportedLanguages}
-            keyExtractor={({ code }) => code}
-            renderItem={({ item: language }) => {
-              const selected = currentLanguage === language.code;
-              const direction = getAppTextDirection(language.code);
-              return (
-                <Pressable
-                  accessibilityLabel={`${language.label}, ${language.englishLabel}`}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => chooseLanguage(language.code)}
-                  style={[
-                    styles.option,
-                    {
-                      borderColor: selected ? theme.colors.primary : sheetBorder,
-                      backgroundColor: selected ? `${theme.colors.primary}14` : optionBackground,
-                    },
-                  ]}
+      <FlatList
+        contentContainerStyle={styles.options}
+        data={supportedLanguages}
+        keyExtractor={({ code }) => code}
+        renderItem={({ item: language }) => {
+          const selected = currentLanguage === language.code;
+          const direction = getAppTextDirection(language.code);
+          return (
+            <Pressable
+              accessibilityLabel={`${language.label}, ${language.englishLabel}`}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              onPress={() => chooseLanguage(language.code)}
+              style={[
+                styles.option,
+                {
+                  borderColor: selected ? theme.colors.primary : sheetBorder,
+                  backgroundColor: selected ? `${theme.colors.primary}14` : optionBackground,
+                },
+              ]}
+            >
+              <CountryFlag countryCode={language.countryCode} label={language.englishLabel} />
+              <View style={styles.optionCopy}>
+                <Text
+                  style={[styles.optionLabel, { color: sheetText, writingDirection: direction }]}
                 >
-                  <CountryFlag countryCode={language.countryCode} label={language.englishLabel} />
-                  <View style={styles.optionCopy}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        { color: sheetText, writingDirection: direction },
-                      ]}
-                    >
-                      {language.label}
-                    </Text>
-                    {language.label !== language.englishLabel ? (
-                      <Text style={[styles.optionHint, { color: sheetMuted }]}>
-                        {language.englishLabel}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View
-                    style={[
-                      styles.radio,
-                      { borderColor: selected ? theme.colors.primary : sheetBorder },
-                    ]}
-                  >
-                    {selected ? (
-                      <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            }}
-            showsVerticalScrollIndicator={false}
-          />
-        </SafeAreaView>
-      </View>
-    </AppModal>
+                  {language.label}
+                </Text>
+                {language.label !== language.englishLabel ? (
+                  <Text style={[styles.optionHint, { color: sheetMuted }]}>
+                    {language.englishLabel}
+                  </Text>
+                ) : null}
+              </View>
+              <View
+                style={[
+                  styles.radio,
+                  { borderColor: selected ? theme.colors.primary : sheetBorder },
+                ]}
+              >
+                {selected ? (
+                  <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        }}
+        showsVerticalScrollIndicator={false}
+      />
+    </InteractiveBottomSheet>
   );
 }
 
@@ -164,19 +153,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   triggerLabel: { ...typography.label, fontWeight: '800' },
-  modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  backdrop: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.58)' },
   sheet: {
-    width: '100%',
     maxWidth: 460,
-    maxHeight: '82%',
+    height: '82%',
+  },
+  sheetContent: {
     paddingTop: spacing.sm,
     paddingHorizontal: 22,
     paddingBottom: spacing.lg,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
   },
-  handle: { width: 40, height: 4, alignSelf: 'center', borderRadius: 2 },
   title: { marginTop: spacing.lg, fontSize: 22, lineHeight: 28, fontWeight: '900' },
   hint: { marginTop: spacing.xs, fontSize: 13, lineHeight: 19 },
   options: { gap: spacing.sm, paddingBottom: spacing.sm, paddingTop: spacing.lg },

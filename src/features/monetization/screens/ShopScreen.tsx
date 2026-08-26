@@ -3,11 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
+import { sectionEntering } from '@/constants/motion';
 import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
@@ -79,7 +82,7 @@ export function ShopScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.currentPlan}>
+        <Animated.View entering={sectionEntering(0)} style={styles.currentPlan}>
           <View style={styles.currentPlanIcon}>
             <IllustratedIcon size={38} source={getPassIllustration(tier)} />
           </View>
@@ -91,90 +94,98 @@ export function ShopScreen() {
             <View style={[styles.activeDot, tier === 'gold' && styles.activeDotGold]} />
             <Text style={styles.activeText}>이용 중</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <LinearGradient colors={['#FFF9E6', '#F2D982']} style={styles.goldHero}>
-          <View style={styles.goldGlow} />
-          <View style={styles.goldTopRow}>
-            <View style={styles.diamondMark}>
-              <IllustratedIcon size={52} source={illustratedIcons.goldPass} />
-            </View>
-            <View>
-              <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
-              <Text style={styles.goldMicrocopy}>방문자 확인 · 광고 제거 · 우선 노출</Text>
-            </View>
-          </View>
-          <Text style={styles.goldTitle}>Gold 기능을{`\n`}한 번에 이용하세요.</Text>
-          <Text style={styles.goldDescription}>
-            방문자 확인, 무제한 되돌리기, 광고 제거와 우선 노출이 포함됩니다.
-          </Text>
-          <View style={styles.goldHighlights}>
-            {goldBenefits.slice(0, 3).map((benefit) => (
-              <View key={benefit.title} style={styles.highlightChip}>
-                <IllustratedIcon size={20} source={benefit.illustration} />
-                <Text style={styles.highlightText}>{benefit.title}</Text>
+        <Animated.View entering={sectionEntering(1)}>
+          <LinearGradient colors={['#FFF9E6', '#F2D982']} style={styles.goldHero}>
+            <View style={styles.goldGlow} />
+            <View style={styles.goldTopRow}>
+              <View style={styles.diamondMark}>
+                <MotionIllustratedIcon
+                  motion="shine"
+                  size={52}
+                  source={illustratedIcons.goldPass}
+                />
               </View>
-            ))}
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/ad-free')}
-            style={({ pressed }) => [styles.goldAction, pressed && styles.pressed]}
-          >
-            <Text style={styles.goldActionText}>
-              {tier === 'gold' ? 'Gold Pass 관리' : '혜택과 가격 확인'}
+              <View>
+                <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
+                <Text style={styles.goldMicrocopy}>방문자 확인 · 광고 제거 · 우선 노출</Text>
+              </View>
+            </View>
+            <Text style={styles.goldTitle}>Gold 기능을{`\n`}한 번에 이용하세요.</Text>
+            <Text style={styles.goldDescription}>
+              방문자 확인, 무제한 되돌리기, 광고 제거와 우선 노출이 포함됩니다.
             </Text>
-            <Ionicons color={palette.white} name="arrow-forward" size={17} />
-          </Pressable>
-        </LinearGradient>
+            <View style={styles.goldHighlights}>
+              {goldBenefits.slice(0, 3).map((benefit) => (
+                <View key={benefit.title} style={styles.highlightChip}>
+                  <IllustratedIcon size={20} source={benefit.illustration} />
+                  <Text style={styles.highlightText}>{benefit.title}</Text>
+                </View>
+              ))}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/ad-free')}
+              style={({ pressed }) => [styles.goldAction, pressed && styles.pressed]}
+            >
+              <Text style={styles.goldActionText}>
+                {tier === 'gold' ? 'Gold Pass 관리' : '혜택과 가격 확인'}
+              </Text>
+              <Ionicons color={palette.white} name="arrow-forward" size={17} />
+            </Pressable>
+          </LinearGradient>
+        </Animated.View>
 
-        <Text style={styles.sectionTitle}>나에게 맞는 이용권</Text>
-        <View style={styles.planRow}>
-          <Pressable
-            accessibilityLabel="Ad-Free 자세히 보기"
-            accessibilityRole="button"
-            onPress={() => router.push('/ad-free?product=ad-free')}
-            style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
-          >
-            <View style={styles.planIconPink}>
-              <IllustratedIcon size={42} source={illustratedIcons.adFree} />
-            </View>
-            <Text style={styles.planName}>Ad-Free</Text>
-            <Text style={styles.planDescription}>선택형 보상 광고를 제외한 자동 광고 제거</Text>
-            <Text style={styles.planPrice}>{AD_FREE_PRODUCT.fallbackPriceLabelKo}</Text>
-            <View style={styles.planLink}>
-              <Text style={styles.planLinkText}>자세히 보기</Text>
-              <Ionicons color={palette.ink} name="chevron-forward" size={15} />
-            </View>
-          </Pressable>
+        <Animated.View entering={sectionEntering(2)}>
+          <Text style={styles.sectionTitle}>나에게 맞는 이용권</Text>
+          <View style={styles.planRow}>
+            <Pressable
+              accessibilityLabel="Ad-Free 자세히 보기"
+              accessibilityRole="button"
+              onPress={() => router.push('/ad-free?product=ad-free')}
+              style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
+            >
+              <View style={styles.planIconPink}>
+                <IllustratedIcon size={42} source={illustratedIcons.adFree} />
+              </View>
+              <Text style={styles.planName}>Ad-Free</Text>
+              <Text style={styles.planDescription}>선택형 보상 광고를 제외한 자동 광고 제거</Text>
+              <Text style={styles.planPrice}>{AD_FREE_PRODUCT.fallbackPriceLabelKo}</Text>
+              <View style={styles.planLink}>
+                <Text style={styles.planLinkText}>자세히 보기</Text>
+                <Ionicons color={palette.ink} name="chevron-forward" size={15} />
+              </View>
+            </Pressable>
 
-          <Pressable
-            accessibilityLabel="Gold Pass 자세히 보기"
-            accessibilityRole="button"
-            onPress={() => router.push('/ad-free')}
-            style={({ pressed }) => [
-              styles.planCard,
-              styles.planCardGold,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View style={styles.planIconGold}>
-              <IllustratedIcon size={42} source={illustratedIcons.goldPass} />
-            </View>
-            <View style={styles.recommendPill}>
-              <Text style={styles.recommendText}>추천</Text>
-            </View>
-            <Text style={styles.planName}>Gold Pass</Text>
-            <Text style={styles.planDescription}>방문자·우선 노출·무제한 되돌리기·광고 제거</Text>
-            <Text style={styles.planPrice}>{GOLD_PRODUCT.fallbackPriceLabelKo}</Text>
-            <View style={styles.planLink}>
-              <Text style={styles.planLinkText}>모든 혜택 보기</Text>
-              <Ionicons color={palette.ink} name="chevron-forward" size={15} />
-            </View>
-          </Pressable>
-        </View>
+            <Pressable
+              accessibilityLabel="Gold Pass 자세히 보기"
+              accessibilityRole="button"
+              onPress={() => router.push('/ad-free')}
+              style={({ pressed }) => [
+                styles.planCard,
+                styles.planCardGold,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={styles.planIconGold}>
+                <IllustratedIcon size={42} source={illustratedIcons.goldPass} />
+              </View>
+              <View style={styles.recommendPill}>
+                <Text style={styles.recommendText}>추천</Text>
+              </View>
+              <Text style={styles.planName}>Gold Pass</Text>
+              <Text style={styles.planDescription}>방문자·우선 노출·무제한 되돌리기·광고 제거</Text>
+              <Text style={styles.planPrice}>{GOLD_PRODUCT.fallbackPriceLabelKo}</Text>
+              <View style={styles.planLink}>
+                <Text style={styles.planLinkText}>모든 혜택 보기</Text>
+                <Ionicons color={palette.ink} name="chevron-forward" size={15} />
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
 
-        <View style={styles.benefitSection}>
+        <Animated.View entering={sectionEntering(3)} style={styles.benefitSection}>
           <View style={styles.sectionHeadingRow}>
             <Text style={styles.sectionTitleInline}>Gold 혜택</Text>
             <Text style={styles.sectionHint}>필요할 때만 선택하세요</Text>
@@ -193,9 +204,9 @@ export function ShopScreen() {
               </View>
             ))}
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.compareCard}>
+        <Animated.View entering={sectionEntering(4)} style={styles.compareCard}>
           <View style={styles.compareHeader}>
             <Text style={styles.compareTitle}>한눈에 비교</Text>
             <View style={styles.compareLabels}>
@@ -215,31 +226,33 @@ export function ShopScreen() {
               <CompareMark gold value={item.gold} />
             </View>
           ))}
-        </View>
+        </Animated.View>
 
-        <Pressable
-          accessibilityLabel="구매 복원 및 이용권 관리"
-          accessibilityRole="button"
-          onPress={() => router.push('/ad-free')}
-          style={({ pressed }) => [styles.purchaseManagement, pressed && styles.pressed]}
-        >
-          <View style={styles.purchaseIcon}>
-            <IllustratedIcon size={30} source={illustratedIcons.purchase} />
-          </View>
-          <View style={styles.purchaseCopy}>
-            <Text style={styles.purchaseTitle}>구매 복원 및 이용권 관리</Text>
-            <Text style={styles.purchaseText}>기존 구매를 복원하거나 이용 상태를 확인해요</Text>
-          </View>
-          <Ionicons color={palette.inkMuted} name="chevron-forward" size={18} />
-        </Pressable>
+        <Animated.View entering={sectionEntering(5)}>
+          <Pressable
+            accessibilityLabel="구매 복원 및 이용권 관리"
+            accessibilityRole="button"
+            onPress={() => router.push('/ad-free')}
+            style={({ pressed }) => [styles.purchaseManagement, pressed && styles.pressed]}
+          >
+            <View style={styles.purchaseIcon}>
+              <IllustratedIcon size={30} source={illustratedIcons.purchase} />
+            </View>
+            <View style={styles.purchaseCopy}>
+              <Text style={styles.purchaseTitle}>구매 복원 및 이용권 관리</Text>
+              <Text style={styles.purchaseText}>기존 구매를 복원하거나 이용 상태를 확인해요</Text>
+            </View>
+            <Ionicons color={palette.inkMuted} name="chevron-forward" size={18} />
+          </Pressable>
 
-        <View style={styles.notice}>
-          <IllustratedIcon size={24} source={illustratedIcons.safety} />
-          <Text style={styles.noticeText}>
-            결제 여부와 관계없이 매치와 채팅 등 핵심 기능은 무료예요. 우선 노출은 필터와 안전 기준을
-            통과한 후보 안에서만 적용됩니다.
-          </Text>
-        </View>
+          <View style={styles.notice}>
+            <IllustratedIcon size={24} source={illustratedIcons.safety} />
+            <Text style={styles.noticeText}>
+              결제 여부와 관계없이 매치와 채팅 등 핵심 기능은 무료예요. 우선 노출은 필터와 안전
+              기준을 통과한 후보 안에서만 적용됩니다.
+            </Text>
+          </View>
+        </Animated.View>
       </ScrollView>
     </Screen>
   );

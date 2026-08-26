@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { AmbientIconMotion } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { layout, palette } from '@/constants/theme';
@@ -151,9 +152,11 @@ export function DiscoverScreen() {
         error={deck.error}
         isLoading={deck.isLoading}
         onAdjustFilters={() => setFiltersOpen(true)}
+        onRestoreAnimationConsumed={deck.clearRestoredSwipe}
         onRetry={deck.retry}
         onSwipe={handleSwipe}
         profiles={deck.profiles}
+        restoredSwipe={deck.restoredSwipe}
       />
       {filtersOpen ? (
         <DiscoveryFilterSheet
@@ -209,7 +212,13 @@ function HeaderAction({
         { opacity: disabled ? 0.55 : pressed ? 0.62 : 1 },
       ]}
     >
-      <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
+      {badge ? (
+        <AmbientIconMotion motion="bell">
+          <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
+        </AmbientIconMotion>
+      ) : (
+        <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
+      )}
       {badge ? (
         <View style={[styles.headerActionBadge, { borderColor: theme.colors.background }]} />
       ) : null}

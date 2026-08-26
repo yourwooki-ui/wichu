@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
@@ -27,86 +29,64 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
   };
 
   return (
-    <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
-      <View style={styles.overlay}>
-        <Pressable
-          accessibilityLabel={t('experience.common.cancel')}
-          accessibilityRole="button"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.heading}>
-            <View style={styles.icon}>
-              <IllustratedIcon size={44} source={illustratedIcons.connections} />
-            </View>
-            <View style={styles.headingCopy}>
-              <Text style={styles.title}>{t('experience.pickMessage.title')}</Text>
-              <Text style={styles.body}>{t('experience.pickMessage.body', { name })}</Text>
-            </View>
-          </View>
-          <TextInput
-            autoFocus
-            maxLength={300}
-            multiline
-            onChangeText={setMessage}
-            placeholder={t('experience.pickMessage.placeholder')}
-            placeholderTextColor={palette.inkMuted}
-            style={styles.input}
-            value={message}
-          />
-          <Text style={styles.count}>{message.length} / 300</Text>
-          <Pressable
-            accessibilityLabel={
-              message.trim()
-                ? t('experience.pickMessage.send')
-                : t('experience.pickMessage.without')
-            }
-            accessibilityRole="button"
-            onPress={submit}
-            style={styles.primary}
-          >
-            <Text style={styles.primaryText}>
-              {message.trim()
-                ? t('experience.pickMessage.send')
-                : t('experience.pickMessage.without')}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel={t('experience.common.cancel')}
-            accessibilityRole="button"
-            onPress={onClose}
-            style={styles.cancel}
-          >
-            <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
-          </Pressable>
-        </SafeAreaView>
+    <InteractiveBottomSheet
+      accessibilityLabel={t('experience.pickMessage.title')}
+      contentStyle={styles.sheetContent}
+      onClose={onClose}
+      sheetStyle={styles.sheet}
+      visible
+    >
+      <View style={styles.heading}>
+        <View style={styles.icon}>
+          <IllustratedIcon size={44} source={illustratedIcons.connections} />
+        </View>
+        <View style={styles.headingCopy}>
+          <Text style={styles.title}>{t('experience.pickMessage.title')}</Text>
+          <Text style={styles.body}>{t('experience.pickMessage.body', { name })}</Text>
+        </View>
       </View>
-    </AppModal>
+      <TextInput
+        autoFocus
+        maxLength={300}
+        multiline
+        onChangeText={setMessage}
+        placeholder={t('experience.pickMessage.placeholder')}
+        placeholderTextColor={palette.inkMuted}
+        style={styles.input}
+        value={message}
+      />
+      <Text style={styles.count}>{message.length} / 300</Text>
+      <Pressable
+        accessibilityLabel={
+          message.trim() ? t('experience.pickMessage.send') : t('experience.pickMessage.without')
+        }
+        accessibilityRole="button"
+        onPress={submit}
+        style={styles.primary}
+      >
+        <Text style={styles.primaryText}>
+          {message.trim() ? t('experience.pickMessage.send') : t('experience.pickMessage.without')}
+        </Text>
+      </Pressable>
+      <BottomSheetCloseButton
+        accessibilityLabel={t('experience.common.cancel')}
+        accessibilityRole="button"
+        style={styles.cancel}
+      >
+        <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
+      </BottomSheetCloseButton>
+    </InteractiveBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { backgroundColor: 'rgba(17,17,20,0.42)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    alignSelf: 'center',
     backgroundColor: '#F8F8FA',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
     maxWidth: 480,
+  },
+  sheetContent: {
     paddingBottom: 12,
     paddingHorizontal: 18,
-    width: '100%',
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: palette.line,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 17,
-    marginTop: 10,
-    width: 38,
   },
   heading: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   icon: {

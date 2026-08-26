@@ -96,6 +96,7 @@ export function ChatListScreen() {
       <AppTabHeader
         actionAccessibilityLabel="채팅 알림 설정"
         actionIcon={illustratedIcons.notification}
+        actionMotion={unreadCount > 0 ? 'bell' : undefined}
         eyebrow="메시지"
         onAction={() => router.push('/settings')}
       />

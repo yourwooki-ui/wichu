@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   signOutText: { color: palette.danger, fontSize: 12, fontWeight: '900' },
   modalBackdrop: {
     alignItems: 'center',
-    backgroundColor: 'rgba(17,17,17,0.42)',
+    backgroundColor: 'rgba(17,17,19,0.18)',
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -630,8 +630,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     borderRadius: 26,
+    elevation: 14,
     maxWidth: 380,
     padding: 22,
+    shadowColor: '#111113',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
     width: '100%',
   },
   signOutIcon: {

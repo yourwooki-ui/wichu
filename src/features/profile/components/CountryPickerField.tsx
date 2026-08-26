@@ -1,19 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { CountryFlag } from '@/components/CountryFlag';
 import { getCountryOptions, type CountryOption } from '@/constants/countries';
 import { palette, radius } from '@/constants/theme';
@@ -89,118 +82,100 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
         <Ionicons color={palette.inkMuted} name="chevron-down" size={20} />
       </Pressable>
 
-      <AppModal
-        animationType="slide"
-        onRequestClose={closePicker}
-        presentationStyle="overFullScreen"
-        transparent
+      <InteractiveBottomSheet
+        accessibilityLabel={t('profileSetup.countryPicker.title')}
+        onClose={closePicker}
+        sheetStyle={styles.sheet}
         visible={visible}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <Pressable
+        <View style={styles.sheetHeader}>
+          <View>
+            <Text style={styles.sheetTitle}>{t('profileSetup.countryPicker.title')}</Text>
+            <Text style={styles.sheetSubtitle}>{t('profileSetup.countryPicker.subtitle')}</Text>
+          </View>
+          <BottomSheetCloseButton
             accessibilityLabel={t('profileSetup.countryPicker.close')}
             accessibilityRole="button"
-            onPress={closePicker}
-            style={styles.scrim}
+            hitSlop={10}
+            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+          >
+            <Ionicons color={palette.ink} name="close" size={22} />
+          </BottomSheetCloseButton>
+        </View>
+
+        <View style={styles.searchBox}>
+          <Ionicons color={palette.inkMuted} name="search" size={20} />
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            clearButtonMode="while-editing"
+            onChangeText={setQuery}
+            placeholder={t('profileSetup.countryPicker.searchPlaceholder')}
+            placeholderTextColor={palette.inkMuted}
+            returnKeyType="search"
+            style={styles.searchInput}
+            value={query}
           />
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            <View style={styles.handle} />
-            <View style={styles.sheetHeader}>
-              <View>
-                <Text style={styles.sheetTitle}>{t('profileSetup.countryPicker.title')}</Text>
-                <Text style={styles.sheetSubtitle}>{t('profileSetup.countryPicker.subtitle')}</Text>
-              </View>
+          {query ? (
+            <Pressable
+              accessibilityLabel={t('profileSetup.countryPicker.clearSearch')}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setQuery('')}
+            >
+              <Ionicons color={palette.inkMuted} name="close-circle" size={19} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <FlatList
+          contentContainerStyle={
+            filteredCountries.length === 0 ? styles.emptyList : styles.listContent
+          }
+          data={filteredCountries}
+          initialNumToRender={18}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(country) => country.code}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons color={palette.inkMuted} name="search-outline" size={26} />
+              <Text style={styles.emptyTitle}>{t('profileSetup.countryPicker.empty')}</Text>
+              <Text style={styles.emptyBody}>{t('profileSetup.countryPicker.emptyHint')}</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const selected = item.code === value;
+            return (
               <Pressable
-                accessibilityLabel={t('profileSetup.countryPicker.close')}
-                accessibilityRole="button"
-                hitSlop={10}
-                onPress={closePicker}
-                style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                onPress={() => selectCountry(item)}
+                style={({ pressed }) => [
+                  styles.countryRow,
+                  selected && styles.countryRowSelected,
+                  pressed && styles.pressed,
+                ]}
               >
-                <Ionicons color={palette.ink} name="close" size={22} />
-              </Pressable>
-            </View>
-
-            <View style={styles.searchBox}>
-              <Ionicons color={palette.inkMuted} name="search" size={20} />
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-                clearButtonMode="while-editing"
-                onChangeText={setQuery}
-                placeholder={t('profileSetup.countryPicker.searchPlaceholder')}
-                placeholderTextColor={palette.inkMuted}
-                returnKeyType="search"
-                style={styles.searchInput}
-                value={query}
-              />
-              {query ? (
-                <Pressable
-                  accessibilityLabel={t('profileSetup.countryPicker.clearSearch')}
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  onPress={() => setQuery('')}
-                >
-                  <Ionicons color={palette.inkMuted} name="close-circle" size={19} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            <FlatList
-              contentContainerStyle={
-                filteredCountries.length === 0 ? styles.emptyList : styles.listContent
-              }
-              data={filteredCountries}
-              initialNumToRender={18}
-              keyboardShouldPersistTaps="handled"
-              keyExtractor={(country) => country.code}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Ionicons color={palette.inkMuted} name="search-outline" size={26} />
-                  <Text style={styles.emptyTitle}>{t('profileSetup.countryPicker.empty')}</Text>
-                  <Text style={styles.emptyBody}>{t('profileSetup.countryPicker.emptyHint')}</Text>
+                <CountryFlag
+                  compact
+                  countryCode={item.code}
+                  label={item.name}
+                  style={styles.flagSpacing}
+                />
+                <Text numberOfLines={1} style={styles.rowName}>
+                  {item.name}
+                </Text>
+                <Text style={styles.rowCode}>{item.code}</Text>
+                <View style={[styles.check, selected && styles.checkSelected]}>
+                  {selected ? <Ionicons color={palette.black} name="checkmark" size={14} /> : null}
                 </View>
-              }
-              renderItem={({ item }) => {
-                const selected = item.code === value;
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                    onPress={() => selectCountry(item)}
-                    style={({ pressed }) => [
-                      styles.countryRow,
-                      selected && styles.countryRowSelected,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <CountryFlag
-                      compact
-                      countryCode={item.code}
-                      label={item.name}
-                      style={styles.flagSpacing}
-                    />
-                    <Text numberOfLines={1} style={styles.rowName}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.rowCode}>{item.code}</Text>
-                    <View style={[styles.check, selected && styles.checkSelected]}>
-                      {selected ? (
-                        <Ionicons color={palette.black} name="checkmark" size={14} />
-                      ) : null}
-                    </View>
-                  </Pressable>
-                );
-              }}
-              showsVerticalScrollIndicator={false}
-            />
-          </SafeAreaView>
-        </KeyboardAvoidingView>
-      </AppModal>
+              </Pressable>
+            );
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+      </InteractiveBottomSheet>
     </View>
   );
 }
@@ -261,34 +236,12 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.72,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  scrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(17, 17, 17, 0.38)',
-  },
   sheet: {
-    alignSelf: 'center',
     backgroundColor: '#F8F8FA',
     borderColor: palette.line,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
     borderWidth: 1,
     height: '84%',
     maxWidth: 460,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: palette.line,
-    borderRadius: 999,
-    height: 4,
-    marginBottom: 17,
-    marginTop: 10,
-    width: 38,
   },
   sheetHeader: {
     alignItems: 'flex-start',

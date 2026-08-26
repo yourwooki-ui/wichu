@@ -1,19 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -160,79 +153,68 @@ export function LanguagePreferencesField({
         ))}
       </View>
 
-      <AppModal
-        animationType="slide"
-        onRequestClose={closePicker}
-        transparent
+      <InteractiveBottomSheet
+        accessibilityLabel={
+          pickerTarget === 'native'
+            ? t('profileSetup.language.chooseNative')
+            : t('profileSetup.language.addSpoken')
+        }
+        onClose={closePicker}
+        sheetStyle={styles.sheet}
         visible={pickerTarget !== null}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <Pressable
+        <View style={styles.sheetHeader}>
+          <View>
+            <Text style={styles.sheetTitle}>
+              {pickerTarget === 'native'
+                ? t('profileSetup.language.chooseNative')
+                : t('profileSetup.language.addSpoken')}
+            </Text>
+            <Text style={styles.sheetSubtitle}>{t('profileSetup.language.searchHint')}</Text>
+          </View>
+          <BottomSheetCloseButton
             accessibilityLabel={t('experience.common.cancel')}
             accessibilityRole="button"
-            onPress={closePicker}
-            style={styles.scrim}
+            hitSlop={8}
+            style={({ pressed }) => [styles.closeButton, pressed && pressFeedback.icon]}
+          >
+            <Ionicons color={palette.ink} name="close" size={22} />
+          </BottomSheetCloseButton>
+        </View>
+        <View style={styles.searchBox}>
+          <Ionicons color={palette.inkMuted} name="search" size={20} />
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            onChangeText={setQuery}
+            placeholder={t('profileSetup.language.searchPlaceholder')}
+            placeholderTextColor={palette.inkMuted}
+            style={styles.searchInput}
+            value={query}
           />
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            <View style={styles.handle} />
-            <View style={styles.sheetHeader}>
-              <View>
-                <Text style={styles.sheetTitle}>
-                  {pickerTarget === 'native'
-                    ? t('profileSetup.language.chooseNative')
-                    : t('profileSetup.language.addSpoken')}
-                </Text>
-                <Text style={styles.sheetSubtitle}>{t('profileSetup.language.searchHint')}</Text>
-              </View>
-              <Pressable
-                accessibilityLabel={t('experience.common.cancel')}
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={closePicker}
-                style={({ pressed }) => [styles.closeButton, pressed && pressFeedback.icon]}
-              >
-                <Ionicons color={palette.ink} name="close" size={22} />
-              </Pressable>
-            </View>
-            <View style={styles.searchBox}>
-              <Ionicons color={palette.inkMuted} name="search" size={20} />
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-                onChangeText={setQuery}
-                placeholder={t('profileSetup.language.searchPlaceholder')}
-                placeholderTextColor={palette.inkMuted}
-                style={styles.searchInput}
-                value={query}
-              />
-            </View>
-            <FlatList
-              contentContainerStyle={styles.listContent}
-              data={filteredOptions}
-              initialNumToRender={20}
-              keyboardShouldPersistTaps="handled"
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <Pressable
-                  accessibilityLabel={item.name}
-                  accessibilityRole="button"
-                  onPress={() => selectLanguage(item)}
-                  style={styles.optionRow}
-                >
-                  <CountryFlag countryCode={item.countryCode} label={item.name} />
-                  <Text style={styles.optionName}>{item.name}</Text>
-                  <Ionicons color={palette.inkMuted} name="chevron-forward" size={18} />
-                </Pressable>
-              )}
-              showsVerticalScrollIndicator={false}
-            />
-          </SafeAreaView>
-        </KeyboardAvoidingView>
-      </AppModal>
+        </View>
+        <FlatList
+          contentContainerStyle={styles.listContent}
+          data={filteredOptions}
+          initialNumToRender={20}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(item) => item.code}
+          renderItem={({ item }) => (
+            <Pressable
+              accessibilityLabel={item.name}
+              accessibilityRole="button"
+              onPress={() => selectLanguage(item)}
+              style={styles.optionRow}
+            >
+              <CountryFlag countryCode={item.countryCode} label={item.name} />
+              <Text style={styles.optionName}>{item.name}</Text>
+              <Ionicons color={palette.inkMuted} name="chevron-forward" size={18} />
+            </Pressable>
+          )}
+          showsVerticalScrollIndicator={false}
+        />
+      </InteractiveBottomSheet>
     </View>
   );
 }
@@ -316,28 +298,12 @@ const styles = StyleSheet.create({
   levelSelected: { backgroundColor: '#FFF0F5' },
   levelLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
   levelLabelSelected: { color: palette.pink },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(17,17,17,0.38)' },
   sheet: {
-    alignSelf: 'center',
     backgroundColor: '#F8F8FA',
     borderColor: palette.line,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
     borderWidth: 1,
     height: '84%',
     maxWidth: 460,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: palette.line,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 17,
-    marginTop: 10,
-    width: 38,
   },
   sheetHeader: {
     alignItems: 'flex-start',

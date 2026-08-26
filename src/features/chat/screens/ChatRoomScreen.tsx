@@ -11,6 +11,7 @@ import { randomUUID } from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -27,15 +28,31 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown, useReducedMotion } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
+import { listLayout, messageEntering, stateEntering, stateExiting } from '@/constants/motion';
 import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
@@ -83,6 +100,7 @@ type LocalMessage = {
   attachments?: ChatImageAttachment[];
   imageDrafts?: ChatImageDraft[];
   uploadProgress?: { completed: number; total: number };
+  animateOnMount?: boolean;
 };
 
 export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
@@ -154,7 +172,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     if (isMock || !userId) return;
     const channel = chatService.subscribe(matchId, (message) => {
       setMessages((current) =>
-        mergeMessage(current, toLocalMessage(message, userId, i18n.language)),
+        mergeMessage(current, {
+          ...toLocalMessage(message, userId, i18n.language),
+          animateOnMount: message.sender_id !== userId,
+        }),
       );
       if (message.sender_id !== userId) {
         void chatService.markRead(matchId).then(() => {
@@ -363,6 +384,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       mine: true,
       originalLanguage: normalizeLanguage(i18n.language),
       status: isMock ? undefined : 'sending',
+      animateOnMount: true,
     };
     setDraft('');
     setSelectedImages([]);
@@ -702,8 +724,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 </View>
               ) : null}
               {displayedMessages.map((message) => (
-                <View
+                <Animated.View
+                  entering={message.animateOnMount ? messageEntering() : undefined}
                   key={message.id}
+                  layout={listLayout()}
                   style={[styles.messageBlock, message.mine ? styles.mineBlock : styles.theirBlock]}
                 >
                   {getMessageImageItems(message).length ? (
@@ -734,10 +758,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                     </View>
                   ) : null}
                   {message.translated ? (
-                    <View style={styles.translation}>
+                    <Animated.View entering={stateEntering()} style={styles.translation}>
                       <IllustratedIcon size={18} source={illustratedIcons.translation} />
                       <Text style={styles.translationText}>{message.translated}</Text>
-                    </View>
+                    </Animated.View>
                   ) : !message.mine &&
                     message.messageId &&
                     normalizeLanguage(message.originalLanguage ?? '') !==
@@ -773,33 +797,43 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                     </Pressable>
                   ) : null}
                   {message.status ? (
-                    <Pressable
-                      accessibilityLabel={
-                        message.status === 'failed' ? '메시지 다시 보내기' : undefined
-                      }
-                      accessibilityRole="button"
-                      disabled={message.status !== 'failed'}
-                      onPress={() => void deliver(message)}
-                      style={[
-                        styles.deliveryAction,
-                        message.mine ? styles.deliveryMine : styles.deliveryTheirs,
-                      ]}
-                    >
-                      <Text
+                    <Animated.View entering={stateEntering()} exiting={stateExiting()}>
+                      <Pressable
+                        accessibilityLabel={
+                          message.status === 'failed' ? '메시지 다시 보내기' : undefined
+                        }
+                        accessibilityRole="button"
+                        disabled={message.status !== 'failed'}
+                        onPress={() => void deliver(message)}
                         style={[
-                          styles.deliveryText,
-                          message.status === 'failed' && styles.deliveryFailed,
+                          styles.deliveryAction,
+                          message.mine ? styles.deliveryMine : styles.deliveryTheirs,
                         ]}
                       >
-                        {message.status === 'sending'
-                          ? message.uploadProgress
-                            ? `사진 올리는 중 ${message.uploadProgress.completed}/${message.uploadProgress.total}`
-                            : '전송 중…'
-                          : '전송 실패 · 다시 보내기'}
-                      </Text>
-                    </Pressable>
+                        <View style={styles.deliveryCopy}>
+                          <Text
+                            style={[
+                              styles.deliveryText,
+                              message.status === 'failed' && styles.deliveryFailed,
+                            ]}
+                          >
+                            {message.status === 'sending'
+                              ? message.uploadProgress
+                                ? `사진 올리는 중 ${message.uploadProgress.completed}/${message.uploadProgress.total}`
+                                : '전송 중…'
+                              : '전송 실패 · 다시 보내기'}
+                          </Text>
+                          {message.uploadProgress ? (
+                            <UploadProgress
+                              completed={message.uploadProgress.completed}
+                              total={message.uploadProgress.total}
+                            />
+                          ) : null}
+                        </View>
+                      </Pressable>
+                    </Animated.View>
                   ) : null}
-                </View>
+                </Animated.View>
               ))}
             </>
           ) : null}
@@ -826,7 +860,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
 
         <View style={[styles.composerShell, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {selectedImages.length ? (
-            <View style={styles.attachmentTray}>
+            <Animated.View
+              entering={stateEntering()}
+              exiting={stateExiting()}
+              style={styles.attachmentTray}
+            >
               <View style={styles.attachmentTrayHeading}>
                 <Text style={styles.attachmentTrayTitle}>보낼 사진</Text>
                 <Text style={styles.attachmentCount}>
@@ -840,7 +878,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 showsHorizontalScrollIndicator={false}
               >
                 {selectedImages.map((image, index) => (
-                  <View key={image.draftId} style={styles.attachmentPreviewWrap}>
+                  <Animated.View
+                    entering={messageEntering()}
+                    exiting={stateExiting()}
+                    key={image.draftId}
+                    layout={listLayout()}
+                    style={styles.attachmentPreviewWrap}
+                  >
                     <Image
                       cachePolicy="memory"
                       contentFit="cover"
@@ -861,10 +905,10 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                     >
                       <Ionicons color={palette.white} name="close" size={14} />
                     </Pressable>
-                  </View>
+                  </Animated.View>
                 ))}
               </ScrollView>
-            </View>
+            </Animated.View>
           ) : null}
           <View style={styles.composerArea}>
             <Pressable
@@ -916,76 +960,66 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         </View>
       </KeyboardAvoidingView>
 
-      <AppModal
-        animationType="fade"
-        onRequestClose={() => setSafetyOpen(false)}
-        transparent
+      <InteractiveBottomSheet
+        accessibilityLabel="대화 안전 메뉴"
+        contentStyle={styles.safetySheetContent}
+        dismissEnabled={!safetyBusy}
+        onClose={() => setSafetyOpen(false)}
+        sheetStyle={styles.safetySheet}
         visible={safetyOpen}
       >
-        <View style={styles.modalBackdrop}>
-          <Pressable
-            accessibilityLabel="대화 안전 메뉴 닫기"
-            accessibilityRole="button"
-            onPress={() => setSafetyOpen(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View accessibilityViewIsModal style={styles.safetySheet}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>{profile.name}님과의 대화</Text>
-            <SafetyAction
-              disabled={safetyBusy}
-              icon="share-social-outline"
-              label={t('experience.dateShare.action')}
-              onPress={() => {
-                setSafetyOpen(false);
-                setDateShareOpen(true);
-              }}
-            />
-            <SafetyAction
-              disabled={safetyBusy}
-              icon="person-outline"
-              label="프로필 보기"
-              onPress={() => {
-                setSafetyOpen(false);
-                router.push(`/profile/${profile.id}`);
-              }}
-            />
-            <SafetyAction
-              disabled={safetyBusy}
-              icon="flag-outline"
-              label="신고하기"
-              onPress={() => {
-                setSafetyOpen(false);
-                setReportOpen(true);
-              }}
-            />
-            <SafetyAction
-              danger
-              disabled={safetyBusy}
-              icon="exit-outline"
-              label="대화방 나가기"
-              onPress={confirmEndMatch}
-            />
-            <SafetyAction
-              danger
-              disabled={safetyBusy}
-              icon="ban-outline"
-              label="차단하기"
-              onPress={confirmBlock}
-            />
-            <Pressable
-              accessibilityLabel="대화 안전 메뉴 닫기"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: safetyBusy }}
-              disabled={safetyBusy}
-              onPress={() => setSafetyOpen(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelText}>{safetyBusy ? '처리 중…' : '닫기'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </AppModal>
+        <Text style={styles.sheetTitle}>{profile.name}님과의 대화</Text>
+        <SafetyAction
+          disabled={safetyBusy}
+          icon="share-social-outline"
+          label={t('experience.dateShare.action')}
+          onPress={() => {
+            setSafetyOpen(false);
+            setDateShareOpen(true);
+          }}
+        />
+        <SafetyAction
+          disabled={safetyBusy}
+          icon="person-outline"
+          label="프로필 보기"
+          onPress={() => {
+            setSafetyOpen(false);
+            router.push(`/profile/${profile.id}`);
+          }}
+        />
+        <SafetyAction
+          disabled={safetyBusy}
+          icon="flag-outline"
+          label="신고하기"
+          onPress={() => {
+            setSafetyOpen(false);
+            setReportOpen(true);
+          }}
+        />
+        <SafetyAction
+          danger
+          disabled={safetyBusy}
+          icon="exit-outline"
+          label="대화방 나가기"
+          onPress={confirmEndMatch}
+        />
+        <SafetyAction
+          danger
+          disabled={safetyBusy}
+          icon="ban-outline"
+          label="차단하기"
+          onPress={confirmBlock}
+        />
+        <BottomSheetCloseButton
+          accessibilityLabel="대화 안전 메뉴 닫기"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: safetyBusy }}
+          disabled={safetyBusy}
+          style={styles.cancelButton}
+        >
+          <Text style={styles.cancelText}>{safetyBusy ? '처리 중…' : '닫기'}</Text>
+        </BottomSheetCloseButton>
+      </InteractiveBottomSheet>
 
       <ReportReasonSheet
         busy={safetyBusy}
@@ -1087,6 +1121,24 @@ function mergeMessage(current: LocalMessage[], incoming: LocalMessage) {
   return next;
 }
 
+function UploadProgress({ completed, total }: { completed: number; total: number }) {
+  const progress = useSharedValue(total > 0 ? completed / total : 0);
+
+  useEffect(() => {
+    progress.set(withTiming(total > 0 ? completed / total : 0, { duration: 180 }));
+  }, [completed, progress, total]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${Math.max(0, Math.min(1, progress.get())) * 100}%`,
+  }));
+
+  return (
+    <View accessibilityRole="progressbar" style={styles.uploadTrack}>
+      <Animated.View style={[styles.uploadFill, fillStyle]} />
+    </View>
+  );
+}
+
 function MessageImageGrid({
   hidden,
   images,
@@ -1180,13 +1232,124 @@ function ImageViewer({
           showsHorizontalScrollIndicator={false}
         >
           {images.map((uri) => (
-            <View key={uri} style={{ height, justifyContent: 'center', width }}>
-              <Image contentFit="contain" source={{ uri }} style={styles.viewerImage} />
-            </View>
+            <ZoomableViewerImage
+              height={height}
+              key={uri}
+              onClose={onClose}
+              uri={uri}
+              width={width}
+            />
           ))}
         </ScrollView>
+        {images.length > 1 ? (
+          <View
+            accessibilityLabel={`${images.length}장 중 ${activeIndex + 1}번째 사진`}
+            style={[styles.viewerDots, { bottom: Math.max(viewerInsets.bottom + 18, 24) }]}
+          >
+            {images.map((uri, index) => (
+              <View
+                key={`dot-${uri}`}
+                style={[styles.viewerDot, index === activeIndex && styles.viewerDotActive]}
+              />
+            ))}
+          </View>
+        ) : null}
       </View>
     </AppModal>
+  );
+}
+
+function ZoomableViewerImage({
+  height,
+  onClose,
+  uri,
+  width,
+}: {
+  height: number;
+  onClose: () => void;
+  uri: string;
+  width: number;
+}) {
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
+
+  const gesture = useMemo(() => {
+    const pinch = Gesture.Pinch()
+      .onUpdate((event) => {
+        scale.set(Math.max(1, Math.min(4, savedScale.get() * event.scale)));
+      })
+      .onEnd(() => {
+        savedScale.set(scale.get());
+      });
+
+    const pan = Gesture.Pan()
+      .activeOffsetY([-12, 12])
+      .failOffsetX([-22, 22])
+      .onBegin(() => {
+        dragStartX.set(translateX.get());
+        dragStartY.set(translateY.get());
+      })
+      .onUpdate((event) => {
+        if (scale.get() > 1.02) {
+          translateX.set(dragStartX.get() + event.translationX);
+          translateY.set(dragStartY.get() + event.translationY);
+          return;
+        }
+        if (Math.abs(event.translationY) > Math.abs(event.translationX)) {
+          translateY.set(event.translationY);
+        }
+      })
+      .onEnd((event) => {
+        if (scale.get() > 1.02) return;
+        if (Math.abs(translateY.get()) > 120 || Math.abs(event.velocityY) > 950) {
+          runOnJS(onClose)();
+          return;
+        }
+        translateY.set(withSpring(0, { damping: 20, stiffness: 220 }));
+      });
+
+    const doubleTap = Gesture.Tap()
+      .numberOfTaps(2)
+      .onEnd((_event, success) => {
+        if (!success) return;
+        if (scale.get() > 1.02) {
+          scale.set(withSpring(1, { damping: 20, stiffness: 220 }));
+          savedScale.set(1);
+          translateX.set(withSpring(0, { damping: 20, stiffness: 220 }));
+          translateY.set(withSpring(0, { damping: 20, stiffness: 220 }));
+          return;
+        }
+        scale.set(withSpring(2.2, { damping: 20, stiffness: 220 }));
+        savedScale.set(2.2);
+      });
+
+    return Gesture.Exclusive(doubleTap, Gesture.Simultaneous(pinch, pan));
+  }, [dragStartX, dragStartY, onClose, savedScale, scale, translateX, translateY]);
+
+  const imageStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(Math.abs(translateY.get()), [0, 240], [1, 0.42], Extrapolation.CLAMP),
+    transform: [
+      { translateX: translateX.get() },
+      { translateY: translateY.get() },
+      { scale: scale.get() },
+    ],
+  }));
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={[styles.viewerPage, { height, width }, imageStyle]}>
+        <Image
+          cachePolicy="memory-disk"
+          contentFit="contain"
+          source={{ uri }}
+          style={styles.viewerImage}
+        />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -1369,10 +1532,20 @@ const styles = StyleSheet.create({
   translationActionText: { color: palette.pink, fontSize: 10, fontWeight: '800' },
   translationFailed: { color: '#D52C47' },
   deliveryAction: { marginTop: 5 },
+  deliveryCopy: { minWidth: 92 },
   deliveryMine: { alignSelf: 'flex-end' },
   deliveryTheirs: { alignSelf: 'flex-start' },
   deliveryText: { color: palette.inkMuted, fontSize: 10, marginRight: 3 },
   deliveryFailed: { color: '#D52C47', fontWeight: '800' },
+  uploadTrack: {
+    backgroundColor: '#D7D7DC',
+    borderRadius: 2,
+    height: 3,
+    marginTop: 4,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  uploadFill: { backgroundColor: palette.pink, borderRadius: 2, height: '100%' },
   imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1541,23 +1714,23 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   viewerCount: { color: palette.white, fontSize: 13, fontWeight: '800' },
+  viewerPage: { justifyContent: 'center' },
   viewerImage: { height: '100%', width: '100%' },
-  modalBackdrop: { backgroundColor: 'rgba(12,12,16,0.46)', flex: 1, justifyContent: 'flex-end' },
+  viewerDots: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    position: 'absolute',
+  },
+  viewerDot: { backgroundColor: '#68686F', borderRadius: 3, height: 5, width: 5 },
+  viewerDotActive: { backgroundColor: palette.white, width: 16 },
   safetySheet: {
     backgroundColor: palette.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+  },
+  safetySheetContent: {
     paddingBottom: 24,
     paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    backgroundColor: '#D8D8DE',
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 20,
-    width: 42,
   },
   sheetTitle: { color: palette.ink, fontSize: 19, fontWeight: '900', marginBottom: 12 },
   safetyAction: { alignItems: 'center', flexDirection: 'row', minHeight: 56 },

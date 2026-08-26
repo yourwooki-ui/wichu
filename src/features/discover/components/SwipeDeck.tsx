@@ -33,14 +33,17 @@ const SWIPE_VELOCITY_THRESHOLD = 0.65;
 const SWIPE_MIN_DISTANCE = 28;
 const DOUBLE_TAP_DELAY = 260;
 const SWIPE_EXIT_DURATION = 220;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type SwipeDeckProps = {
   profiles: Profile[];
   isLoading: boolean;
   error: string | null;
   onAdjustFilters: () => void;
+  onRestoreAnimationConsumed?: () => void;
   onSwipe: (profile: Profile, action: SwipeAction) => void;
   onRetry: () => void;
+  restoredSwipe?: { action: SwipeAction; profileId: string; sequence: number } | null;
 };
 
 export function SwipeDeck({
@@ -48,8 +51,10 @@ export function SwipeDeck({
   isLoading,
   error,
   onAdjustFilters,
+  onRestoreAnimationConsumed,
   onSwipe,
   onRetry,
+  restoredSwipe,
 }: SwipeDeckProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -156,11 +161,32 @@ export function SwipeDeck({
   );
 
   useEffect(() => {
-    translateX.set(0);
+    const isRestoredProfile = restoredSwipe?.profileId === currentProfile?.id;
+    const restoredOffset = restoredSwipe?.action === 'like' ? width * 0.72 : -width * 0.72;
+
+    if (isRestoredProfile && !reduceMotion) {
+      translateX.set(restoredOffset);
+      translateX.set(withSpring(0, { damping: 19, stiffness: 185, mass: 0.82 }));
+    } else {
+      translateX.set(0);
+    }
     translateY.set(0);
     pickPulse.set(0);
     interactionLocked.set(false);
-  }, [currentProfile?.id, interactionLocked, pickPulse, translateX, translateY]);
+    if (isRestoredProfile) onRestoreAnimationConsumed?.();
+  }, [
+    currentProfile?.id,
+    interactionLocked,
+    onRestoreAnimationConsumed,
+    pickPulse,
+    reduceMotion,
+    restoredSwipe?.action,
+    restoredSwipe?.profileId,
+    restoredSwipe?.sequence,
+    translateX,
+    translateY,
+    width,
+  ]);
 
   const gesture = useMemo(() => {
     const finishSwipe = (action: SwipeAction) => {
@@ -240,6 +266,14 @@ export function SwipeDeck({
           Extrapolation.CLAMP,
         )}deg`,
       },
+      {
+        scale: interpolate(
+          Math.abs(translateX.get()),
+          [0, SWIPE_THRESHOLD, width],
+          [1, 0.992, 0.975],
+          Extrapolation.CLAMP,
+        ),
+      },
     ],
   }));
   const nextCardStyle = useAnimatedStyle(() => {
@@ -266,9 +300,24 @@ export function SwipeDeck({
   }));
   const likeDecisionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      {
+        scale: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0.82, 1], Extrapolation.CLAMP),
+      },
+    ],
   }));
   const passDecisionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.get(), [-SWIPE_THRESHOLD, -15], [1, 0], Extrapolation.CLAMP),
+    transform: [
+      {
+        scale: interpolate(
+          translateX.get(),
+          [-SWIPE_THRESHOLD, -15],
+          [1, 0.82],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
   }));
 
   if (isLoading) {
@@ -426,25 +475,32 @@ function DeckAction({
   profileName: string;
 }) {
   const isPick = kind === 'pick';
+  const reduceMotion = useReducedMotion();
+  const pressed = useSharedValue(0);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.get() * 0.08 }],
+  }));
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
       accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
       accessibilityRole="button"
+      onPressIn={() =>
+        pressed.set(reduceMotion ? 1 : withSpring(1, { damping: 18, stiffness: 300 }))
+      }
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.action,
-        isPick ? styles.actionPick : styles.actionPass,
-        pressed && pressFeedback.control,
-      ]}
+      onPressOut={() =>
+        pressed.set(reduceMotion ? 0 : withSpring(0, { damping: 16, stiffness: 280 }))
+      }
+      style={[styles.action, isPick ? styles.actionPick : styles.actionPass, animatedStyle]}
     >
       <Ionicons
         color={isPick ? palette.white : palette.ink}
         name={isPick ? 'heart' : 'close'}
         size={isPick ? 30 : 28}
       />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

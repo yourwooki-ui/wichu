@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { CountryMultiSelectField } from '@/features/discover/components/CountryMultiSelectField';
 import {
@@ -93,146 +95,125 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
   };
 
   return (
-    <AppModal animationType="slide" onRequestClose={onClose} transparent visible>
-      <View style={styles.overlay}>
-        <Pressable
+    <InteractiveBottomSheet
+      accessibilityLabel="탐색 조건"
+      dismissEnabled={!saving}
+      onClose={onClose}
+      sheetStyle={styles.sheet}
+      visible
+    >
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>탐색 조건</Text>
+          <Text style={styles.subtitle}>나에게 맞는 프로필만 발견해요.</Text>
+        </View>
+        <BottomSheetCloseButton
           accessibilityLabel="탐색 조건 닫기"
           accessibilityRole="button"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>탐색 조건</Text>
-              <Text style={styles.subtitle}>나에게 맞는 프로필만 발견해요.</Text>
-            </View>
-            <Pressable
-              accessibilityLabel="탐색 조건 닫기"
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={onClose}
-              style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
-            >
-              <Ionicons color={palette.ink} name="close" size={21} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View>
-              <Text style={styles.sectionTitle}>만나고 싶은 사람</Text>
-              <Text style={styles.hint}>한 개 이상 선택해주세요.</Text>
-              <View style={styles.genderOptions}>
-                {GENDERS.map((gender) => {
-                  const selected = genders.includes(gender.value);
-                  return (
-                    <Pressable
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: selected }}
-                      key={gender.value}
-                      onPress={() => toggleGender(gender.value)}
-                      style={[styles.genderOption, selected && styles.genderOptionSelected]}
-                    >
-                      <Text style={[styles.genderText, selected && styles.genderTextSelected]}>
-                        {gender.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <View>
-              <Text style={styles.sectionTitle}>
-                {t('profileSetup.profileTags.categories.connection_goal.label')}
-              </Text>
-              <Text style={styles.hint}>{t('experience.discover.connectionGoalHint')}</Text>
-              <View style={styles.genderOptions}>
-                {CONNECTION_GOALS.map((goal) => {
-                  const selected = connectionGoals.includes(goal);
-                  return (
-                    <Pressable
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: selected }}
-                      key={goal}
-                      onPress={() => toggleConnectionGoal(goal)}
-                      style={[styles.goalOption, selected && styles.goalOptionSelected]}
-                    >
-                      <Text style={[styles.goalText, selected && styles.goalTextSelected]}>
-                        {t(`profileSetup.profileTags.values.${goal}`)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <AgeRangeField
-              maxAge={maxAge}
-              minAge={minAge}
-              onChangeMax={setMaxAge}
-              onChangeMin={setMinAge}
-            />
-            <DistanceLimitField onChange={setMaxDistanceKm} value={maxDistanceKm} />
-            <View style={styles.preferenceCard}>
-              <View style={styles.preferenceIcon}>
-                <Ionicons color={palette.pinkPressed} name="flag-outline" size={19} />
-              </View>
-              <View style={styles.preferenceCopy}>
-                <Text style={styles.preferenceTitle}>같은 국적 프로필 만나지 않기</Text>
-                <Text style={styles.preferenceDescription}>
-                  내 프로필에 설정한 국가와 같은 사용자를 탐색에서 제외해요.
-                </Text>
-              </View>
-              <Switch
-                accessibilityLabel="같은 국적 프로필 탐색에서 제외"
-                accessibilityRole="switch"
-                ios_backgroundColor="#DADAE0"
-                onValueChange={setExcludeSameCountry}
-                thumbColor={palette.white}
-                trackColor={{ false: '#DADAE0', true: palette.pink }}
-                value={excludeSameCountry}
-              />
-            </View>
-            <CountryMultiSelectField onChange={setCountryCodes} value={countryCodes} />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-          </ScrollView>
-          <View style={styles.footer}>
-            <Pressable
-              accessibilityLabel="이 조건으로 탐색"
-              accessibilityRole="button"
-              accessibilityState={{ busy: saving, disabled: saving }}
-              disabled={saving}
-              onPress={save}
-              style={({ pressed }) => [styles.save, (pressed || saving) && styles.pressed]}
-            >
-              <Text style={styles.saveText}>{saving ? '저장 중…' : '이 조건으로 탐색'}</Text>
-            </Pressable>
-          </View>
-        </SafeAreaView>
+          hitSlop={8}
+          style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
+        >
+          <Ionicons color={palette.ink} name="close" size={21} />
+        </BottomSheetCloseButton>
       </View>
-    </AppModal>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View>
+          <Text style={styles.sectionTitle}>만나고 싶은 사람</Text>
+          <Text style={styles.hint}>한 개 이상 선택해주세요.</Text>
+          <View style={styles.genderOptions}>
+            {GENDERS.map((gender) => {
+              const selected = genders.includes(gender.value);
+              return (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  key={gender.value}
+                  onPress={() => toggleGender(gender.value)}
+                  style={[styles.genderOption, selected && styles.genderOptionSelected]}
+                >
+                  <Text style={[styles.genderText, selected && styles.genderTextSelected]}>
+                    {gender.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <View>
+          <Text style={styles.sectionTitle}>
+            {t('profileSetup.profileTags.categories.connection_goal.label')}
+          </Text>
+          <Text style={styles.hint}>{t('experience.discover.connectionGoalHint')}</Text>
+          <View style={styles.genderOptions}>
+            {CONNECTION_GOALS.map((goal) => {
+              const selected = connectionGoals.includes(goal);
+              return (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  key={goal}
+                  onPress={() => toggleConnectionGoal(goal)}
+                  style={[styles.goalOption, selected && styles.goalOptionSelected]}
+                >
+                  <Text style={[styles.goalText, selected && styles.goalTextSelected]}>
+                    {t(`profileSetup.profileTags.values.${goal}`)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <AgeRangeField
+          maxAge={maxAge}
+          minAge={minAge}
+          onChangeMax={setMaxAge}
+          onChangeMin={setMinAge}
+        />
+        <DistanceLimitField onChange={setMaxDistanceKm} value={maxDistanceKm} />
+        <View style={styles.preferenceCard}>
+          <View style={styles.preferenceIcon}>
+            <Ionicons color={palette.pinkPressed} name="flag-outline" size={19} />
+          </View>
+          <View style={styles.preferenceCopy}>
+            <Text style={styles.preferenceTitle}>같은 국적 프로필 만나지 않기</Text>
+            <Text style={styles.preferenceDescription}>
+              내 프로필에 설정한 국가와 같은 사용자를 탐색에서 제외해요.
+            </Text>
+          </View>
+          <Switch
+            accessibilityLabel="같은 국적 프로필 탐색에서 제외"
+            accessibilityRole="switch"
+            ios_backgroundColor="#DADAE0"
+            onValueChange={setExcludeSameCountry}
+            thumbColor={palette.white}
+            trackColor={{ false: '#DADAE0', true: palette.pink }}
+            value={excludeSameCountry}
+          />
+        </View>
+        <CountryMultiSelectField onChange={setCountryCodes} value={countryCodes} />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </ScrollView>
+      <View style={styles.footer}>
+        <Pressable
+          accessibilityLabel="이 조건으로 탐색"
+          accessibilityRole="button"
+          accessibilityState={{ busy: saving, disabled: saving }}
+          disabled={saving}
+          onPress={save}
+          style={({ pressed }) => [styles.save, (pressed || saving) && styles.pressed]}
+        >
+          <Text style={styles.saveText}>{saving ? '저장 중…' : '이 조건으로 탐색'}</Text>
+        </Pressable>
+      </View>
+    </InteractiveBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { backgroundColor: 'rgba(17,17,17,0.38)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    alignSelf: 'center',
     backgroundColor: '#F8F8FA',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    maxHeight: '92%',
+    height: '92%',
     maxWidth: 460,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: palette.line,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 15,
-    marginTop: 10,
-    width: 38,
   },
   header: {
     alignItems: 'center',

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
@@ -121,7 +122,8 @@ export function AppPermissionOnboarding() {
             style={styles.visual}
           >
             <View style={[styles.iconCircle, !isLocation && styles.iconCircleYellow]}>
-              <IllustratedIcon
+              <MotionIllustratedIcon
+                motion={isLocation ? 'float' : 'bell'}
                 size={68}
                 source={isLocation ? illustratedIcons.location : illustratedIcons.notification}
               />
@@ -198,12 +200,23 @@ function storageKey(userId: string) {
 const styles = StyleSheet.create({
   overlay: {
     alignItems: 'center',
-    backgroundColor: 'rgba(17,17,19,0.5)',
+    backgroundColor: 'rgba(17,17,19,0.22)',
     flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
-  card: { backgroundColor: '#FAFAFC', borderRadius: 30, maxWidth: 400, padding: 22, width: '100%' },
+  card: {
+    backgroundColor: '#FAFAFC',
+    borderRadius: 30,
+    elevation: 16,
+    maxWidth: 400,
+    padding: 22,
+    shadowColor: '#111113',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 26,
+    width: '100%',
+  },
   progressRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   progressTrack: {
     backgroundColor: '#E5E5E9',

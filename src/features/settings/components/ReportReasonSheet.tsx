@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 
 export const REPORT_REASONS = [
@@ -25,75 +28,58 @@ type ReportReasonSheetProps = {
 
 export function ReportReasonSheet({ busy, onClose, onSelect, visible }: ReportReasonSheetProps) {
   return (
-    <AppModal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <View style={styles.backdrop}>
-        <Pressable
-          accessibilityLabel="신고 창 닫기"
-          accessibilityRole="button"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <View accessibilityViewIsModal style={styles.sheet}>
-          <View style={styles.handle} />
-          <Text style={styles.eyebrow}>SAFETY FIRST</Text>
-          <Text style={styles.title}>신고 이유를 알려주세요</Text>
-          <Text style={styles.subtitle}>
-            신고 내용은 상대에게 공개되지 않으며 운영팀이 확인합니다.
-          </Text>
-          <View style={styles.reasonList}>
-            {REPORT_REASONS.map((reason) => (
-              <Pressable
-                accessibilityRole="button"
-                disabled={busy}
-                key={reason.value}
-                onPress={() => onSelect(reason.value)}
-                style={({ pressed }) => [styles.reason, pressed && styles.pressed]}
-              >
-                <View style={styles.reasonIcon}>
-                  <Ionicons
-                    color={palette.ink}
-                    name={reason.icon as keyof typeof Ionicons.glyphMap}
-                    size={19}
-                  />
-                </View>
-                <Text style={styles.reasonLabel}>{reason.label}</Text>
-                <Ionicons color="#A3A3AA" name="chevron-forward" size={17} />
-              </Pressable>
-            ))}
-          </View>
+    <InteractiveBottomSheet
+      accessibilityLabel="신고 이유"
+      contentStyle={styles.sheetContent}
+      dismissEnabled={!busy}
+      onClose={onClose}
+      sheetStyle={styles.sheet}
+      visible={visible}
+    >
+      <Text style={styles.eyebrow}>SAFETY FIRST</Text>
+      <Text style={styles.title}>신고 이유를 알려주세요</Text>
+      <Text style={styles.subtitle}>신고 내용은 상대에게 공개되지 않으며 운영팀이 확인합니다.</Text>
+      <View style={styles.reasonList}>
+        {REPORT_REASONS.map((reason) => (
           <Pressable
-            accessibilityLabel="취소"
             accessibilityRole="button"
-            accessibilityState={{ busy: busy, disabled: busy }}
             disabled={busy}
-            onPress={onClose}
-            style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}
+            key={reason.value}
+            onPress={() => onSelect(reason.value)}
+            style={({ pressed }) => [styles.reason, pressed && styles.pressed]}
           >
-            <Text style={styles.cancelText}>{busy ? '접수 중…' : '취소'}</Text>
+            <View style={styles.reasonIcon}>
+              <Ionicons
+                color={palette.ink}
+                name={reason.icon as keyof typeof Ionicons.glyphMap}
+                size={19}
+              />
+            </View>
+            <Text style={styles.reasonLabel}>{reason.label}</Text>
+            <Ionicons color="#A3A3AA" name="chevron-forward" size={17} />
           </Pressable>
-        </View>
+        ))}
       </View>
-    </AppModal>
+      <BottomSheetCloseButton
+        accessibilityLabel="취소"
+        accessibilityRole="button"
+        accessibilityState={{ busy: busy, disabled: busy }}
+        disabled={busy}
+        style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}
+      >
+        <Text style={styles.cancelText}>{busy ? '접수 중…' : '취소'}</Text>
+      </BottomSheetCloseButton>
+    </InteractiveBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(10,10,14,0.46)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: palette.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+  },
+  sheetContent: {
     paddingBottom: 24,
     paddingHorizontal: 18,
-    paddingTop: 10,
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: '#D7D7DC',
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 17,
-    width: 42,
   },
   eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   title: { color: palette.ink, fontSize: 21, fontWeight: '900', marginTop: 4 },

@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { CountryFlag } from '@/components/CountryFlag';
 import { getCountryOptions } from '@/constants/countries';
 import { palette, pressFeedback, radius } from '@/constants/theme';
@@ -62,97 +64,89 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
         <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
       </Pressable>
 
-      <AppModal animationType="slide" onRequestClose={close} transparent visible={visible}>
-        <View style={styles.overlay}>
-          <Pressable
+      <InteractiveBottomSheet
+        accessibilityLabel="국가 선택"
+        onClose={close}
+        sheetStyle={styles.sheet}
+        visible={visible}
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>탐색 국가</Text>
+            <Text style={styles.subtitle}>여러 국가를 선택할 수 있어요.</Text>
+          </View>
+          <BottomSheetCloseButton
             accessibilityLabel="국가 선택 닫기"
             accessibilityRole="button"
-            onPress={close}
-            style={StyleSheet.absoluteFill}
-          />
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            <View style={styles.handle} />
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.title}>탐색 국가</Text>
-                <Text style={styles.subtitle}>여러 국가를 선택할 수 있어요.</Text>
-              </View>
-              <Pressable
-                accessibilityLabel="국가 선택 닫기"
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={close}
-                style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
-              >
-                <Ionicons color={palette.ink} name="close" size={21} />
-              </Pressable>
-            </View>
-            <View style={styles.search}>
-              <Ionicons color={palette.inkMuted} name="search" size={18} />
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                onChangeText={setQuery}
-                placeholder="국가 검색"
-                placeholderTextColor={palette.inkMuted}
-                style={styles.searchInput}
-                value={query}
-              />
-              {query ? (
-                <Pressable
-                  accessibilityLabel="검색어 지우기"
-                  accessibilityRole="button"
-                  onPress={() => setQuery('')}
-                >
-                  <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
-                </Pressable>
-              ) : null}
-            </View>
-            <Pressable
-              accessibilityLabel="모든 국가"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: value.length === 0 }}
-              onPress={() => onChange([])}
-              style={styles.allCountries}
-            >
-              <View style={styles.globe}>
-                <Ionicons color={palette.pink} name="globe-outline" size={20} />
-              </View>
-              <Text style={styles.countryName}>모든 국가</Text>
-              <Check selected={value.length === 0} />
-            </Pressable>
-            <FlatList
-              contentContainerStyle={styles.list}
-              data={filtered}
-              initialNumToRender={18}
-              keyboardShouldPersistTaps="handled"
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <Pressable
-                  accessibilityLabel={item.name}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: value.includes(item.code) }}
-                  onPress={() => toggle(item.code)}
-                  style={styles.countryRow}
-                >
-                  <CountryFlag compact countryCode={item.code} label={item.name} />
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.code}>{item.code}</Text>
-                  <Check selected={value.includes(item.code)} />
-                </Pressable>
-              )}
-            />
-            <Pressable
-              accessibilityLabel="선택 완료"
-              accessibilityRole="button"
-              onPress={close}
-              style={({ pressed }) => [styles.done, pressed && pressFeedback.control]}
-            >
-              <Text style={styles.doneText}>선택 완료</Text>
-            </Pressable>
-          </SafeAreaView>
+            hitSlop={8}
+            style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
+          >
+            <Ionicons color={palette.ink} name="close" size={21} />
+          </BottomSheetCloseButton>
         </View>
-      </AppModal>
+        <View style={styles.search}>
+          <Ionicons color={palette.inkMuted} name="search" size={18} />
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setQuery}
+            placeholder="국가 검색"
+            placeholderTextColor={palette.inkMuted}
+            style={styles.searchInput}
+            value={query}
+          />
+          {query ? (
+            <Pressable
+              accessibilityLabel="검색어 지우기"
+              accessibilityRole="button"
+              onPress={() => setQuery('')}
+            >
+              <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityLabel="모든 국가"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: value.length === 0 }}
+          onPress={() => onChange([])}
+          style={styles.allCountries}
+        >
+          <View style={styles.globe}>
+            <Ionicons color={palette.pink} name="globe-outline" size={20} />
+          </View>
+          <Text style={styles.countryName}>모든 국가</Text>
+          <Check selected={value.length === 0} />
+        </Pressable>
+        <FlatList
+          contentContainerStyle={styles.list}
+          data={filtered}
+          initialNumToRender={18}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(item) => item.code}
+          renderItem={({ item }) => (
+            <Pressable
+              accessibilityLabel={item.name}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: value.includes(item.code) }}
+              onPress={() => toggle(item.code)}
+              style={styles.countryRow}
+            >
+              <CountryFlag compact countryCode={item.code} label={item.name} />
+              <Text style={styles.countryName}>{item.name}</Text>
+              <Text style={styles.code}>{item.code}</Text>
+              <Check selected={value.includes(item.code)} />
+            </Pressable>
+          )}
+        />
+        <BottomSheetCloseButton
+          accessibilityLabel="선택 완료"
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.done, pressed && pressFeedback.control]}
+        >
+          <Text style={styles.doneText}>선택 완료</Text>
+        </BottomSheetCloseButton>
+      </InteractiveBottomSheet>
     </View>
   );
 }
@@ -186,25 +180,10 @@ const styles = StyleSheet.create({
   triggerCopy: { flex: 1 },
   triggerTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
   triggerValue: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
-  overlay: { backgroundColor: 'rgba(17,17,17,0.38)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    alignSelf: 'center',
     backgroundColor: '#F8F8FA',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
     height: '84%',
     maxWidth: 460,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  handle: {
-    alignSelf: 'center',
-    backgroundColor: palette.line,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 15,
-    marginTop: 10,
-    width: 38,
   },
   header: {
     alignItems: 'center',

@@ -3,11 +3,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { AmbientIconMotion, type IconMotion } from '@/components/MotionIllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 
 type AppTabHeaderProps = {
   actionAccessibilityLabel?: string;
   actionIcon?: ImageSource;
+  actionMotion?: IconMotion;
   eyebrow: string;
   onAction?: () => void;
 };
@@ -15,6 +17,7 @@ type AppTabHeaderProps = {
 export function AppTabHeader({
   actionAccessibilityLabel,
   actionIcon,
+  actionMotion,
   eyebrow,
   onAction,
 }: AppTabHeaderProps) {
@@ -34,11 +37,23 @@ export function AppTabHeader({
           onPress={onAction}
           style={({ pressed }) => [styles.action, pressed && styles.pressed]}
         >
-          <IllustratedIcon size={42} source={actionIcon} />
+          {actionMotion ? (
+            <AmbientIconMotion motion={actionMotion}>
+              <IllustratedIcon size={42} source={actionIcon} />
+            </AmbientIconMotion>
+          ) : (
+            <IllustratedIcon size={42} source={actionIcon} />
+          )}
         </Pressable>
       ) : actionIcon ? (
         <View accessibilityElementsHidden style={styles.action}>
-          <IllustratedIcon size={42} source={actionIcon} />
+          {actionMotion ? (
+            <AmbientIconMotion motion={actionMotion}>
+              <IllustratedIcon size={42} source={actionIcon} />
+            </AmbientIconMotion>
+          ) : (
+            <IllustratedIcon size={42} source={actionIcon} />
+          )}
         </View>
       ) : (
         <View style={styles.action} />

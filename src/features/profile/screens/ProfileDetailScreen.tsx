@@ -15,7 +15,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppModal } from '@/components/AppModal';
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { Screen } from '@/components/Screen';
 import { StateView } from '@/components/StateView';
@@ -384,58 +387,46 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
 
       {!isPreview ? (
         <>
-          <AppModal
-            animationType="fade"
-            onRequestClose={() => setSafetyOpen(false)}
-            transparent
+          <InteractiveBottomSheet
+            accessibilityLabel={t('profileDetail.safetyTitle', { name: profile.name })}
+            contentStyle={styles.safetySheetContent}
+            dismissEnabled={!safetyBusy}
+            handleColor={theme.colors.border}
+            onClose={() => setSafetyOpen(false)}
+            sheetStyle={[styles.safetySheet, { backgroundColor: theme.colors.surface }]}
             visible={safetyOpen}
           >
-            <View style={styles.modalBackdrop}>
-              <Pressable
-                accessibilityLabel="안전 메뉴 닫기"
-                accessibilityRole="button"
-                onPress={() => setSafetyOpen(false)}
-                style={StyleSheet.absoluteFill}
-              />
-              <View
-                accessibilityViewIsModal
-                style={[styles.safetySheet, { backgroundColor: theme.colors.surface }]}
-              >
-                <View style={[styles.sheetHandle, { backgroundColor: theme.colors.border }]} />
-                <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
-                  {t('profileDetail.safetyTitle', { name: profile.name })}
-                </Text>
-                <SafetyAction
-                  disabled={safetyBusy}
-                  icon="flag-outline"
-                  label={t('profileDetail.report')}
-                  onPress={() => {
-                    setSafetyOpen(false);
-                    setReportOpen(true);
-                  }}
-                />
-                <SafetyAction
-                  danger
-                  disabled={safetyBusy}
-                  icon="ban-outline"
-                  label={t('profileDetail.block')}
-                  onPress={handleBlock}
-                />
-                <Pressable
-                  accessibilityLabel={t('profileDetail.cancel')}
-                  accessibilityRole="button"
-                  accessibilityState={{ busy: safetyBusy, disabled: safetyBusy }}
-                  disabled={safetyBusy}
-                  onPress={() => setSafetyOpen(false)}
-                  style={[styles.cancelButton, { backgroundColor: theme.colors.background }]}
-                >
-                  <Text style={[styles.cancelText, { color: theme.colors.text }]}>
-                    {t('profileDetail.cancel')}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </AppModal>
+            <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
+              {t('profileDetail.safetyTitle', { name: profile.name })}
+            </Text>
+            <SafetyAction
+              disabled={safetyBusy}
+              icon="flag-outline"
+              label={t('profileDetail.report')}
+              onPress={() => {
+                setSafetyOpen(false);
+                setReportOpen(true);
+              }}
+            />
+            <SafetyAction
+              danger
+              disabled={safetyBusy}
+              icon="ban-outline"
+              label={t('profileDetail.block')}
+              onPress={handleBlock}
+            />
+            <BottomSheetCloseButton
+              accessibilityLabel={t('profileDetail.cancel')}
+              accessibilityRole="button"
+              accessibilityState={{ busy: safetyBusy, disabled: safetyBusy }}
+              disabled={safetyBusy}
+              style={[styles.cancelButton, { backgroundColor: theme.colors.background }]}
+            >
+              <Text style={[styles.cancelText, { color: theme.colors.text }]}>
+                {t('profileDetail.cancel')}
+              </Text>
+            </BottomSheetCloseButton>
+          </InteractiveBottomSheet>
 
           <ReportReasonSheet
             busy={safetyBusy}
@@ -536,15 +527,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  modalBackdrop: { backgroundColor: 'rgba(12,12,16,0.46)', flex: 1, justifyContent: 'flex-end' },
-  safetySheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+  safetySheet: {},
+  safetySheetContent: {
     paddingBottom: 24,
     paddingHorizontal: 20,
-    paddingTop: 10,
   },
-  sheetHandle: { alignSelf: 'center', borderRadius: 2, height: 4, marginBottom: 20, width: 42 },
   sheetTitle: { ...typography.heading, marginBottom: 12 },
   safetyAction: { alignItems: 'center', flexDirection: 'row', minHeight: 56 },
   safetyActionText: { flex: 1, fontSize: 15, fontWeight: '800', marginLeft: 12 },

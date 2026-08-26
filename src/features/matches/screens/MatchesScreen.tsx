@@ -6,15 +6,27 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { GoldBadge } from '@/components/GoldBadge';
-import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
-import { listEntering, listExiting, listLayout } from '@/constants/motion';
+import {
+  categoryEntering,
+  categoryExiting,
+  listEntering,
+  listExiting,
+  listLayout,
+} from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
@@ -101,6 +113,7 @@ export function MatchesScreen() {
   const entitlement = usePassEntitlement();
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
+  const [categoryDirection, setCategoryDirection] = useState<-1 | 1>(1);
   const [now] = useState(() => Date.now());
   const incomingLikesQuery = useQuery({
     enabled: Boolean(session?.user.id),
@@ -220,12 +233,22 @@ export function MatchesScreen() {
   const selectCategory = (nextCategory: MatchCategory) => {
     if (nextCategory === category) return;
     hapticsService.selection();
+    setCategoryDirection(
+      categories.findIndex((item) => item.key === nextCategory) >
+        categories.findIndex((item) => item.key === category)
+        ? 1
+        : -1,
+    );
     setCategory(nextCategory);
   };
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <AppTabHeader actionIcon={illustratedIcons.matches} eyebrow="연결" />
+      <AppTabHeader
+        actionIcon={illustratedIcons.matches}
+        actionMotion={pickedProfiles.length ? 'pulse' : undefined}
+        eyebrow="연결"
+      />
 
       <View accessibilityRole="tablist" style={styles.categories}>
         {categories.map((item) => {
@@ -237,28 +260,13 @@ export function MatchesScreen() {
                 ? matchedProfiles.length
                 : pickedProfiles.length;
           return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
+            <MatchCategoryTab
+              count={count}
               key={item.key}
+              label={item.label}
               onPress={() => selectCategory(item.key)}
-              style={({ pressed }) => [
-                styles.category,
-                selected && styles.categorySelected,
-                pressed && styles.categoryPressed,
-              ]}
-            >
-              <Text style={[styles.categoryLabel, selected && styles.categoryLabelSelected]}>
-                {item.label}
-              </Text>
-              <View style={[styles.categoryCount, selected && styles.categoryCountSelected]}>
-                <Text
-                  style={[styles.categoryCountText, selected && styles.categoryCountTextSelected]}
-                >
-                  {count}
-                </Text>
-              </View>
-            </Pressable>
+              selected={selected}
+            />
           );
         })}
       </View>
@@ -268,99 +276,159 @@ export function MatchesScreen() {
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.subtitle}>{copy.description}</Text>
+        <Animated.View
+          entering={categoryEntering(categoryDirection)}
+          exiting={categoryExiting(categoryDirection)}
+          key={category}
+        >
+          <Text style={styles.subtitle}>{copy.description}</Text>
 
-        {visitorsLocked ? (
-          <View style={styles.visitorLock}>
-            <View style={styles.visitorLockCopy}>
-              <View style={styles.visitorLockIcon}>
-                <IllustratedIcon size={40} source={illustratedIcons.goldPass} />
+          {visitorsLocked ? (
+            <View style={styles.visitorLock}>
+              <View style={styles.visitorLockCopy}>
+                <View style={styles.visitorLockIcon}>
+                  <MotionIllustratedIcon
+                    motion="shine"
+                    size={40}
+                    source={illustratedIcons.goldPass}
+                  />
+                </View>
+                <View style={styles.visitorLockTextBlock}>
+                  <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>
+                  <Text style={styles.visitorLockText}>
+                    방문자 프로필은 Gold Pass에서 확인할 수 있습니다.
+                  </Text>
+                </View>
               </View>
-              <View style={styles.visitorLockTextBlock}>
-                <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>
-                <Text style={styles.visitorLockText}>
-                  방문자 프로필은 Gold Pass에서 확인할 수 있습니다.
-                </Text>
-              </View>
+              {MONETIZATION_ENABLED ? (
+                <Pressable
+                  accessibilityLabel="Gold Pass 보기"
+                  accessibilityRole="button"
+                  onPress={() => router.push('/(tabs)/shop')}
+                  style={styles.visitorLockAction}
+                >
+                  <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
+                </Pressable>
+              ) : null}
             </View>
-            {MONETIZATION_ENABLED ? (
-              <Pressable
-                accessibilityLabel="Gold Pass 보기"
-                accessibilityRole="button"
-                onPress={() => router.push('/(tabs)/shop')}
-                style={styles.visitorLockAction}
-              >
-                <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
+          ) : null}
 
-        {categoryLoading ? (
-          <ConnectionGridSkeleton />
-        ) : categoryError ? (
-          <StateView
-            actionLabel={t('reliability.retry')}
-            body={t('reliability.connectionsBody')}
-            illustration={illustratedIcons.connectionError}
-            onAction={() => {
-              if (category === 'picked-me') void incomingLikesQuery.refetch();
-              if (category === 'matched') void matchesQuery.refetch();
-              if (category === 'visitors') void visitorsQuery.refetch();
-            }}
-            title={t('reliability.connectionsTitle')}
-            tone="error"
-          />
-        ) : !profiles.length ? (
-          <StateView
-            actionLabel={emptyCopy.actionLabel}
-            body={emptyCopy.body}
-            icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
-            illustration={illustratedIcons.connections}
-            onAction={() =>
-              router.push(category === 'visitors' ? '/(tabs)/me' : '/(tabs)/discover')
-            }
-            title={emptyCopy.title}
-          />
-        ) : (
-          <View style={styles.grid}>
-            {profiles.map((profile, index) => (
-              <ProfileTile
-                activityTime={
-                  category === 'visitors'
-                    ? formatVisitTime(
-                        visitorsQuery.data?.find((visitor) => visitor.visitor_id === profile.id)
-                          ?.last_visited_at,
-                        now,
-                      )
-                    : category === 'picked-me'
-                      ? formatRemainingPickTime(
-                          incomingLikesQuery.data?.find((like) => like.profileId === profile.id)
-                            ?.expiresAt,
+          {categoryLoading ? (
+            <ConnectionGridSkeleton />
+          ) : categoryError ? (
+            <StateView
+              actionLabel={t('reliability.retry')}
+              body={t('reliability.connectionsBody')}
+              illustration={illustratedIcons.connectionError}
+              onAction={() => {
+                if (category === 'picked-me') void incomingLikesQuery.refetch();
+                if (category === 'matched') void matchesQuery.refetch();
+                if (category === 'visitors') void visitorsQuery.refetch();
+              }}
+              title={t('reliability.connectionsTitle')}
+              tone="error"
+            />
+          ) : !profiles.length ? (
+            <StateView
+              actionLabel={emptyCopy.actionLabel}
+              body={emptyCopy.body}
+              icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
+              illustration={illustratedIcons.connections}
+              onAction={() =>
+                router.push(category === 'visitors' ? '/(tabs)/me' : '/(tabs)/discover')
+              }
+              title={emptyCopy.title}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {profiles.map((profile, index) => (
+                <ProfileTile
+                  activityTime={
+                    category === 'visitors'
+                      ? formatVisitTime(
+                          visitorsQuery.data?.find((visitor) => visitor.visitor_id === profile.id)
+                            ?.last_visited_at,
                           now,
                         )
-                      : visitorTimes[profile.id]
-                }
-                category={category}
-                introMessage={profile.introMessage}
-                index={index}
-                key={`${category}-${profile.id}`}
-                locked={visitorsLocked}
-                onChat={() => openChat(profile)}
-                onPress={() =>
-                  visitorsLocked
-                    ? MONETIZATION_ENABLED
-                      ? router.push('/(tabs)/shop')
-                      : undefined
-                    : openProfile(profile.id)
-                }
-                profile={profile}
-              />
-            ))}
-          </View>
-        )}
+                      : category === 'picked-me'
+                        ? formatRemainingPickTime(
+                            incomingLikesQuery.data?.find((like) => like.profileId === profile.id)
+                              ?.expiresAt,
+                            now,
+                          )
+                        : visitorTimes[profile.id]
+                  }
+                  category={category}
+                  introMessage={profile.introMessage}
+                  index={index}
+                  key={`${category}-${profile.id}`}
+                  locked={visitorsLocked}
+                  onChat={() => openChat(profile)}
+                  onPress={() =>
+                    visitorsLocked
+                      ? MONETIZATION_ENABLED
+                        ? router.push('/(tabs)/shop')
+                        : undefined
+                      : openProfile(profile.id)
+                  }
+                  profile={profile}
+                />
+              ))}
+            </View>
+          )}
+        </Animated.View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function MatchCategoryTab({
+  count,
+  label,
+  onPress,
+  selected,
+}: {
+  count: number;
+  label: string;
+  onPress: () => void;
+  selected: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const active = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    active.set(reduceMotion ? (selected ? 1 : 0) : withTiming(selected ? 1 : 0, { duration: 180 }));
+  }, [active, reduceMotion, selected]);
+
+  const selectionStyle = useAnimatedStyle(() => ({
+    opacity: active.get(),
+    transform: [{ scale: 0.94 + active.get() * 0.06 }],
+  }));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.ink]),
+  }));
+  const countStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(active.get(), [0, 1], ['#DEDEE2', '#FFE1EB']),
+  }));
+  const countTextStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.pink]),
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.category, pressed && styles.categoryPressed]}
+    >
+      <Animated.View pointerEvents="none" style={[styles.categorySelection, selectionStyle]} />
+      <View style={styles.categoryContent}>
+        <Animated.Text style={[styles.categoryLabel, labelStyle]}>{label}</Animated.Text>
+        <Animated.View style={[styles.categoryCount, countStyle]}>
+          <Animated.Text style={[styles.categoryCountText, countTextStyle]}>{count}</Animated.Text>
+        </Animated.View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -535,19 +603,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 14,
     flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    overflow: 'hidden',
+    paddingHorizontal: 3,
+  },
+  categorySelection: {
+    backgroundColor: palette.white,
+    borderRadius: 14,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    ...elevation.sm,
+  },
+  categoryContent: {
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 5,
     justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 3,
-  },
-  categorySelected: {
-    backgroundColor: palette.white,
-    ...elevation.sm,
   },
   categoryPressed: pressFeedback.control,
   categoryLabel: { ...typography.label, color: palette.inkMuted },
-  categoryLabelSelected: { color: palette.ink, fontWeight: '900' },
   categoryCount: {
     alignItems: 'center',
     backgroundColor: '#DEDEE2',
@@ -557,9 +635,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 3,
   },
-  categoryCountSelected: { backgroundColor: '#FFE1EB' },
   categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
-  categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   subtitle: {
     ...typography.bodySm,
