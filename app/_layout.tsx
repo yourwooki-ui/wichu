@@ -12,7 +12,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { BrandWordmark } from '@/components/BrandWordmark';
-import { GlobalInAppNotificationHost } from '@/components/GlobalInAppNotificationHost';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
 import { QueryLifecycleManager } from '@/components/QueryLifecycleManager';
 import { StateView } from '@/components/StateView';
@@ -124,9 +123,6 @@ function RootNavigator() {
           <Stack.Screen name="operations" />
         </Stack.Protected>
       </Stack>
-      {session && profileCompleted ? (
-        <GlobalInAppNotificationHost userId={session.user.id} />
-      ) : null}
       <PostProfileOnboardingCoordinator
         key={session?.user.id ?? 'signed-out'}
         profileCompleted={profileCompleted}

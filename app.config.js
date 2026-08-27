@@ -46,12 +46,13 @@ const baseConfig = {
       'expo-build-properties',
       {
         android: {
-          enableMinifyInReleaseBuilds: true,
-          enableShrinkResourcesInReleaseBuilds: true,
+          // Stability first for the closed-test build. R8/resource shrinking can be
+          // reintroduced only after a release APK has passed physical-device startup QA.
+          enableMinifyInReleaseBuilds: false,
+          enableShrinkResourcesInReleaseBuilds: false,
         },
       },
     ],
-    './plugins/with-android-performance',
     [
       'expo-router',
       {
