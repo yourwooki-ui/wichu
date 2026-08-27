@@ -39,17 +39,21 @@ function sanitizeProperties(properties: ProductEventProperties = {}) {
 export const productAnalyticsService = {
   track(eventName: ProductEventName, properties?: ProductEventProperties, route?: string) {
     const safeRoute = route?.trim().slice(0, 120) || null;
-    void getSupabaseClient()
-      .from('product_events')
-      .insert({
-        event_name: eventName,
-        properties: sanitizeProperties(properties),
-        route: safeRoute,
-        session_id: sessionId,
-      })
-      .then(
-        () => undefined,
-        () => undefined,
-      );
+    try {
+      void getSupabaseClient()
+        .from('product_events')
+        .insert({
+          event_name: eventName,
+          properties: sanitizeProperties(properties),
+          route: safeRoute,
+          session_id: sessionId,
+        })
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+    } catch {
+      // 관측 기능은 앱의 핵심 흐름을 중단시키면 안 된다.
+    }
   },
 };

@@ -1,14 +1,8 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
@@ -16,6 +10,7 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { layout } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
 export default function TabLayout() {
@@ -107,26 +102,38 @@ function AnimatedTabIcon({
   focused: boolean;
   name: TabName;
 }) {
-  const reduceMotion = useReducedMotion();
-  const active = useSharedValue(focused ? 1 : 0);
+  const reduceMotion = useReduceMotion();
+  const [active] = useState(() => new Animated.Value(focused ? 1 : 0));
 
   useEffect(() => {
-    active.set(
-      reduceMotion
-        ? focused
-          ? 1
-          : 0
-        : withSpring(focused ? 1 : 0, { damping: 18, mass: 0.7, stiffness: 260 }),
-    );
+    active.stopAnimation();
+    if (reduceMotion) {
+      active.setValue(focused ? 1 : 0);
+      return;
+    }
+    const animation = Animated.spring(active, {
+      damping: 18,
+      mass: 0.7,
+      stiffness: 260,
+      toValue: focused ? 1 : 0,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
   }, [active, focused, reduceMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 0.7 + active.get() * 0.3,
+  const animatedStyle = {
+    opacity: active.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }),
     transform: [
-      { translateY: active.get() * -2 },
-      { scale: 1 + active.get() * (name === 'discover' ? 0.07 : 0.045) },
+      { translateY: active.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
+      {
+        scale: active.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1 + (name === 'discover' ? 0.07 : 0.045)],
+        }),
+      },
     ],
-  }));
+  };
 
   return (
     <View

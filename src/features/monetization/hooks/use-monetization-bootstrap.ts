@@ -10,10 +10,14 @@ import { purchaseService } from '@/features/monetization/services/purchase-servi
 
 export function useMonetizationBootstrap(userId: string | undefined) {
   useEffect(() => {
-    if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED) void adsService.initialize();
+    if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED) {
+      void adsService.initialize().catch(() => undefined);
+    }
   }, []);
 
   useEffect(() => {
-    if (MONETIZATION_ENABLED && userId) void purchaseService.initialize(userId);
+    if (MONETIZATION_ENABLED && userId) {
+      void purchaseService.initialize(userId).catch(() => undefined);
+    }
   }, [userId]);
 }

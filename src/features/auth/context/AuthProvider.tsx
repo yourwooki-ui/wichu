@@ -42,7 +42,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    const supabase = getSupabaseClient();
+
+    let supabase: ReturnType<typeof getSupabaseClient>;
+    try {
+      supabase = getSupabaseClient();
+    } catch (error) {
+      reportOperationalError('auth_client_init', error, '/');
+      const settleTimer = setTimeout(() => {
+        setSession(null);
+        setIsSessionLoading(false);
+      }, 0);
+      return () => clearTimeout(settleTimer);
+    }
 
     void supabase.auth
       .getSession()
@@ -50,13 +61,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
       .catch(() => setSession(null))
       .finally(() => setIsSessionLoading(false));
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setIsSessionLoading(false);
-      if (!nextSession) queryClient.clear();
-    });
+    let unsubscribe: (() => void) | undefined;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        setSession(nextSession);
+        setIsSessionLoading(false);
+        if (!nextSession) queryClient.clear();
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch (error) {
+      reportOperationalError('auth_state_listener', error, '/');
+    }
 
-    return () => data.subscription.unsubscribe();
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch {
+        // 인증 리스너 정리 실패가 앱 종료 경로를 방해하지 않게 한다.
+      }
+    };
   }, [queryClient]);
 
   const {

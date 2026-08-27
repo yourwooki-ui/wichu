@@ -12,11 +12,18 @@ export function usePresenceHeartbeat(userId?: string) {
     let isActive = AppState.currentState === 'active';
     const touchPresence = () => {
       if (!isActive) return;
-      void getSupabaseClient()
-        .rpc('touch_presence')
-        .then(({ error }) => {
-          if (__DEV__ && error) console.warn('Could not update presence', error.message);
-        });
+      try {
+        void getSupabaseClient()
+          .rpc('touch_presence')
+          .then(
+            ({ error }) => {
+              if (__DEV__ && error) console.warn('Could not update presence', error.message);
+            },
+            () => undefined,
+          );
+      } catch {
+        // Presence는 보조 신호다. 초기화 실패가 세션 복원이나 앱 실행을 막지 않는다.
+      }
     };
 
     touchPresence();

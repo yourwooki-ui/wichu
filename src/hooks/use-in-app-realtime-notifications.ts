@@ -8,16 +8,16 @@ import { useInAppNotificationCenter } from '@/services/in-app-notification-cente
 import { reportOperationalError } from '@/services/operational-error-service';
 import type { Tables } from '@/types/database';
 
+const CONNECTION_DELAY_MS = 750;
 const connectionKey = (userId: string) => ['matches', 'connections', userId] as const;
 
-export function useInAppRealtimeNotifications(enabled: boolean, userId?: string) {
+export function useInAppRealtimeNotifications(userId: string) {
   const { i18n, t } = useTranslation();
 
   useEffect(() => {
-    if (!enabled || !userId) return;
     const enqueue = useInAppNotificationCenter.getState().enqueue;
-    const supabase = getSupabaseClient();
     let active = true;
+    let removeRealtimeChannel: (() => void) | undefined;
 
     const refreshConnections = async () => {
       const connections = await matchesService.listConnections(userId);
@@ -77,31 +77,57 @@ export function useInAppRealtimeNotifications(enabled: boolean, userId?: string)
       });
     };
 
-    const channel = supabase
-      .channel(`in-app-notices:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'matches' },
-        (payload) => void showMatch(payload.new as Tables<'matches'>),
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => void showMessage(payload.new as Tables<'messages'>),
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          reportOperationalError(
-            'in_app_notification_realtime',
-            new Error(`Realtime subscription ${status.toLowerCase()}`),
-            '/notification-host',
-          );
-        }
+    const runHandler = (surface: string, task: Promise<void>) => {
+      void task.catch((error) => {
+        reportOperationalError(surface, error, '/notification-host');
       });
+    };
+
+    // 인증·프로필 복원과 같은 프레임에서 WebSocket을 만들지 않는다.
+    // 실시간 알림 실패는 핵심 탐색/채팅 화면의 실행을 중단시키면 안 된다.
+    const connectTimer = setTimeout(() => {
+      if (!active) return;
+      try {
+        const supabase = getSupabaseClient();
+        const channel = supabase
+          .channel(`in-app-notices:${userId}`)
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'matches' },
+            (payload) =>
+              runHandler('in_app_notification_match', showMatch(payload.new as Tables<'matches'>)),
+          )
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages' },
+            (payload) =>
+              runHandler(
+                'in_app_notification_message',
+                showMessage(payload.new as Tables<'messages'>),
+              ),
+          )
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              reportOperationalError(
+                'in_app_notification_realtime',
+                new Error(`Realtime subscription ${status.toLowerCase()}`),
+                '/notification-host',
+              );
+            }
+          });
+
+        removeRealtimeChannel = () => {
+          void supabase.removeChannel(channel).catch(() => undefined);
+        };
+      } catch (error) {
+        reportOperationalError('in_app_notification_init', error, '/notification-host');
+      }
+    }, CONNECTION_DELAY_MS);
 
     return () => {
       active = false;
-      void supabase.removeChannel(channel);
+      clearTimeout(connectTimer);
+      removeRealtimeChannel?.();
     };
-  }, [enabled, i18n.resolvedLanguage, t, userId]);
+  }, [i18n.resolvedLanguage, t, userId]);
 }

@@ -1,20 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ImageSource } from 'expo-image';
-import { useEffect, type ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  interpolate,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 export type IconMotion = 'bell' | 'float' | 'pulse' | 'shine';
 
@@ -35,79 +25,101 @@ export function AmbientIconMotion({
   motion,
   style,
 }: AmbientIconMotionProps) {
-  const reduceMotion = useReducedMotion();
-  const progress = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
+  const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    cancelAnimation(progress);
-    progress.set(0);
+    progress.stopAnimation();
+    progress.setValue(0);
     if (!active || reduceMotion) return;
 
-    if (motion === 'bell') {
-      progress.set(
-        withRepeat(
-          withSequence(
-            withDelay(3000, withTiming(1, { duration: 90 })),
-            withTiming(-0.8, { duration: 100 }),
-            withTiming(0.55, { duration: 90 }),
-            withTiming(-0.3, { duration: 80 }),
-            withTiming(0, { duration: 80 }),
-          ),
-          -1,
-          false,
-        ),
-      );
-    } else if (motion === 'pulse') {
-      progress.set(
-        withRepeat(
-          withSequence(
-            withDelay(3200, withTiming(1, { duration: 170 })),
-            withTiming(0, { duration: 220 }),
-          ),
-          -1,
-          false,
-        ),
-      );
-    } else {
-      progress.set(
-        withRepeat(
-          withSequence(
-            withDelay(motion === 'shine' ? 2800 : 2400, withTiming(1, { duration: 520 })),
-            withTiming(0, { duration: 620 }),
-          ),
-          -1,
-          false,
-        ),
-      );
-    }
+    const timing = (toValue: number, duration: number) =>
+      Animated.timing(progress, {
+        duration,
+        easing: Easing.inOut(Easing.quad),
+        toValue,
+        useNativeDriver: true,
+      });
+    const animation = Animated.loop(
+      motion === 'bell'
+        ? Animated.sequence([
+            Animated.delay(3000),
+            timing(1, 90),
+            timing(-0.8, 100),
+            timing(0.55, 90),
+            timing(-0.3, 80),
+            timing(0, 80),
+          ])
+        : Animated.sequence([
+            Animated.delay(motion === 'shine' ? 2800 : motion === 'pulse' ? 3200 : 2400),
+            timing(1, motion === 'pulse' ? 170 : 520),
+            timing(0, motion === 'pulse' ? 220 : 620),
+          ]),
+    );
 
-    return () => cancelAnimation(progress);
+    animation.start();
+    return () => {
+      animation.stop();
+      progress.stopAnimation();
+      progress.setValue(0);
+    };
   }, [active, motion, progress, reduceMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => {
+  const animatedStyle = useMemo(() => {
     if (motion === 'bell') {
-      return { transform: [{ rotate: `${progress.get() * 9}deg` }] };
+      return {
+        transform: [
+          {
+            rotate: progress.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: ['-9deg', '0deg', '9deg'],
+            }),
+          },
+        ],
+      };
     }
     if (motion === 'pulse' || motion === 'shine') {
       return {
-        transform: [{ scale: interpolate(progress.get(), [0, 1], [1, 1.08]) }],
+        transform: [
+          { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) },
+        ],
       };
     }
     return {
       transform: [
-        { translateY: interpolate(progress.get(), [0, 1], [0, -4]) },
-        { rotate: `${interpolate(progress.get(), [0, 1], [0, 1.5])}deg` },
+        { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) },
+        {
+          rotate: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['0deg', '1.5deg'],
+          }),
+        },
       ],
     };
-  });
-  const sparkleStyle = useAnimatedStyle(() => ({
-    opacity: motion === 'shine' ? interpolate(progress.get(), [0, 0.35, 1], [0, 1, 0]) : 0,
-    transform: [
-      { translateX: interpolate(progress.get(), [0, 1], [-4, 3]) },
-      { translateY: interpolate(progress.get(), [0, 1], [3, -4]) },
-      { scale: interpolate(progress.get(), [0, 0.5, 1], [0.65, 1.15, 0.8]) },
-    ],
-  }));
+  }, [motion, progress]);
+
+  const sparkleStyle = useMemo(
+    () => ({
+      opacity:
+        motion === 'shine'
+          ? progress.interpolate({
+              inputRange: [0, 0.35, 1],
+              outputRange: [0, 1, 0],
+            })
+          : 0,
+      transform: [
+        { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-4, 3] }) },
+        { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [3, -4] }) },
+        {
+          scale: progress.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [0.65, 1.15, 0.8],
+          }),
+        },
+      ],
+    }),
+    [motion, progress],
+  );
 
   return (
     <View style={[styles.frame, style]}>

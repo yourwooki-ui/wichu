@@ -124,10 +124,9 @@ function RootNavigator() {
           <Stack.Screen name="operations" />
         </Stack.Protected>
       </Stack>
-      <GlobalInAppNotificationHost
-        enabled={Boolean(session) && profileCompleted}
-        userId={session?.user.id}
-      />
+      {session && profileCompleted ? (
+        <GlobalInAppNotificationHost userId={session.user.id} />
+      ) : null}
       <PostProfileOnboardingCoordinator
         key={session?.user.id ?? 'signed-out'}
         profileCompleted={profileCompleted}

@@ -28,11 +28,13 @@ export const useInAppNotificationCenter = create<NotificationCenterState>((set) 
       // 같은 사건의 두 전달 경로가 겹치지 않도록 Match는 종류 단위로 합친다.
       const group = notice.type === 'match' ? 'match' : `${notice.type}:${notice.route}`;
       const queuedAt = Date.now();
-      const previousQueuedAt = recentlyQueued.get(group) ?? 0;
+      const previousQueuedAt = recentlyQueued.get(group);
       const existingIndex = state.queue.findIndex(
         (item) => (item.type === 'match' ? 'match' : `${item.type}:${item.route}`) === group,
       );
-      if (queuedAt - previousQueuedAt < DUPLICATE_WINDOW_MS) return state;
+      if (previousQueuedAt !== undefined && queuedAt - previousQueuedAt < DUPLICATE_WINDOW_MS) {
+        return state;
+      }
       recentlyQueued.set(group, queuedAt);
       if (existingIndex >= 0) {
         const queue = [...state.queue];
