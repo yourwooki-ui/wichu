@@ -1,16 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { palette, radius, spacing, typography } from '@/constants/theme';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 
 /**
  * `primary` 하나만 브랜드 핑크를 쓴다.
@@ -45,35 +37,21 @@ export function PrimaryButton({
   const theme = useAppTheme();
   const isDisabled = disabled || loading;
   const { background, border, foreground } = variantColors(variant, tone, theme);
-  const reduceMotion = useReducedMotion();
-  const pressed = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 1 - pressed.get() * 0.08,
-    transform: [{ scale: 1 - pressed.get() * 0.025 }],
-  }));
 
   return (
-    <AnimatedPressable
+    <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ busy: loading, disabled: Boolean(isDisabled) }}
       disabled={isDisabled}
       onPress={onPress}
-      onPressIn={() => {
-        if (!isDisabled) {
-          pressed.set(reduceMotion ? 1 : withSpring(1, { damping: 18, stiffness: 320 }));
-        }
-      }}
-      onPressOut={() =>
-        pressed.set(reduceMotion ? 0 : withSpring(0, { damping: 17, stiffness: 280 }))
-      }
-      style={[
+      style={({ pressed }) => [
         styles.button,
         size === 'sm' && styles.buttonSm,
         { backgroundColor: background },
         border ? { borderColor: border, borderWidth: StyleSheet.hairlineWidth } : null,
         isDisabled && styles.disabled,
-        animatedStyle,
+        pressed && !isDisabled && pressFeedback.control,
       ]}
     >
       {loading ? (
@@ -91,7 +69,7 @@ export function PrimaryButton({
           </Text>
         </View>
       )}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

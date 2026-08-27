@@ -1,8 +1,7 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
@@ -10,7 +9,6 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { layout } from '@/constants/theme';
-import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
 export default function TabLayout() {
@@ -73,7 +71,29 @@ export default function TabLayout() {
         ],
         tabBarIcon: ({ focused }) => {
           const name = route.name as TabName;
-          return <AnimatedTabIcon compact={compactWebPreview} focused={focused} name={name} />;
+          return (
+            <View
+              style={[
+                styles.iconFrame,
+                compactWebPreview && styles.iconFrameCompact,
+                name === 'discover' && styles.discoverFrame,
+                compactWebPreview && name === 'discover' && styles.discoverFrameCompact,
+              ]}
+            >
+              <Image
+                accessibilityIgnoresInvertColors
+                contentFit="contain"
+                source={tabIconSources[name]}
+                style={[
+                  styles.tabIcon,
+                  compactWebPreview && styles.tabIconCompact,
+                  name === 'discover' && styles.discoverIcon,
+                  compactWebPreview && name === 'discover' && styles.discoverIconCompact,
+                  { opacity: focused ? 1 : 0.7 },
+                ]}
+              />
+            </View>
+          );
         },
       })}
     >
@@ -90,74 +110,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="me" options={{ title: t('tabs.me') }} />
     </Tabs>
-  );
-}
-
-function AnimatedTabIcon({
-  compact,
-  focused,
-  name,
-}: {
-  compact: boolean;
-  focused: boolean;
-  name: TabName;
-}) {
-  const reduceMotion = useReduceMotion();
-  const [active] = useState(() => new Animated.Value(focused ? 1 : 0));
-
-  useEffect(() => {
-    active.stopAnimation();
-    if (reduceMotion) {
-      active.setValue(focused ? 1 : 0);
-      return;
-    }
-    const animation = Animated.spring(active, {
-      damping: 18,
-      mass: 0.7,
-      stiffness: 260,
-      toValue: focused ? 1 : 0,
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [active, focused, reduceMotion]);
-
-  const animatedStyle = {
-    opacity: active.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }),
-    transform: [
-      { translateY: active.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
-      {
-        scale: active.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1 + (name === 'discover' ? 0.07 : 0.045)],
-        }),
-      },
-    ],
-  };
-
-  return (
-    <View
-      style={[
-        styles.iconFrame,
-        compact && styles.iconFrameCompact,
-        name === 'discover' && styles.discoverFrame,
-        compact && name === 'discover' && styles.discoverFrameCompact,
-      ]}
-    >
-      <Animated.View style={animatedStyle}>
-        <Image
-          accessibilityIgnoresInvertColors
-          contentFit="contain"
-          source={tabIconSources[name]}
-          style={[
-            styles.tabIcon,
-            compact && styles.tabIconCompact,
-            name === 'discover' && styles.discoverIcon,
-            compact && name === 'discover' && styles.discoverIconCompact,
-          ]}
-        />
-      </Animated.View>
-    </View>
   );
 }
 

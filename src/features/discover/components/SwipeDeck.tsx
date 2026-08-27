@@ -33,7 +33,6 @@ const SWIPE_VELOCITY_THRESHOLD = 0.65;
 const SWIPE_MIN_DISTANCE = 28;
 const DOUBLE_TAP_DELAY = 260;
 const SWIPE_EXIT_DURATION = 220;
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type SwipeDeckProps = {
   profiles: Profile[];
@@ -475,32 +474,25 @@ function DeckAction({
   profileName: string;
 }) {
   const isPick = kind === 'pick';
-  const reduceMotion = useReducedMotion();
-  const pressed = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - pressed.get() * 0.08 }],
-  }));
 
   return (
-    <AnimatedPressable
+    <Pressable
       accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
       accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
       accessibilityRole="button"
-      onPressIn={() =>
-        pressed.set(reduceMotion ? 1 : withSpring(1, { damping: 18, stiffness: 300 }))
-      }
       onPress={onPress}
-      onPressOut={() =>
-        pressed.set(reduceMotion ? 0 : withSpring(0, { damping: 16, stiffness: 280 }))
-      }
-      style={[styles.action, isPick ? styles.actionPick : styles.actionPass, animatedStyle]}
+      style={({ pressed }) => [
+        styles.action,
+        isPick ? styles.actionPick : styles.actionPass,
+        pressed && pressFeedback.control,
+      ]}
     >
       <Ionicons
         color={isPick ? palette.white : palette.ink}
         name={isPick ? 'heart' : 'close'}
         size={isPick ? 30 : 28}
       />
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

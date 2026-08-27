@@ -1,11 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ImageSource } from 'expo-image';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated from 'react-native-reanimated';
 
-import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { stateEntering } from '@/constants/motion';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 
 /** 상태의 성격. 아이콘 배경과 강조색만 달라지고 레이아웃은 같다. */
@@ -49,8 +47,7 @@ export function StateView({
   const accent = toneAccent(tone, theme.colors.primary, theme.colors.danger);
 
   return (
-    <Animated.View
-      entering={stateEntering()}
+    <View
       style={[
         styles.container,
         container === 'card' && [
@@ -63,12 +60,7 @@ export function StateView({
     >
       {illustration ? (
         <View style={styles.illustration}>
-          <MotionIllustratedIcon
-            active={tone !== 'error'}
-            motion={tone === 'promo' ? 'shine' : 'float'}
-            size={64}
-            source={illustration}
-          />
+          <IllustratedIcon size={64} source={illustration} />
         </View>
       ) : icon ? (
         <View style={[styles.icon, { backgroundColor: `${accent}1A` }]}>
@@ -118,7 +110,7 @@ export function StateView({
           ) : null}
         </View>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 

@@ -6,27 +6,15 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  interpolateColor,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { GoldBadge } from '@/components/GoldBadge';
-import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
-import {
-  categoryEntering,
-  categoryExiting,
-  listEntering,
-  listExiting,
-  listLayout,
-} from '@/constants/motion';
+import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
@@ -113,7 +101,6 @@ export function MatchesScreen() {
   const entitlement = usePassEntitlement();
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
-  const [categoryDirection, setCategoryDirection] = useState<-1 | 1>(1);
   const [now] = useState(() => Date.now());
   const incomingLikesQuery = useQuery({
     enabled: Boolean(session?.user.id),
@@ -233,12 +220,6 @@ export function MatchesScreen() {
   const selectCategory = (nextCategory: MatchCategory) => {
     if (nextCategory === category) return;
     hapticsService.selection();
-    setCategoryDirection(
-      categories.findIndex((item) => item.key === nextCategory) >
-        categories.findIndex((item) => item.key === category)
-        ? 1
-        : -1,
-    );
     setCategory(nextCategory);
   };
 
@@ -276,22 +257,14 @@ export function MatchesScreen() {
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          entering={categoryEntering(categoryDirection)}
-          exiting={categoryExiting(categoryDirection)}
-          key={category}
-        >
+        <View key={category}>
           <Text style={styles.subtitle}>{copy.description}</Text>
 
           {visitorsLocked ? (
             <View style={styles.visitorLock}>
               <View style={styles.visitorLockCopy}>
                 <View style={styles.visitorLockIcon}>
-                  <MotionIllustratedIcon
-                    motion="shine"
-                    size={40}
-                    source={illustratedIcons.goldPass}
-                  />
+                  <IllustratedIcon size={40} source={illustratedIcons.goldPass} />
                 </View>
                 <View style={styles.visitorLockTextBlock}>
                   <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>
@@ -376,7 +349,7 @@ export function MatchesScreen() {
               ))}
             </View>
           )}
-        </Animated.View>
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -393,27 +366,6 @@ function MatchCategoryTab({
   onPress: () => void;
   selected: boolean;
 }) {
-  const reduceMotion = useReducedMotion();
-  const active = useSharedValue(selected ? 1 : 0);
-
-  useEffect(() => {
-    active.set(reduceMotion ? (selected ? 1 : 0) : withTiming(selected ? 1 : 0, { duration: 180 }));
-  }, [active, reduceMotion, selected]);
-
-  const selectionStyle = useAnimatedStyle(() => ({
-    opacity: active.get(),
-    transform: [{ scale: 0.94 + active.get() * 0.06 }],
-  }));
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.ink]),
-  }));
-  const countStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(active.get(), [0, 1], ['#DEDEE2', '#FFE1EB']),
-  }));
-  const countTextStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.pink]),
-  }));
-
   return (
     <Pressable
       accessibilityRole="tab"
@@ -421,12 +373,16 @@ function MatchCategoryTab({
       onPress={onPress}
       style={({ pressed }) => [styles.category, pressed && styles.categoryPressed]}
     >
-      <Animated.View pointerEvents="none" style={[styles.categorySelection, selectionStyle]} />
+      {selected ? <View pointerEvents="none" style={styles.categorySelection} /> : null}
       <View style={styles.categoryContent}>
-        <Animated.Text style={[styles.categoryLabel, labelStyle]}>{label}</Animated.Text>
-        <Animated.View style={[styles.categoryCount, countStyle]}>
-          <Animated.Text style={[styles.categoryCountText, countTextStyle]}>{count}</Animated.Text>
-        </Animated.View>
+        <Text style={[styles.categoryLabel, selected && styles.categoryLabelSelected]}>
+          {label}
+        </Text>
+        <View style={[styles.categoryCount, selected && styles.categoryCountSelected]}>
+          <Text style={[styles.categoryCountText, selected && styles.categoryCountTextSelected]}>
+            {count}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -626,6 +582,7 @@ const styles = StyleSheet.create({
   },
   categoryPressed: pressFeedback.control,
   categoryLabel: { ...typography.label, color: palette.inkMuted },
+  categoryLabelSelected: { color: palette.ink },
   categoryCount: {
     alignItems: 'center',
     backgroundColor: '#DEDEE2',
@@ -635,7 +592,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 3,
   },
+  categoryCountSelected: { backgroundColor: '#FFE1EB' },
   categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
+  categoryCountTextSelected: { color: palette.pink },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   subtitle: {
     ...typography.bodySm,

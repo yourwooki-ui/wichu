@@ -3,14 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
-import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
-import { sectionEntering } from '@/constants/motion';
 import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
@@ -82,7 +79,7 @@ export function ShopScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={sectionEntering(0)} style={styles.currentPlan}>
+        <View style={styles.currentPlan}>
           <View style={styles.currentPlanIcon}>
             <IllustratedIcon size={38} source={getPassIllustration(tier)} />
           </View>
@@ -94,18 +91,14 @@ export function ShopScreen() {
             <View style={[styles.activeDot, tier === 'gold' && styles.activeDotGold]} />
             <Text style={styles.activeText}>이용 중</Text>
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={sectionEntering(1)}>
+        <View>
           <LinearGradient colors={['#FFF9E6', '#F2D982']} style={styles.goldHero}>
             <View style={styles.goldGlow} />
             <View style={styles.goldTopRow}>
               <View style={styles.diamondMark}>
-                <MotionIllustratedIcon
-                  motion="shine"
-                  size={52}
-                  source={illustratedIcons.goldPass}
-                />
+                <IllustratedIcon size={52} source={illustratedIcons.goldPass} />
               </View>
               <View>
                 <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
@@ -135,9 +128,9 @@ export function ShopScreen() {
               <Ionicons color={palette.white} name="arrow-forward" size={17} />
             </Pressable>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={sectionEntering(2)}>
+        <View>
           <Text style={styles.sectionTitle}>나에게 맞는 이용권</Text>
           <View style={styles.planRow}>
             <Pressable
@@ -183,9 +176,9 @@ export function ShopScreen() {
               </View>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={sectionEntering(3)} style={styles.benefitSection}>
+        <View style={styles.benefitSection}>
           <View style={styles.sectionHeadingRow}>
             <Text style={styles.sectionTitleInline}>Gold 혜택</Text>
             <Text style={styles.sectionHint}>필요할 때만 선택하세요</Text>
@@ -204,9 +197,9 @@ export function ShopScreen() {
               </View>
             ))}
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={sectionEntering(4)} style={styles.compareCard}>
+        <View style={styles.compareCard}>
           <View style={styles.compareHeader}>
             <Text style={styles.compareTitle}>한눈에 비교</Text>
             <View style={styles.compareLabels}>
@@ -226,9 +219,9 @@ export function ShopScreen() {
               <CompareMark gold value={item.gold} />
             </View>
           ))}
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={sectionEntering(5)}>
+        <View>
           <Pressable
             accessibilityLabel="구매 복원 및 이용권 관리"
             accessibilityRole="button"
@@ -252,7 +245,7 @@ export function ShopScreen() {
               기준을 통과한 후보 안에서만 적용됩니다.
             </Text>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     </Screen>
   );

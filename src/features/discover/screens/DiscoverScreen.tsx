@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
-import { AmbientIconMotion } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { layout, palette } from '@/constants/theme';
@@ -167,7 +166,9 @@ export function DiscoverScreen() {
           visible
         />
       ) : null}
-      <NotificationsSheet onClose={() => setNotificationsOpen(false)} visible={notificationsOpen} />
+      {notificationsOpen ? (
+        <NotificationsSheet onClose={() => setNotificationsOpen(false)} visible />
+      ) : null}
       <MatchCelebration
         onChat={openMatchedChat}
         onContinue={clearLastMatch}
@@ -212,13 +213,7 @@ function HeaderAction({
         { opacity: disabled ? 0.55 : pressed ? 0.62 : 1 },
       ]}
     >
-      {badge ? (
-        <AmbientIconMotion motion="bell">
-          <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
-        </AmbientIconMotion>
-      ) : (
-        <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
-      )}
+      <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
       {badge ? (
         <View style={[styles.headerActionBadge, { borderColor: theme.colors.background }]} />
       ) : null}
