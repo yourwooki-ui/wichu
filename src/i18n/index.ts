@@ -708,6 +708,14 @@ function readDeviceLanguage(): AppLanguage {
   }
 }
 
+async function loadDisplayNamesPolyfill() {
+  if (typeof Intl.DisplayNames === 'function') return;
+
+  // Hermes에 DisplayNames가 없는 경우에만 순수 JS 폴리필을 늦게 읽는다.
+  // 로드 실패는 국가·언어 코드를 표시하는 기존 fallback으로 흡수한다.
+  await import('@/lib/intl-polyfills').catch(() => undefined);
+}
+
 let activeLanguage: AppLanguage = 'en';
 const i18n = createInstance();
 
@@ -726,6 +734,7 @@ async function readStoredLanguage() {
 }
 
 export const i18nReady = (async () => {
+  await loadDisplayNamesPolyfill();
   const storedLanguage = await readStoredLanguage().catch(() => null);
   activeLanguage = storedLanguage ?? readDeviceLanguage();
 
