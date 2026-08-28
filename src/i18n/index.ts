@@ -692,8 +692,23 @@ const resources = {
   },
 } as const;
 
-const deviceLanguage = resolveAppLanguage(getLocales()[0]?.languageTag) ?? 'en';
-let activeLanguage: AppLanguage = deviceLanguage;
+/**
+ * 기기 언어는 모듈 평가 시점에 읽지 않는다.
+ *
+ * `getLocales()`는 expo-localization의 동기 네이티브 호출이다. 모듈 스코프에서
+ * 부르면 React가 마운트되기 전, 에러 바운더리가 생기기도 전에 실행되므로
+ * 네이티브 모듈이 아직 준비되지 않았거나 예외가 나면 화면 없이 앱이 죽는다.
+ * 같은 이유로 product-analytics-service도 Crypto 호출을 평가 시점에서 뺐다.
+ */
+function readDeviceLanguage(): AppLanguage {
+  try {
+    return resolveAppLanguage(getLocales()[0]?.languageTag) ?? 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+let activeLanguage: AppLanguage = 'en';
 const i18n = createInstance();
 
 function applyDocumentLanguage(language: AppLanguage) {
@@ -712,7 +727,7 @@ async function readStoredLanguage() {
 
 export const i18nReady = (async () => {
   const storedLanguage = await readStoredLanguage().catch(() => null);
-  activeLanguage = storedLanguage ?? deviceLanguage;
+  activeLanguage = storedLanguage ?? readDeviceLanguage();
 
   await i18n.use(initReactI18next).init({
     resources,

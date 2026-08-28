@@ -1,5 +1,3 @@
-import '@/lib/intl-polyfills';
-
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -28,7 +26,13 @@ import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 import { useTranslation } from 'react-i18next';
 
-SplashScreen.setOptions({ duration: 240, fade: true });
+// 스플래시 설정도 모듈 평가 시점의 네이티브 호출이다. 여기서 예외가 나면
+// 화면이 뜨기 전에 앱이 죽으므로, 실패해도 앱은 계속 열리게 감싼다.
+try {
+  SplashScreen.setOptions({ duration: 240, fade: true });
+} catch {
+  // 스플래시 연출은 없어도 앱 실행에 지장이 없다.
+}
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function AppLaunchSurface() {
@@ -146,11 +150,18 @@ export default function RootLayout() {
     let mounted = true;
     const syncLanguage = () => setLanguage(getAppLanguage());
 
-    void i18nReady.finally(() => {
-      if (!mounted) return;
-      syncLanguage();
-      setLanguageReady(true);
-    });
+    void i18nReady.then(
+      () => {
+        if (!mounted) return;
+        syncLanguage();
+        setLanguageReady(true);
+      },
+      () => {
+        // 로케일 저장소나 초기화가 실패해도 기본 언어로 앱을 연다. 여기서
+        // 거부된 Promise를 남기면 Android release가 치명적 JS 오류로 처리할 수 있다.
+        if (mounted) setLanguageReady(true);
+      },
+    );
     i18n.on('languageChanged', syncLanguage);
 
     return () => {
