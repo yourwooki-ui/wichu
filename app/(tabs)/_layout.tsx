@@ -9,7 +9,6 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { layout } from '@/constants/theme';
-import { hapticsService } from '@/services/haptics-service';
 
 export default function TabLayout() {
   const theme = useAppTheme();
@@ -33,14 +32,7 @@ export default function TabLayout() {
         tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: theme.colors.tabInactive,
         tabBarButton: ({ ref: _ref, ...props }) => (
-          <Pressable
-            {...props}
-            onPress={(event) => {
-              hapticsService.selection();
-              props.onPress?.(event);
-            }}
-            style={[props.style, styles.tabBarButton]}
-          />
+          <Pressable {...props} style={[props.style, styles.tabBarButton]} />
         ),
         tabBarStyle: {
           alignSelf: 'center',

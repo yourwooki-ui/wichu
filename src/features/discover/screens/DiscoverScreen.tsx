@@ -151,11 +151,9 @@ export function DiscoverScreen() {
         error={deck.error}
         isLoading={deck.isLoading}
         onAdjustFilters={() => setFiltersOpen(true)}
-        onRestoreAnimationConsumed={deck.clearRestoredSwipe}
         onRetry={deck.retry}
         onSwipe={handleSwipe}
         profiles={deck.profiles}
-        restoredSwipe={deck.restoredSwipe}
       />
       {filtersOpen ? (
         <DiscoveryFilterSheet

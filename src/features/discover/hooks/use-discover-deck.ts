@@ -17,7 +17,6 @@ import type { Profile, SwipeAction } from '@/types/profile';
 
 type UndoableSwipe = { profile: Profile; action: SwipeAction; userId: string };
 type MatchedProfile = { matchId: string; profile: Profile };
-type RestoredSwipe = Pick<UndoableSwipe, 'action'> & { profileId: string; sequence: number };
 
 export function useDiscoverDeck() {
   const { session } = useAuthSession();
@@ -26,7 +25,6 @@ export function useDiscoverDeck() {
   const [swipeError, setSwipeError] = useState<string | null>(null);
   const [lastMatch, setLastMatch] = useState<MatchedProfile | null>(null);
   const [undoStack, setUndoStack] = useState<UndoableSwipe[]>([]);
-  const [restoredSwipe, setRestoredSwipe] = useState<RestoredSwipe | null>(null);
   const trackedEmpty = useRef(false);
   const userId = session?.user.id;
   const passEntitlement = usePassEntitlement();
@@ -152,16 +150,10 @@ export function useDiscoverDeck() {
       hapticsService.selection();
       setSwipeError(null);
       restoreSwipe(profile);
-      setRestoredSwipe((current) => ({
-        action,
-        profileId: profile.id,
-        sequence: (current?.sequence ?? 0) + 1,
-      }));
       setUndoStack((current) => current.slice(0, -1));
     },
     onError: (_error, { profile, action, userId: swipeUserId }) => {
       recordSwipe(profile.id, action);
-      setRestoredSwipe(null);
       setUndoStack((current) => [...current, { profile, action, userId: swipeUserId }]);
       setSwipeError(t('reliability.undoBody'));
     },
@@ -242,7 +234,6 @@ export function useDiscoverDeck() {
   }, [undoEntitlementQuery, undoMutation, undoStack, userId]);
 
   const clearLastMatch = useCallback(() => setLastMatch(null), []);
-  const clearRestoredSwipe = useCallback(() => setRestoredSwipe(null), []);
 
   const queryError = preferencesQuery.error ?? candidatesQuery.error;
 
@@ -270,8 +261,6 @@ export function useDiscoverDeck() {
     error: swipeError ?? (queryError ? t('reliability.discoverBody') : null),
     lastMatch,
     clearLastMatch,
-    clearRestoredSwipe,
-    restoredSwipe,
     preferences: preferencesQuery.data,
     savePreferences: preferencesMutation.mutateAsync,
     isSavingPreferences: preferencesMutation.isPending,
