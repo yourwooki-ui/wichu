@@ -11,8 +11,6 @@ export function resolveBottomSheetSnap({
   position,
   velocityY,
 }: ResolveBottomSheetSnapOptions): BottomSheetSnap {
-  'worklet';
-
   if (velocityY < -320) return 'expanded';
   if (velocityY > 1_100 || position > collapsedOffset + 110) return 'closed';
   if (velocityY > 320 || position > collapsedOffset * 0.5) return 'collapsed';

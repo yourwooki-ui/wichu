@@ -1,5 +1,3 @@
-import { randomUUID } from 'expo-crypto';
-
 import { getSupabaseClient } from '@/lib/supabase';
 
 export type ProductEventName =
@@ -22,7 +20,9 @@ export type ProductEventName =
 type SafeEventValue = boolean | number | string;
 type ProductEventProperties = Record<string, SafeEventValue | null | undefined>;
 
-const sessionId = randomUUID();
+// 분석용 상관관계 ID에는 암호학적 UUID가 필요하지 않다. 네이티브 Crypto 모듈을
+// 앱 모듈 평가 시점에 호출하지 않아, 관측 기능이 실행 자체를 막을 수 없게 한다.
+const sessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 const SAFE_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const MAX_STRING_LENGTH = 80;
 

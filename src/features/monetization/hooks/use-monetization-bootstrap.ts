@@ -5,19 +5,21 @@ import {
   MONETIZATION_ENABLED,
   REWARDED_ADS_ENABLED,
 } from '@/constants/features';
-import { adsService } from '@/features/monetization/services/ads-service';
-import { purchaseService } from '@/features/monetization/services/purchase-service';
 
 export function useMonetizationBootstrap(userId: string | undefined) {
   useEffect(() => {
     if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED) {
-      void adsService.initialize().catch(() => undefined);
+      void import('@/features/monetization/services/ads-service')
+        .then(({ adsService }) => adsService.initialize())
+        .catch(() => undefined);
     }
   }, []);
 
   useEffect(() => {
     if (MONETIZATION_ENABLED && userId) {
-      void purchaseService.initialize(userId).catch(() => undefined);
+      void import('@/features/monetization/services/purchase-service')
+        .then(({ purchaseService }) => purchaseService.initialize(userId))
+        .catch(() => undefined);
     }
   }, [userId]);
 }

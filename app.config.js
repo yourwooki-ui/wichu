@@ -125,53 +125,6 @@ const baseConfig = {
   owner: 'withyouwichu',
 };
 
-const TEST_ADMOB_APP_IDS = {
-  android: 'ca-app-pub-3940256099942544~3347511713',
-  ios: 'ca-app-pub-3940256099942544~1458002511',
-};
-
-function getAdMobAppId(platform) {
-  const configured =
-    platform === 'android'
-      ? process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID
-      : process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID;
-  return configured?.trim() || TEST_ADMOB_APP_IDS[platform];
-}
-
-module.exports = () => {
-  const androidAppId = getAdMobAppId('android');
-  const iosAppId = getAdMobAppId('ios');
-  const adsEnabled =
-    process.env.EXPO_PUBLIC_REWARDED_ADS_ENABLED === 'true' ||
-    process.env.EXPO_PUBLIC_INTERSTITIAL_ADS_ENABLED === 'true';
-  const isProductionBuild = process.env.EAS_BUILD_PROFILE === 'production';
-  const buildPlatform = process.env.EAS_BUILD_PLATFORM;
-  const missingProductionAppId =
-    (buildPlatform !== 'ios' && androidAppId === TEST_ADMOB_APP_IDS.android) ||
-    (buildPlatform !== 'android' && iosAppId === TEST_ADMOB_APP_IDS.ios);
-
-  if (isProductionBuild && adsEnabled && missingProductionAppId) {
-    throw new Error(
-      'Production ads are enabled without a real AdMob app ID for the target platform.',
-    );
-  }
-
-  return {
-    ...baseConfig,
-    plugins: [
-      ...baseConfig.plugins,
-      [
-        'react-native-google-mobile-ads',
-        {
-          androidAppId,
-          iosAppId,
-          delayAppMeasurementInit: true,
-          optimizeInitialization: true,
-          optimizeAdLoading: true,
-          userTrackingUsageDescription:
-            'WICHU may use a device identifier to measure ad performance and show relevant ads.',
-        },
-      ],
-    ],
-  };
-};
+// Native ad and purchase SDKs are intentionally excluded from the stability build.
+// The service boundary stays in place so they can be restored after physical-device QA.
+module.exports = () => baseConfig;

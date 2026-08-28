@@ -1,19 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
@@ -25,6 +13,7 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import { Profile, SwipeAction } from '@/types/profile';
 
@@ -55,14 +44,14 @@ export function SwipeDeck({
   const { t } = useTranslation();
   const theme = useAppTheme();
   const { height, width } = useAppViewport();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const [presenceNow, setPresenceNow] = useState(() => Date.now());
   const lastTapRef = useRef(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const pickPulse = useSharedValue(0);
-  const interactionLocked = useSharedValue(false);
+  const [translateX] = useState(() => new Animated.Value(0));
+  const [translateY] = useState(() => new Animated.Value(0));
+  const [pickPulse] = useState(() => new Animated.Value(0));
+  const [interactionLocked, setInteractionLocked] = useState(false);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
   // 헤더와 하단 탭은 또렷하게 남기되, 그 사이의 세로 공간은 카드가 충분히 채운다.
@@ -97,20 +86,25 @@ export function SwipeDeck({
 
   const startSwipe = useCallback(
     (action: SwipeAction) => {
-      if (interactionLocked.get()) return;
-      interactionLocked.set(true);
+      if (interactionLocked) return;
+      setInteractionLocked(true);
       signalSwipeDecision(action);
       const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
-      translateY.set(withTiming(10, { duration: exitDuration }));
-      translateX.set(
-        withTiming(
-          action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: exitDuration },
-          (finished) => {
-            if (finished) runOnJS(commitSwipe)(action);
-          },
-        ),
-      );
+      Animated.parallel([
+        Animated.timing(translateY, {
+          duration: exitDuration,
+          toValue: 10,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          duration: exitDuration,
+          toValue: action === 'like' ? width * 1.35 : -width * 1.35,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) commitSwipe(action);
+        setInteractionLocked(false);
+      });
     },
     [
       commitSwipe,
@@ -133,9 +127,10 @@ export function SwipeDeck({
       singleTapTimerRef.current = null;
       lastTapRef.current = 0;
       if (!reduceMotion) {
-        pickPulse.set(
-          withSequence(withTiming(1, { duration: 110 }), withTiming(0, { duration: 150 })),
-        );
+        Animated.sequence([
+          Animated.timing(pickPulse, { duration: 110, toValue: 1, useNativeDriver: true }),
+          Animated.timing(pickPulse, { duration: 150, toValue: 0, useNativeDriver: true }),
+        ]).start();
       }
       startSwipe('like');
       return;
@@ -156,120 +151,142 @@ export function SwipeDeck({
   );
 
   useEffect(() => {
-    translateX.set(0);
-    translateY.set(0);
-    pickPulse.set(0);
-    interactionLocked.set(false);
-  }, [currentProfile?.id, interactionLocked, pickPulse, translateX, translateY]);
+    translateX.stopAnimation();
+    translateY.stopAnimation();
+    pickPulse.stopAnimation();
+    translateX.setValue(0);
+    translateY.setValue(0);
+    pickPulse.setValue(0);
+  }, [currentProfile?.id, pickPulse, translateX, translateY]);
 
-  const gesture = useMemo(() => {
-    const finishSwipe = (action: SwipeAction) => {
-      'worklet';
-      if (interactionLocked.get()) return;
-      interactionLocked.set(true);
-      runOnJS(signalSwipeDecision)(action);
-      const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
-      translateY.set(withTiming(10, { duration: exitDuration }));
-      translateX.set(
-        withTiming(
-          action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: exitDuration },
-          (finished) => {
-            if (finished) runOnJS(commitSwipe)(action);
-          },
-        ),
-      );
-    };
+  const gesture = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, state) =>
+          !interactionLocked && Math.abs(state.dx) > 6 && Math.abs(state.dx) > Math.abs(state.dy),
+        onPanResponderMove: (_event, state) => {
+          if (interactionLocked) return;
+          translateX.setValue(state.dx);
+          translateY.setValue(state.dy);
+        },
+        onPanResponderRelease: (_event, state) => {
+          if (interactionLocked) return;
+          const isFastRight = state.vx > SWIPE_VELOCITY_THRESHOLD && state.dx > SWIPE_MIN_DISTANCE;
+          const isFastLeft = state.vx < -SWIPE_VELOCITY_THRESHOLD && state.dx < -SWIPE_MIN_DISTANCE;
 
-    const pan = Gesture.Pan()
-      .activeOffsetX([-6, 6])
-      .failOffsetY([-14, 14])
-      .onUpdate((event) => {
-        if (interactionLocked.get()) return;
-        translateX.set(event.translationX);
-        translateY.set(event.translationY);
-      })
-      .onEnd((event) => {
-        if (interactionLocked.get()) return;
-        const isFastRight =
-          event.velocityX > SWIPE_VELOCITY_THRESHOLD * 1000 &&
-          event.translationX > SWIPE_MIN_DISTANCE;
-        const isFastLeft =
-          event.velocityX < -SWIPE_VELOCITY_THRESHOLD * 1000 &&
-          event.translationX < -SWIPE_MIN_DISTANCE;
-
-        if (event.translationX > SWIPE_THRESHOLD || isFastRight) finishSwipe('like');
-        else if (event.translationX < -SWIPE_THRESHOLD || isFastLeft) finishSwipe('pass');
-        else {
-          if (reduceMotion) {
-            translateX.set(withTiming(0, { duration: 0 }));
-            translateY.set(withTiming(0, { duration: 0 }));
+          if (state.dx > SWIPE_THRESHOLD || isFastRight) startSwipe('like');
+          else if (state.dx < -SWIPE_THRESHOLD || isFastLeft) startSwipe('pass');
+          else if (reduceMotion) {
+            translateX.setValue(0);
+            translateY.setValue(0);
           } else {
-            translateX.set(withSpring(0, { damping: 18, stiffness: 210 }));
-            translateY.set(withSpring(0, { damping: 18, stiffness: 210 }));
+            Animated.parallel([
+              Animated.spring(translateX, {
+                damping: 18,
+                stiffness: 210,
+                toValue: 0,
+                useNativeDriver: true,
+              }),
+              Animated.spring(translateY, {
+                damping: 18,
+                stiffness: 210,
+                toValue: 0,
+                useNativeDriver: true,
+              }),
+            ]).start();
           }
-        }
-      });
+        },
+        onPanResponderTerminate: () => {
+          if (interactionLocked) return;
+          translateX.setValue(0);
+          translateY.setValue(0);
+        },
+      }),
+    [interactionLocked, reduceMotion, startSwipe, translateX, translateY],
+  );
 
-    return Gesture.Simultaneous(pan, Gesture.Native());
-  }, [
-    commitSwipe,
-    interactionLocked,
-    reduceMotion,
-    signalSwipeDecision,
-    translateX,
-    translateY,
-    width,
-  ]);
+  const topCardStyle = useMemo(
+    () => ({
+      opacity: translateX.interpolate({
+        extrapolate: 'clamp' as const,
+        inputRange: [-width * 1.25, 0, width * 1.25],
+        outputRange: [0.92, 1, 0.92],
+      }),
+      transform: [
+        { translateX },
+        { translateY },
+        {
+          rotate: translateX.interpolate({
+            extrapolate: 'clamp' as const,
+            inputRange: [-width, 0, width],
+            outputRange: ['-12deg', '0deg', '12deg'],
+          }),
+        },
+      ],
+    }),
+    [translateX, translateY, width],
+  );
 
-  const topCardStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      Math.abs(translateX.get()),
-      [0, width * 1.25],
-      [1, 0.92],
-      Extrapolation.CLAMP,
-    ),
-    transform: [
-      { translateX: translateX.get() },
-      { translateY: translateY.get() },
-      {
-        rotate: `${interpolate(
-          translateX.get(),
-          [-width, 0, width],
-          [-12, 0, 12],
-          Extrapolation.CLAMP,
-        )}deg`,
-      },
-    ],
-  }));
-  const nextCardStyle = useAnimatedStyle(() => {
-    const progress = interpolate(
-      Math.abs(translateX.get()),
-      [0, SWIPE_THRESHOLD, width * 1.1],
-      [0, 0.46, 1],
-      Extrapolation.CLAMP,
-    );
-
-    return {
-      opacity: interpolate(progress, [0, 1], [0.82, 1]),
+  const nextCardStyle = useMemo(
+    () => ({
+      opacity: translateX.interpolate({
+        extrapolate: 'clamp' as const,
+        inputRange: [-width, 0, width],
+        outputRange: [1, 0.82, 1],
+      }),
       transform: [
         {
-          translateX: interpolate(progress, [0, 1], [width * 1.04, 0], Extrapolation.CLAMP),
+          translateX: translateX.interpolate({
+            extrapolate: 'clamp' as const,
+            inputRange: [-width, 0, width],
+            outputRange: [0, width * 1.04, 0],
+          }),
         },
-        { scale: interpolate(progress, [0, 1], [0.975, 1]) },
+        {
+          scale: translateX.interpolate({
+            extrapolate: 'clamp' as const,
+            inputRange: [-width, 0, width],
+            outputRange: [1, 0.975, 1],
+          }),
+        },
       ],
-    };
-  });
-  const pickPulseStyle = useAnimatedStyle(() => ({
-    opacity: pickPulse.get(),
-    transform: [{ scale: interpolate(pickPulse.get(), [0, 1], [0.72, 1]) }],
-  }));
-  const likeDecisionStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
-  }));
-  const passDecisionStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.get(), [-SWIPE_THRESHOLD, -15], [1, 0], Extrapolation.CLAMP),
-  }));
+    }),
+    [translateX, width],
+  );
+
+  const pickPulseStyle = useMemo(
+    () => ({
+      opacity: pickPulse,
+      transform: [
+        {
+          scale: pickPulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }),
+        },
+      ],
+    }),
+    [pickPulse],
+  );
+
+  const likeDecisionStyle = useMemo(
+    () => ({
+      opacity: translateX.interpolate({
+        extrapolate: 'clamp' as const,
+        inputRange: [15, SWIPE_THRESHOLD],
+        outputRange: [0, 1],
+      }),
+    }),
+    [translateX],
+  );
+
+  const passDecisionStyle = useMemo(
+    () => ({
+      opacity: translateX.interpolate({
+        extrapolate: 'clamp' as const,
+        inputRange: [-SWIPE_THRESHOLD, -15],
+        outputRange: [1, 0],
+      }),
+    }),
+    [translateX],
+  );
 
   if (isLoading) {
     // 실제 카드와 같은 크기·정보 배치로 골격을 그려 데이터 도착 시 화면이 튀지 않게 한다.
@@ -352,46 +369,44 @@ export function SwipeDeck({
             <ProfileCard now={presenceNow} profile={nextProfile} />
           </Animated.View>
         ) : null}
-        <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.topCard, topCardStyle]}>
-            <ProfileCard
-              accessibilityActions={[
-                { label: '상세 프로필 열기', name: 'activate' },
-                { label: 'Pick', name: 'increment' },
-                { label: 'Pass', name: 'decrement' },
-              ]}
-              now={presenceNow}
-              onAccessibilityAction={(event) => {
-                if (event.nativeEvent.actionName === 'activate') openProfile();
-                if (event.nativeEvent.actionName === 'increment') startSwipe('like');
-                if (event.nativeEvent.actionName === 'decrement') startSwipe('pass');
-              }}
-              onPress={handleCardPress}
-              profile={currentProfile}
-            />
-            <Animated.View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={[styles.pickPulse, pickPulseStyle]}
-            >
-              <Ionicons color={palette.white} name="heart" size={44} />
-            </Animated.View>
-            <Animated.View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={[styles.decision, styles.likeDecision, likeDecisionStyle]}
-            >
-              <Text style={styles.likeText}>PICK</Text>
-            </Animated.View>
-            <Animated.View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={[styles.decision, styles.passDecision, passDecisionStyle]}
-            >
-              <Text style={styles.passText}>PASS</Text>
-            </Animated.View>
+        <Animated.View {...gesture.panHandlers} style={[styles.topCard, topCardStyle]}>
+          <ProfileCard
+            accessibilityActions={[
+              { label: '상세 프로필 열기', name: 'activate' },
+              { label: 'Pick', name: 'increment' },
+              { label: 'Pass', name: 'decrement' },
+            ]}
+            now={presenceNow}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'activate') openProfile();
+              if (event.nativeEvent.actionName === 'increment') startSwipe('like');
+              if (event.nativeEvent.actionName === 'decrement') startSwipe('pass');
+            }}
+            onPress={handleCardPress}
+            profile={currentProfile}
+          />
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.pickPulse, pickPulseStyle]}
+          >
+            <Ionicons color={palette.white} name="heart" size={44} />
           </Animated.View>
-        </GestureDetector>
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.decision, styles.likeDecision, likeDecisionStyle]}
+          >
+            <Text style={styles.likeText}>PICK</Text>
+          </Animated.View>
+          <Animated.View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.decision, styles.passDecision, passDecisionStyle]}
+          >
+            <Text style={styles.passText}>PASS</Text>
+          </Animated.View>
+        </Animated.View>
       </View>
 
       {/*
