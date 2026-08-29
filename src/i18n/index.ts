@@ -709,15 +709,35 @@ function readDeviceLanguage(): AppLanguage {
 }
 
 async function loadDisplayNamesPolyfill() {
-  if (typeof Intl.DisplayNames === 'function') return;
+  try {
+    if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') return;
 
-  // Hermes에 DisplayNames가 없는 경우에만 순수 JS 폴리필을 늦게 읽는다.
-  // 로드 실패는 국가·언어 코드를 표시하는 기존 fallback으로 흡수한다.
-  await import('@/lib/intl-polyfills').catch(() => undefined);
+    // 일부 Hermes 릴리스 런타임에는 Intl 자체가 없을 수 있다. 프로퍼티에
+    // 접근하기 전 전역 객체부터 확인하고, 폴리필 실패는 코드 표시 fallback으로 흡수한다.
+    await import('@/lib/intl-polyfills');
+  } catch {
+    // 국가·언어 표시명은 부가 기능이다. 실패해도 번역 초기화는 계속한다.
+  }
 }
 
 let activeLanguage: AppLanguage = 'en';
 const i18n = createInstance();
+
+async function initializeTranslations(language: AppLanguage) {
+  if (i18n.isInitialized) {
+    await i18n.changeLanguage(language);
+    return;
+  }
+
+  await i18n.use(initReactI18next).init({
+    resources,
+    lng: language,
+    fallbackLng: 'en',
+    supportedLngs: supportedLanguages.map(({ code }) => code),
+    load: 'currentOnly',
+    interpolation: { escapeValue: false },
+  });
+}
 
 function applyDocumentLanguage(language: AppLanguage) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -734,24 +754,25 @@ async function readStoredLanguage() {
 }
 
 export const i18nReady = (async () => {
-  await loadDisplayNamesPolyfill();
   const storedLanguage = await readStoredLanguage().catch(() => null);
   activeLanguage = storedLanguage ?? readDeviceLanguage();
 
-  await i18n.use(initReactI18next).init({
-    resources,
-    lng: activeLanguage,
-    fallbackLng: 'en',
-    supportedLngs: supportedLanguages.map(({ code }) => code),
-    load: 'currentOnly',
-    interpolation: { escapeValue: false },
-  });
+  // 핵심 UI 번역을 먼저 활성화한다. DisplayNames 폴리필은 실패 가능한 부가 기능이므로
+  // auth.* 같은 필수 카피 초기화를 절대로 가로막아서는 안 된다.
+  await initializeTranslations(activeLanguage);
+
+  await loadDisplayNamesPolyfill();
 
   applyDocumentLanguage(activeLanguage);
   if (!storedLanguage) {
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage).catch(() => undefined);
   }
-})();
+})().catch(async () => {
+  // 어떤 초기화 단계가 실패해도 번역 키 자체를 사용자에게 노출하지 않는다.
+  // 저장소·기기 로케일·폴리필과 무관한 영어 리소스로 마지막 한 번 복구한다.
+  activeLanguage = 'en';
+  await initializeTranslations('en').catch(() => undefined);
+});
 
 export async function setAppLanguage(language: AppLanguage) {
   await i18nReady;
