@@ -54,12 +54,17 @@ export function DiscoverScreen() {
     const userId = session?.user.id;
     if (!userId) return () => undefined;
 
-    void tutorialState.hasCompletedUndoCoach(userId).then((completed) => {
-      if (active) {
-        setUndoCoachAvailable(!completed);
-        setUndoCoachVisible(false);
-      }
-    });
+    void tutorialState
+      .hasCompletedUndoCoach(userId)
+      .then((completed) => {
+        if (active) {
+          setUndoCoachAvailable(!completed);
+          setUndoCoachVisible(false);
+        }
+      })
+      .catch(() => {
+        if (active) setUndoCoachAvailable(false);
+      });
 
     return () => {
       active = false;

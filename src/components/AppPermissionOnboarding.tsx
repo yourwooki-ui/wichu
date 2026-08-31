@@ -31,7 +31,7 @@ export function AppPermissionOnboarding() {
   const [message, setMessage] = useState<string | null>(null);
 
   const finish = useCallback(async () => {
-    if (userId) await AsyncStorage.setItem(storageKey(userId), 'done');
+    if (userId) await AsyncStorage.setItem(storageKey(userId), 'done').catch(() => undefined);
     setStep(null);
     if (pathname === '/profile-setup') router.replace('/(tabs)/discover');
   }, [pathname, router, userId]);

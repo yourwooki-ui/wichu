@@ -43,44 +43,56 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
     // 매치 순간은 한 번만 울리고, 카드 → 인증 마크 → 안내 순서로 시선이 흐르게 한다.
     hapticsService.success();
     if (profile) {
-      AccessibilityInfo.announceForAccessibility(`${profile.name}님과 매치됐어요`);
+      try {
+        AccessibilityInfo.announceForAccessibility(`${profile.name}님과 매치됐어요`);
+      } catch {
+        // 접근성 네이티브 모듈이 준비되지 않아도 매치 화면은 계속 보여준다.
+      }
     }
 
     let cancelled = false;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
-      if (cancelled) return;
-      if (reduceMotion) {
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduceMotion) => {
+        if (cancelled) return;
+        if (reduceMotion) {
+          enter.setValue(1);
+          contentEnter.setValue(1);
+          markEnter.setValue(1);
+          return;
+        }
+        Animated.parallel([
+          Animated.spring(enter, {
+            bounciness: 8,
+            speed: 14,
+            toValue: 1,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+          Animated.sequence([
+            Animated.delay(90),
+            Animated.spring(markEnter, {
+              bounciness: 11,
+              speed: 16,
+              toValue: 1,
+              useNativeDriver: USE_NATIVE_DRIVER,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.delay(120),
+            Animated.timing(contentEnter, {
+              duration: 180,
+              toValue: 1,
+              useNativeDriver: USE_NATIVE_DRIVER,
+            }),
+          ]),
+        ]).start();
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // 접근성 조회 실패 시 모션 없이 최종 상태를 노출한다.
         enter.setValue(1);
         contentEnter.setValue(1);
         markEnter.setValue(1);
-        return;
-      }
-      Animated.parallel([
-        Animated.spring(enter, {
-          bounciness: 8,
-          speed: 14,
-          toValue: 1,
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-        Animated.sequence([
-          Animated.delay(90),
-          Animated.spring(markEnter, {
-            bounciness: 11,
-            speed: 16,
-            toValue: 1,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.delay(120),
-          Animated.timing(contentEnter, {
-            duration: 180,
-            toValue: 1,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-        ]),
-      ]).start();
-    });
+      });
 
     return () => {
       cancelled = true;

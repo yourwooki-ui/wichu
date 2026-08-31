@@ -48,19 +48,24 @@ async function removeGeneration(key: string, manifest: Manifest | null) {
 
 export const sensitiveStorage = {
   async getItem(key: string) {
-    const manifest = parseManifest(await SecureStore.getItemAsync(manifestKey(key), OPTIONS));
-    if (manifest) {
-      const chunks = await Promise.all(
-        Array.from({ length: manifest.chunks }, (_, index) =>
-          SecureStore.getItemAsync(chunkKey(key, manifest.generation, index), OPTIONS),
-        ),
-      );
-      if (chunks.every((chunk): chunk is string => chunk !== null)) return chunks.join('');
-      await removeGeneration(key, manifest);
-      await SecureStore.deleteItemAsync(manifestKey(key), OPTIONS);
+    try {
+      const manifest = parseManifest(await SecureStore.getItemAsync(manifestKey(key), OPTIONS));
+      if (manifest) {
+        const chunks = await Promise.all(
+          Array.from({ length: manifest.chunks }, (_, index) =>
+            SecureStore.getItemAsync(chunkKey(key, manifest.generation, index), OPTIONS),
+          ),
+        );
+        if (chunks.every((chunk): chunk is string => chunk !== null)) return chunks.join('');
+        await removeGeneration(key, manifest);
+        await SecureStore.deleteItemAsync(manifestKey(key), OPTIONS);
+      }
+    } catch {
+      // 잠금화면·키스토어 초기화 등으로 SecureStore가 일시 실패하면 세션 없음으로 복구한다.
+      return null;
     }
 
-    const legacyValue = await AsyncStorage.getItem(key);
+    const legacyValue = await AsyncStorage.getItem(key).catch(() => null);
     if (!legacyValue) return null;
     await sensitiveStorage.setItem(key, legacyValue);
     await AsyncStorage.removeItem(key);
@@ -88,11 +93,13 @@ export const sensitiveStorage = {
   },
 
   async removeItem(key: string) {
-    const manifest = parseManifest(await SecureStore.getItemAsync(manifestKey(key), OPTIONS));
-    await removeGeneration(key, manifest);
-    await Promise.all([
-      SecureStore.deleteItemAsync(manifestKey(key), OPTIONS),
-      AsyncStorage.removeItem(key),
-    ]);
+    try {
+      const manifest = parseManifest(await SecureStore.getItemAsync(manifestKey(key), OPTIONS));
+      await removeGeneration(key, manifest);
+      await SecureStore.deleteItemAsync(manifestKey(key), OPTIONS);
+    } catch {
+      // 기기 키스토어가 이미 초기화된 경우 삭제할 암호화 데이터도 사용할 수 없다.
+    }
+    await AsyncStorage.removeItem(key).catch(() => undefined);
   },
 };

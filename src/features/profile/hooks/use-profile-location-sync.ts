@@ -64,7 +64,9 @@ export function useProfileLocationSync() {
       Date.now() - lastSyncSnapshot.syncedAt < RETRY_AFTER_MS
     )
       return;
-    void Promise.resolve().then(() => sync(false));
+    void Promise.resolve()
+      .then(() => sync(false))
+      .catch(() => undefined);
   }, [sync, userId]);
 
   return {
@@ -73,6 +75,10 @@ export function useProfileLocationSync() {
     status,
     updatedAt,
     requestLocation: () => sync(true),
-    openDeviceSettings: () => Linking.openSettings(),
+    openDeviceSettings: () =>
+      Linking.openSettings().then(
+        () => true,
+        () => false,
+      ),
   };
 }

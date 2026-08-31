@@ -37,6 +37,7 @@ export const supportedLanguages = [
 
 export type AppLanguage = (typeof supportedLanguages)[number]['code'];
 export type AppTextDirection = (typeof supportedLanguages)[number]['direction'];
+export const DEFAULT_APP_LANGUAGE: AppLanguage = 'ko';
 
 const supportedLanguageCodes = new Set<string>(supportedLanguages.map((language) => language.code));
 

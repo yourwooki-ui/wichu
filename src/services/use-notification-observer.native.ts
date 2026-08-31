@@ -3,23 +3,29 @@ import { type Href, router } from 'expo-router';
 import { useEffect } from 'react';
 
 const SAFE_NOTIFICATION_ROUTE = /^\/(?:chat\/[0-9a-f-]{36}|matches|chat)$/i;
+let notificationHandlerConfigured = false;
 
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-} catch {
-  // 알림 초기화가 실패해도 앱의 인증·탐색 화면은 계속 열려야 한다.
+function configureNotificationHandler() {
+  if (notificationHandlerConfigured) return;
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    notificationHandlerConfigured = true;
+  } catch {
+    // 알림 초기화가 실패해도 앱의 인증·탐색 화면은 계속 열려야 한다.
+  }
 }
 
 export function useNotificationObserver(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
+    configureNotificationHandler();
 
     const redirect = (response: Notifications.NotificationResponse) => {
       if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return false;

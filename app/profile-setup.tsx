@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -134,6 +134,7 @@ const EDIT_SECTION_BY_NAME: Record<string, SetupStep> = {
 function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const requestedEditMode = mode === 'edit';
   const { section: requestedSection } = useLocalSearchParams<{ section?: string }>();
   const { session, refreshProfile, profileReviewStatus, profileReviewNote } = useAuthSession();
@@ -493,6 +494,16 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         productAnalyticsService.track('profile_completed', undefined, '/profile-setup');
       }
       await refreshProfile().catch(() => undefined);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['profile-setup', 'existing', session.user.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['me', 'operational-profile', session.user.id],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['my-profile-preview', session.user.id] }),
+        queryClient.invalidateQueries({ queryKey: ['profile-detail', session.user.id] }),
+      ]);
       router.replace(requestedEditMode ? '/(tabs)/me' : '/tutorial');
     } catch (error) {
       if (uploadedPaths.length > 0) {

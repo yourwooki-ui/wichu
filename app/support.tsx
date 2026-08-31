@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
 import { COMPANY_INFO, SUPPORT_EMAIL } from '@/constants/company';
@@ -26,9 +26,15 @@ export default function SupportRoute() {
   const router = useRouter();
   const sendEmail = () => {
     const subject = encodeURIComponent('[WICHU 문의] 도움이 필요해요');
-    void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}`);
+    void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}`).catch(() => {
+      Alert.alert('메일 앱을 열지 못했어요', SUPPORT_EMAIL);
+    });
   };
-  const openCompanyWebsite = () => void Linking.openURL(COMPANY_INFO.website);
+  const openCompanyWebsite = () => {
+    void Linking.openURL(COMPANY_INFO.website).catch(() => {
+      Alert.alert('웹사이트를 열지 못했어요', COMPANY_INFO.website);
+    });
+  };
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>

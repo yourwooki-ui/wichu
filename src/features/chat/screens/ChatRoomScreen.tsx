@@ -50,6 +50,7 @@ import {
 } from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { listLayout, messageEntering, stateEntering, stateExiting } from '@/constants/motion';
@@ -178,21 +179,23 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         }),
       );
       if (message.sender_id !== userId) {
-        void chatService.markRead(matchId).then(() => {
-          void queryClient.invalidateQueries({ queryKey: ['matches'] });
-        });
+        void chatService
+          .markRead(matchId)
+          .then(() => queryClient.invalidateQueries({ queryKey: ['matches'] }))
+          .catch(() => undefined);
       }
     });
     return () => {
-      void chatService.unsubscribe(channel);
+      void chatService.unsubscribe(channel).catch(() => undefined);
     };
   }, [i18n.language, isMock, matchId, queryClient, userId]);
 
   useEffect(() => {
     if (isMock || !userId || !messagesQuery.data?.pages.length) return;
-    void chatService.markRead(matchId).then(() => {
-      void queryClient.invalidateQueries({ queryKey: ['matches'] });
-    });
+    void chatService
+      .markRead(matchId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['matches'] }))
+      .catch(() => undefined);
   }, [isMock, matchId, messagesQuery.data, queryClient, userId]);
 
   useEffect(() => {
@@ -223,18 +226,44 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   }, [displayedMessages]);
 
   const profile = useMemo(() => {
+    if (isMock) return mockConversation.profile;
     const real = connectionQuery.data?.profile;
-    if (!real) return mockConversation.profile;
+    if (!real) return null;
     return {
       ...mockConversation.profile,
       id: real.id,
       name: real.display_name,
       countryCode: real.country_code,
-      photo: real.photo ?? mockConversation.profile.photo,
+      photo: real.photo ?? '',
       isOnline:
         Boolean(real.last_active_at) && now - new Date(real.last_active_at!).getTime() < 5 * 60_000,
     };
-  }, [connectionQuery.data?.profile, mockConversation.profile, now]);
+  }, [connectionQuery.data?.profile, isMock, mockConversation.profile, now]);
+
+  if (!isMock && connectionQuery.isLoading) {
+    return (
+      <Screen edges={['top', 'left', 'right']} style={styles.connectionStateScreen}>
+        <ActivityIndicator color={palette.pink} size="small" />
+        <Text style={styles.stateText}>{t('reliability.messagesBody')}</Text>
+      </Screen>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <Screen edges={['top', 'left', 'right']} style={styles.connectionStateScreen}>
+        <StateView
+          actionLabel={t('reliability.retry')}
+          body={t('reliability.messagesBody')}
+          container="plain"
+          illustration={illustratedIcons.connectionError}
+          onAction={() => void connectionQuery.refetch()}
+          title={t('reliability.messagesTitle')}
+          tone="error"
+        />
+      </Screen>
+    );
+  }
 
   const deliver = async (message: LocalMessage) => {
     if (isMock || !userId) return;
@@ -289,13 +318,17 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         },
         `/chat/${matchId}`,
       );
-      void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      void queryClient.invalidateQueries({ queryKey: ['matches'] }).catch(() => undefined);
     } catch {
       setMessages((current) =>
         current.map((item) => (item.id === message.id ? { ...item, status: 'failed' } : item)),
       );
       hapticsService.error();
-      AccessibilityInfo.announceForAccessibility(t('experience.chat.sendFailed'));
+      try {
+        AccessibilityInfo.announceForAccessibility(t('experience.chat.sendFailed'));
+      } catch {
+        // 접근성 모듈 실패가 메시지 재시도 UI까지 막지 않게 한다.
+      }
     }
   };
 
@@ -583,7 +616,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           <Pressable
             accessibilityLabel={`${profile.name} 프로필 열기`}
             accessibilityRole="button"
-            onPress={() => router.push(`/profile/${profile.id}`)}
+            onPress={() =>
+              router.push(
+                `/profile/${profile.id}?context=chat&matchId=${encodeURIComponent(matchId)}`,
+              )
+            }
             style={styles.person}
           >
             <View>
@@ -984,7 +1021,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           label="프로필 보기"
           onPress={() => {
             setSafetyOpen(false);
-            router.push(`/profile/${profile.id}`);
+            router.push(
+              `/profile/${profile.id}?context=chat&matchId=${encodeURIComponent(matchId)}`,
+            );
           }}
         />
         <SafetyAction
@@ -1385,6 +1424,16 @@ function SafetyAction({
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', backgroundColor: '#F5F5F6', maxWidth: 620, width: '100%' },
+  connectionStateScreen: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#F5F5F6',
+    gap: 14,
+    justifyContent: 'center',
+    maxWidth: 620,
+    paddingHorizontal: 24,
+    width: '100%',
+  },
   keyboard: { flex: 1 },
   header: {
     alignItems: 'center',

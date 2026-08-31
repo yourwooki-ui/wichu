@@ -15,9 +15,20 @@ export function QueryLifecycleManager() {
       focusManager.setFocused(status === 'active');
     };
 
-    onAppStateChange(AppState.currentState);
-    const subscription = AppState.addEventListener('change', onAppStateChange);
-    return () => subscription.remove();
+    try {
+      onAppStateChange(AppState.currentState);
+      const subscription = AppState.addEventListener('change', onAppStateChange);
+      return () => {
+        try {
+          subscription.remove();
+        } catch {
+          // 앱 종료 중 네이티브 구독이 먼저 해제된 경우는 무시한다.
+        }
+      };
+    } catch {
+      // AppState를 제공하지 않는 제한 런타임에서도 쿼리는 온라인 상태로 동작한다.
+      focusManager.setFocused(true);
+    }
   }, []);
 
   return null;

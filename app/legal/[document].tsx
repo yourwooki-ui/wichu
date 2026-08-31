@@ -53,7 +53,7 @@ export default function LegalDocumentRoute() {
         <Pressable
           accessibilityLabel={`${SUPPORT_EMAIL}로 정책 문의 메일 보내기`}
           accessibilityRole="link"
-          onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+          onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => undefined)}
           style={styles.notice}
         >
           <Ionicons color={palette.inkMuted} name="mail-outline" size={15} />

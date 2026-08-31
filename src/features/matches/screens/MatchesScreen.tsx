@@ -210,7 +210,17 @@ export function MatchesScreen() {
     ),
   );
 
-  const openProfile = (profileId: string) => router.push(`/profile/${profileId}`);
+  const openProfile = (profile: ConnectionProfile) => {
+    const realMatch = matchesQuery.data?.find((match) => match.profile.id === profile.id);
+    const context =
+      category === 'matched' ? 'matched' : category === 'visitors' ? 'visitor' : 'incoming-like';
+    const matchId =
+      category === 'matched'
+        ? (realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`)
+        : undefined;
+    const matchQuery = matchId ? `&matchId=${encodeURIComponent(matchId)}` : '';
+    router.push(`/profile/${profile.id}?context=${context}${matchQuery}`);
+  };
 
   const openChat = (profile: ConnectionProfile) => {
     const realMatch = matchesQuery.data?.find((match) => match.profile.id === profile.id);
@@ -342,7 +352,7 @@ export function MatchesScreen() {
                       ? MONETIZATION_ENABLED
                         ? router.push('/(tabs)/shop')
                         : undefined
-                      : openProfile(profile.id)
+                      : openProfile(profile)
                   }
                   profile={profile}
                 />

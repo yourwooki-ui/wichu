@@ -90,4 +90,21 @@ describe('translation coverage', () => {
       );
     }
   });
+
+  it('resolves startup copy to text instead of exposing translation keys', () => {
+    const startupKeys = [
+      'auth.brandKicker',
+      'auth.welcomeTitle',
+      'auth.welcomeBody',
+      'auth.createAccount',
+      'auth.signIn',
+      'auth.chooseLanguage',
+    ];
+
+    for (const { code } of languages) {
+      for (const key of startupKeys) {
+        expect(i18n.t(key, { lng: code }), `${code} exposed ${key}`).not.toBe(key);
+      }
+    }
+  });
 });

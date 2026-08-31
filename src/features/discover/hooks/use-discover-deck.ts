@@ -122,13 +122,12 @@ export function useDiscoverDeck() {
         setLastMatch({ matchId, profile });
         // A completed match is a hard boundary: older swipes cannot skip past it.
         setUndoStack([]);
-        void queryClient.invalidateQueries({ queryKey: ['matches'] });
-        void queryClient.invalidateQueries({ queryKey: ['chat-list'] });
+        void queryClient.invalidateQueries({ queryKey: ['matches'] }).catch(() => undefined);
+        void queryClient.invalidateQueries({ queryKey: ['chat-list'] }).catch(() => undefined);
       } else if (INTERSTITIAL_ADS_ENABLED && passEntitlement.isSuccess) {
-        void adsService.showInterstitial(
-          'discover_swipe',
-          passEntitlement.data?.adsRemoved ?? false,
-        );
+        void adsService
+          .showInterstitial('discover_swipe', passEntitlement.data?.adsRemoved ?? false)
+          .catch(() => undefined);
       }
     },
     onSettled: () => {
@@ -180,7 +179,9 @@ export function useDiscoverDeck() {
       );
       queryClient.setQueryData(['discover', 'preferences', userId], filters);
       clearDeck();
-      void queryClient.invalidateQueries({ queryKey: ['discover', 'candidates', userId] });
+      void queryClient
+        .invalidateQueries({ queryKey: ['discover', 'candidates', userId] })
+        .catch(() => undefined);
     },
   });
 
@@ -194,7 +195,9 @@ export function useDiscoverDeck() {
 
   const retry = useCallback(() => {
     setSwipeError(null);
-    void Promise.all([preferencesQuery.refetch(), candidatesQuery.refetch()]);
+    void Promise.all([preferencesQuery.refetch(), candidatesQuery.refetch()]).catch(
+      () => undefined,
+    );
   }, [candidatesQuery, preferencesQuery]);
 
   const undo = useCallback(() => {

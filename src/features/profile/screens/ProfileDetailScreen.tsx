@@ -35,6 +35,11 @@ import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entit
 import { StandardProfileDetail } from '@/features/profile/components/StandardProfileDetail';
 import { profileService } from '@/features/profile/services/profile-service';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
+import { toMyPreviewProfile } from '@/features/profile/utils/my-profile-preview';
+import {
+  getProfileDetailAction,
+  resolveProfileContext,
+} from '@/features/profile/utils/profile-detail-context';
 import {
   ReportReasonSheet,
   type ReportReason,
@@ -52,9 +57,19 @@ type ProfileDetailScreenProps = {
 };
 
 export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetailScreenProps = {}) {
-  const { id: routeProfileId } = useLocalSearchParams<{ id?: string }>();
+  const {
+    context: routeContext,
+    id: routeProfileId,
+    matchId,
+  } = useLocalSearchParams<{
+    context?: string;
+    id?: string;
+    matchId?: string;
+  }>();
   const id = profileId ?? routeProfileId;
   const isPreview = mode === 'preview';
+  const profileContext = resolveProfileContext(routeContext);
+  const detailAction = isPreview ? 'none' : getProfileDetailAction(profileContext, matchId);
   const router = useRouter();
   const theme = useAppTheme();
   const { session } = useAuthSession();
@@ -72,15 +87,22 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const cachedProfile = isPreview
     ? undefined
     : (deckProfile ?? mockProfiles.find((item) => item.id === id));
-  const remoteProfileQuery = useQuery({
-    queryKey: [isPreview ? 'my-profile-preview' : 'profile-detail', id, i18n.language],
-    enabled: Boolean(id && session?.user.id && !id.startsWith('mock-')),
+  const myPreviewQuery = useQuery({
+    queryKey: ['me', 'operational-profile', id],
+    enabled: Boolean(isPreview && id && session?.user.id),
     staleTime: 60_000,
-    queryFn: () =>
-      isPreview
-        ? profileService.getMyPreviewProfile(id!, i18n.language)
-        : discoveryService.getProfileById(id!, i18n.language),
+    queryFn: () => profileService.getMyOperationalProfile(id!),
+    select: (operational) => toMyPreviewProfile(operational, i18n.language),
   });
+  const publicProfileQuery = useQuery({
+    queryKey: ['profile-detail', id, i18n.language],
+    enabled: Boolean(!isPreview && id && session?.user.id && !id.startsWith('mock-')),
+    staleTime: 60_000,
+    queryFn: () => discoveryService.getProfileById(id!, i18n.language),
+  });
+  // 마이 화면과 같은 query key를 사용해 미리보기 진입 시 이미 받은 프로필을 즉시 쓴다.
+  // 백그라운드 갱신이 실패해도 기존 정상 데이터는 유지된다.
+  const remoteProfileQuery = isPreview ? myPreviewQuery : publicProfileQuery;
   const loadedProfile = remoteProfileQuery.data ?? cachedProfile ?? undefined;
   const profile = useMemo(
     () =>
@@ -156,15 +178,34 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
 
   if (!profile) {
     const failed = remoteProfileQuery.isError;
+    const previewUnavailable = isPreview && failed;
     return (
       <Screen style={[styles.screen, styles.unavailableScreen]}>
         <StateView
           actionLabel={failed ? t('reliability.retry') : t('profileDetail.back')}
-          body={failed ? t('reliability.profileBody') : t('profileDetail.unavailable')}
+          body={
+            previewUnavailable
+              ? t('reliability.previewBody')
+              : failed
+                ? t('reliability.profileBody')
+                : t('profileDetail.unavailable')
+          }
           container="plain"
-          illustration={failed ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
+          illustration={
+            previewUnavailable
+              ? illustratedIcons.profileEdit
+              : failed
+                ? illustratedIcons.connectionError
+                : illustratedIcons.searchEmpty
+          }
           onAction={failed ? () => void remoteProfileQuery.refetch() : () => router.back()}
-          title={failed ? t('reliability.profileTitle') : t('profileDetail.unavailable')}
+          title={
+            previewUnavailable
+              ? t('reliability.previewTitle')
+              : failed
+                ? t('reliability.profileTitle')
+                : t('profileDetail.unavailable')
+          }
           tone={failed ? 'error' : 'neutral'}
         />
       </Screen>
@@ -266,7 +307,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
       decisionFeedback.set(withTiming(0, { duration: 120 }));
       decisionOpacity.set(withTiming(1, { duration: 160 }));
       decisionX.set(withSpring(0, { damping: 18, stiffness: 210 }));
-      Alert.alert('선택을 저장하지 못했어요', '연결을 확인하고 다시 시도해주세요.');
+      Alert.alert(t('profileDetail.actionFailed'), t('reliability.swipeSaveBody'));
     }
   };
 
@@ -283,10 +324,27 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         style={({ pressed }) => [styles.previewEditButton, pressed && styles.pressed]}
       >
         <Ionicons color={palette.white} name="pencil" size={17} />
-        <Text style={styles.previewEditText}>프로필 수정</Text>
+        <Text style={styles.previewEditText}>{t('settings.editProfile')}</Text>
       </Pressable>
     </View>
-  ) : (
+  ) : detailAction === 'chat' && matchId ? (
+    <View
+      style={[
+        styles.decisionBar,
+        { backgroundColor: theme.colors.surface, paddingBottom: Math.max(insets.bottom, 12) },
+      ]}
+    >
+      <Pressable
+        accessibilityLabel={t('tabs.chat')}
+        accessibilityRole="button"
+        onPress={() => router.push(`/chat/${encodeURIComponent(matchId)}`)}
+        style={({ pressed }) => [styles.connectedChatButton, pressed && styles.pressed]}
+      >
+        <Ionicons color={palette.white} name="chatbubble" size={18} />
+        <Text style={styles.connectedChatText}>{t('tabs.chat')}</Text>
+      </Pressable>
+    </View>
+  ) : detailAction === 'decision' ? (
     <View
       style={[
         styles.decisionBar,
@@ -332,7 +390,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         <Text style={styles.pickButtonText}>{decisionBusy ? '처리 중…' : 'PICK'}</Text>
       </Pressable>
     </View>
-  );
+  ) : null;
 
   return (
     <Screen edges={['left', 'right', 'bottom']} padded={false} style={styles.screen}>
@@ -348,7 +406,9 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             onPress: () => router.back(),
           }}
           headerRight={{
-            accessibilityLabel: isPreview ? '프로필 수정' : t('profileDetail.safetyOptions'),
+            accessibilityLabel: isPreview
+              ? t('settings.editProfile')
+              : t('profileDetail.safetyOptions'),
             icon: isPreview ? 'pencil' : 'ellipsis-horizontal',
             onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
           }}
@@ -599,5 +659,16 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   previewEditText: { color: palette.white, fontSize: 13, fontWeight: '900' },
+  connectedChatButton: {
+    alignItems: 'center',
+    backgroundColor: palette.pink,
+    borderRadius: radius.pill,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  connectedChatText: { color: palette.white, fontSize: 14, fontWeight: '900' },
   pressed: { opacity: 0.66 },
 });

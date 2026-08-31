@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLocales } from 'expo-localization';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { Platform } from 'react-native';
@@ -11,14 +10,15 @@ import { operationalResources } from './operational-resources';
 import { reliabilityResources } from './reliability-resources';
 import {
   type AppLanguage,
+  DEFAULT_APP_LANGUAGE,
   getAppTextDirection,
   isAppLanguage,
-  resolveAppLanguage,
   supportedLanguages,
 } from './languages';
 
 export {
   type AppLanguage,
+  DEFAULT_APP_LANGUAGE,
   getAppLanguageMetadata,
   getAppTextDirection,
   isRtlAppLanguage,
@@ -692,22 +692,6 @@ const resources = {
   },
 } as const;
 
-/**
- * 기기 언어는 모듈 평가 시점에 읽지 않는다.
- *
- * `getLocales()`는 expo-localization의 동기 네이티브 호출이다. 모듈 스코프에서
- * 부르면 React가 마운트되기 전, 에러 바운더리가 생기기도 전에 실행되므로
- * 네이티브 모듈이 아직 준비되지 않았거나 예외가 나면 화면 없이 앱이 죽는다.
- * 같은 이유로 product-analytics-service도 Crypto 호출을 평가 시점에서 뺐다.
- */
-function readDeviceLanguage(): AppLanguage {
-  try {
-    return resolveAppLanguage(getLocales()[0]?.languageTag) ?? 'en';
-  } catch {
-    return 'en';
-  }
-}
-
 async function loadDisplayNamesPolyfill() {
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') return;
@@ -720,7 +704,7 @@ async function loadDisplayNamesPolyfill() {
   }
 }
 
-let activeLanguage: AppLanguage = 'en';
+let activeLanguage: AppLanguage = DEFAULT_APP_LANGUAGE;
 const i18n = createInstance();
 
 async function initializeTranslations(language: AppLanguage) {
@@ -732,10 +716,14 @@ async function initializeTranslations(language: AppLanguage) {
   await i18n.use(initReactI18next).init({
     resources,
     lng: language,
-    fallbackLng: 'en',
+    fallbackLng: DEFAULT_APP_LANGUAGE,
     supportedLngs: supportedLanguages.map(({ code }) => code),
+    // 번들은 이미 앱에 포함되어 있다. 첫 React 렌더 전에 순수 JS 초기화를
+    // 끝내 번역 키가 화면에 노출되지 않도록 한다.
+    initAsync: false,
     load: 'currentOnly',
     interpolation: { escapeValue: false },
+    react: { useSuspense: false },
   });
 }
 
@@ -753,29 +741,44 @@ async function readStoredLanguage() {
   return isAppLanguage(legacyLanguage) ? legacyLanguage : null;
 }
 
-export const i18nReady = (async () => {
-  const storedLanguage = await readStoredLanguage().catch(() => null);
-  activeLanguage = storedLanguage ?? readDeviceLanguage();
+// 앱 모듈 평가 중에는 AsyncStorage 같은 네이티브 모듈을 호출하지 않는다.
+// 번들에 포함된 한국어 리소스만 순수 JS로 즉시 준비해 첫 화면을 항상 열 수 있게 한다.
+export const i18nReady = initializeTranslations(DEFAULT_APP_LANGUAGE).catch(() => undefined);
 
-  // 핵심 UI 번역을 먼저 활성화한다. DisplayNames 폴리필은 실패 가능한 부가 기능이므로
-  // auth.* 같은 필수 카피 초기화를 절대로 가로막아서는 안 된다.
-  await initializeTranslations(activeLanguage);
+let languageHydration: Promise<void> | null = null;
 
-  await loadDisplayNamesPolyfill();
+/**
+ * React가 마운트된 뒤 저장 언어와 부가 Intl 폴리필을 복원한다.
+ * 네이티브 저장소가 실패해도 이미 준비된 한국어 UI는 계속 동작한다.
+ */
+export function hydrateAppLanguage() {
+  if (languageHydration) return languageHydration;
 
-  applyDocumentLanguage(activeLanguage);
-  if (!storedLanguage) {
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage).catch(() => undefined);
-  }
-})().catch(async () => {
-  // 어떤 초기화 단계가 실패해도 번역 키 자체를 사용자에게 노출하지 않는다.
-  // 저장소·기기 로케일·폴리필과 무관한 영어 리소스로 마지막 한 번 복구한다.
-  activeLanguage = 'en';
-  await initializeTranslations('en').catch(() => undefined);
-});
+  languageHydration = (async () => {
+    await i18nReady;
+    const storedLanguage = await readStoredLanguage().catch(() => null);
+    const nextLanguage = storedLanguage ?? DEFAULT_APP_LANGUAGE;
+
+    if (nextLanguage !== activeLanguage || i18n.resolvedLanguage !== nextLanguage) {
+      activeLanguage = nextLanguage;
+      await i18n.changeLanguage(nextLanguage);
+    }
+
+    applyDocumentLanguage(activeLanguage);
+    if (!storedLanguage) {
+      await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage).catch(() => undefined);
+    }
+    await loadDisplayNamesPolyfill();
+  })().catch(() => {
+    // 저장소·폴리필 복원은 부가 작업이다. 실패해도 기본 한국어 리소스를 유지한다.
+    activeLanguage = DEFAULT_APP_LANGUAGE;
+  });
+
+  return languageHydration;
+}
 
 export async function setAppLanguage(language: AppLanguage) {
-  await i18nReady;
+  await hydrateAppLanguage();
   activeLanguage = language;
   await i18n.changeLanguage(language);
   applyDocumentLanguage(language);

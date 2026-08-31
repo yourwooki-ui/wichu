@@ -118,7 +118,9 @@ function PassDetailScreen() {
       Platform.OS === 'ios'
         ? 'https://apps.apple.com/account/subscriptions'
         : 'https://play.google.com/store/account/subscriptions?package=app.wichu.mobile';
-    void Linking.openURL(url);
+    void Linking.openURL(url).catch(() => {
+      Alert.alert('구독 설정을 열지 못했어요', '잠시 후 다시 시도해 주세요.');
+    });
   };
 
   return (

@@ -66,11 +66,11 @@ export default function AccountDeletionRoute() {
             accessibilityLabel={`${SUPPORT_EMAIL}로 삭제 요청 메일 보내기`}
             accessibilityRole="link"
             hitSlop={touchSlop.link}
-            onPress={() =>
-              Linking.openURL(
+            onPress={() => {
+              void Linking.openURL(
                 `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('WICHU 계정 삭제 요청')}`,
-              )
-            }
+              ).catch(() => undefined);
+            }}
             style={({ pressed }) => [styles.mailButton, pressed && pressFeedback.control]}
           >
             <Ionicons color={palette.white} name="mail-outline" size={17} />

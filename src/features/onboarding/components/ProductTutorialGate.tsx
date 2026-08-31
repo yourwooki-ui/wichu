@@ -15,9 +15,12 @@ export function ProductTutorialGate({ profileCompleted, userId }: ProductTutoria
   useEffect(() => {
     if (!profileCompleted || !userId || pathname === '/tutorial') return;
     let active = true;
-    void tutorialState.getProductTutorialStatus(userId).then((status) => {
-      if (active && status === 'required') router.replace('/tutorial');
-    });
+    void tutorialState
+      .getProductTutorialStatus(userId)
+      .then((status) => {
+        if (active && status === 'required') router.replace('/tutorial');
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };

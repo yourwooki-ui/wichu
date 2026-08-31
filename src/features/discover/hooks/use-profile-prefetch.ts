@@ -11,7 +11,7 @@ export function useProfilePrefetch(profiles: Profile[]) {
       .flatMap((profile) => profile.photos.slice(0, 2));
 
     if (urls.length > 0) {
-      void Image.prefetch(urls, 'memory-disk');
+      void Image.prefetch(urls, 'memory-disk').catch(() => undefined);
     }
   }, [profiles]);
 }

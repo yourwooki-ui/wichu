@@ -42,19 +42,24 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
     }
 
     let cancelled = false;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
-      if (cancelled) return;
-      if (reduceMotion) {
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduceMotion) => {
+        if (cancelled) return;
+        if (reduceMotion) {
+          enter.setValue(1);
+          return;
+        }
+        Animated.spring(enter, {
+          bounciness: 6,
+          speed: 16,
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }).start();
+      })
+      .catch(() => {
+        if (cancelled) return;
         enter.setValue(1);
-        return;
-      }
-      Animated.spring(enter, {
-        bounciness: 6,
-        speed: 16,
-        toValue: 1,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
-    });
+      });
 
     return () => {
       cancelled = true;

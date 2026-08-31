@@ -28,15 +28,25 @@ export function usePresenceHeartbeat(userId?: string) {
 
     touchPresence();
     const interval = setInterval(touchPresence, HEARTBEAT_INTERVAL_MS);
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      const wasActive = isActive;
-      isActive = nextState === 'active';
-      if (isActive && !wasActive) touchPresence();
-    });
+    let removeAppStateListener: (() => void) | undefined;
+    try {
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        const wasActive = isActive;
+        isActive = nextState === 'active';
+        if (isActive && !wasActive) touchPresence();
+      });
+      removeAppStateListener = () => subscription.remove();
+    } catch {
+      // Presence는 보조 신호이므로 AppState 구독 실패를 앱 오류로 전파하지 않는다.
+    }
 
     return () => {
       clearInterval(interval);
-      subscription.remove();
+      try {
+        removeAppStateListener?.();
+      } catch {
+        // 네이티브 구독 정리 실패는 무시한다.
+      }
     };
   }, [userId]);
 }

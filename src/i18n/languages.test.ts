@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_APP_LANGUAGE,
   getAppTextDirection,
   isAppLanguage,
   resolveAppLanguage,
@@ -8,6 +9,10 @@ import {
 } from './languages';
 
 describe('app language metadata', () => {
+  it('defaults new installations to Korean', () => {
+    expect(DEFAULT_APP_LANGUAGE).toBe('ko');
+  });
+
   it('exposes the ten supported interface languages', () => {
     expect(supportedLanguages.map(({ code }) => code)).toEqual([
       'ko',

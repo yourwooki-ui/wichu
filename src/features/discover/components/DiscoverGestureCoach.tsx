@@ -54,7 +54,7 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
 
   const finish = () => {
     setStepIndex(0);
-    if (userId) void tutorialState.completeDiscoverCoach(userId);
+    if (userId) void tutorialState.completeDiscoverCoach(userId).catch(() => undefined);
     onComplete();
   };
 

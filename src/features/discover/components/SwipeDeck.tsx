@@ -81,7 +81,7 @@ export function SwipeDeck({
   }, []);
 
   const openProfile = useCallback(() => {
-    if (currentProfile) router.push(`/profile/${currentProfile.id}`);
+    if (currentProfile) router.push(`/profile/${currentProfile.id}?context=discover`);
   }, [currentProfile, router]);
 
   const startSwipe = useCallback(

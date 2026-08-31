@@ -96,7 +96,9 @@ export const chatService = {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` },
         (payload) => {
-          void hydrateMessage(payload.new as ChatMessageRow).then(onInsert);
+          void hydrateMessage(payload.new as ChatMessageRow)
+            .then(onInsert)
+            .catch(() => undefined);
         },
       )
       .subscribe();

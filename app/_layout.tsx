@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 
 import { ThemeProvider, useAppTheme } from '@/components/ThemeProvider';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { NativePreviewFrame } from '@/components/NativePreviewFrame';
 import { QueryLifecycleManager } from '@/components/QueryLifecycleManager';
+import { GlobalInAppNotificationHost } from '@/components/GlobalInAppNotificationHost';
 import { StateView } from '@/components/StateView';
 import { palette } from '@/constants/theme';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -22,9 +24,8 @@ import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
 import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
-import i18n, { getAppLanguage, getAppTextDirection, i18nReady } from '@/i18n';
+import i18n, { getAppLanguage, getAppTextDirection, hydrateAppLanguage, i18nReady } from '@/i18n';
 import { productAnalyticsService } from '@/services/product-analytics-service';
-import { useTranslation } from 'react-i18next';
 
 // 스플래시 설정도 모듈 평가 시점의 네이티브 호출이다. 여기서 예외가 나면
 // 화면이 뜨기 전에 앱이 죽으므로, 실패해도 앱은 계속 열리게 감싼다.
@@ -132,6 +133,9 @@ function RootNavigator() {
         profileCompleted={profileCompleted}
         userId={session?.user.id}
       />
+      {session?.user.id && profileCompleted ? (
+        <GlobalInAppNotificationHost userId={session.user.id} />
+      ) : null}
     </>
   );
 }
@@ -148,45 +152,50 @@ export default function RootLayout() {
 
   useEffect(() => {
     let mounted = true;
+    let hydrationTimer: ReturnType<typeof setTimeout> | undefined;
     const syncLanguage = () => setLanguage(getAppLanguage());
 
-    void i18nReady.then(
-      () => {
-        if (!mounted) return;
-        syncLanguage();
-        setLanguageReady(true);
-      },
-      () => {
-        // 로케일 저장소나 초기화가 실패해도 기본 언어로 앱을 연다. 여기서
-        // 거부된 Promise를 남기면 Android release가 치명적 JS 오류로 처리할 수 있다.
-        if (mounted) setLanguageReady(true);
-      },
-    );
     i18n.on('languageChanged', syncLanguage);
+    void i18nReady.then(() => {
+      if (!mounted) return;
+      syncLanguage();
+      setLanguageReady(true);
+
+      // 번역 리소스가 React에 연결되고 첫 화면이 그려진 뒤에만 네이티브
+      // 저장소를 읽는다. 저장 언어 복원 실패가 앱 시작을 막지 않게 분리한다.
+      hydrationTimer = setTimeout(() => {
+        void hydrateAppLanguage().then(() => {
+          if (mounted) syncLanguage();
+        });
+      }, 0);
+    });
 
     return () => {
       mounted = false;
+      if (hydrationTimer) clearTimeout(hydrationTimer);
       i18n.off('languageChanged', syncLanguage);
     };
   }, []);
 
-  if (!languageReady) return null;
+  if (!languageReady) return <AppLaunchSurface />;
 
   return (
     <GestureHandlerRootView style={{ direction: getAppTextDirection(language), flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <QueryLifecycleManager />
-          <AuthProvider>
-            <ThemeProvider>
-              <AppErrorBoundary>
-                <NativePreviewFrame>
-                  <RootNavigator />
-                </NativePreviewFrame>
-              </AppErrorBoundary>
-            </ThemeProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <AppErrorBoundary>
+          <I18nextProvider i18n={i18n}>
+            <QueryClientProvider client={queryClient}>
+              <QueryLifecycleManager />
+              <AuthProvider>
+                <ThemeProvider>
+                  <NativePreviewFrame>
+                    <RootNavigator />
+                  </NativePreviewFrame>
+                </ThemeProvider>
+              </AuthProvider>
+            </QueryClientProvider>
+          </I18nextProvider>
+        </AppErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
