@@ -32,6 +32,8 @@ const HEAVY_SIDE_EFFECT = /@formatjs|intl-|polyfill|react-native-purchases|react
 /** 평가 시점에 부르면 위험한 네이티브 API. */
 const NATIVE_CALL =
   /\b(SecureStore|AsyncStorage|Crypto|Notifications|Location|ImagePicker|Device|Localization|FileSystem|SplashScreen|WebBrowser|NativeModules|getLocales|randomUUID)\b/;
+/** 번역 준비도 React 마운트 전에 실행하지 않는다. */
+const STARTUP_I18N_CALL = /\b(initializeTranslations|hydrateAppLanguage)\s*\(/;
 
 function resolve(spec, from) {
   let base;
@@ -66,8 +68,19 @@ function visit(file) {
     const isDeclaration = /^(export\s+)?(async\s+)?function\b/.test(trimmed)
       || /^(export\s+)?const\s+\w+\s*=\s*(\(|async\s*\(|function)/.test(trimmed);
     if (topLevel && !isDeclaration && !trimmed.startsWith('import') && !trimmed.startsWith('//')) {
-      if (NATIVE_CALL.test(trimmed) && /\w\s*\(/.test(trimmed) && !trimmed.includes('.catch(')) {
-        findings.push({ at, why: '모듈 평가 시점 네이티브 호출', code: trimmed });
+      const isCall = /\w\s*\(/.test(trimmed);
+      // 호출뿐 아니라 '속성 접근'도 위험하다. 네이티브 모듈의 상수를 평가 시점에 읽으면
+      // 모듈이 아직 준비되지 않았을 때 파일 평가 자체가 실패한다.
+      const isPropertyRead = /\b[A-Z][A-Za-z0-9_]*\.[A-Z_][A-Z0-9_]{2,}\b/.test(trimmed);
+      if (NATIVE_CALL.test(trimmed) && (isCall || isPropertyRead) && !trimmed.includes('.catch(')) {
+        findings.push({
+          at,
+          why: isCall ? '모듈 평가 시점 네이티브 호출' : '모듈 평가 시점 네이티브 속성 접근',
+          code: trimmed,
+        });
+      }
+      if (STARTUP_I18N_CALL.test(trimmed)) {
+        findings.push({ at, why: '모듈 평가 시점 번역 초기화', code: trimmed });
       }
     }
   });
