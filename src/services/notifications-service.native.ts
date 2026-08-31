@@ -3,13 +3,13 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import i18n, { i18nReady } from '@/i18n';
+import i18n, { initializeAppLanguage } from '@/i18n';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export const notificationsService = {
   async prepare() {
     if (Platform.OS !== 'android') return;
-    await i18nReady;
+    await initializeAppLanguage();
     await Notifications.setNotificationChannelAsync('wichu-default', {
       name: i18n.t('notifications.channelName'),
       importance: Notifications.AndroidImportance.HIGH,

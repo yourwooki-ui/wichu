@@ -46,6 +46,20 @@ Start-Sleep -Seconds 6
 & $adb logcat -d > $out
 Write-Host "Full log saved: $out"
 
+Write-Host "`n===== JS EXCEPTION MESSAGE AND STACK (most important) ====="
+# The JavascriptException line carries the real message, and the JS frames follow it.
+# Native frames alone say nothing about the cause, so capture the whole block.
+$js = Select-String -Path $out -Pattern 'JavascriptException|ReactNativeJS' -Context 0,25
+if ($js) {
+  $js | Select-Object -First 3 | ForEach-Object {
+    $_.Line
+    $_.Context.PostContext | ForEach-Object { $_ }
+    Write-Host '---'
+  }
+} else {
+  Write-Host '(No JS exception found. Check the native errors below.)'
+}
+
 Write-Host "`n===== FATAL ERROR EXCERPT ====="
 Select-String -Path $out -Pattern 'FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|com\.facebook|SoLoader|UnsatisfiedLink|ClassNotFound|NoSuchMethod|app\.wichu' `
   | Select-Object -First 80 | ForEach-Object { $_.Line }

@@ -15,10 +15,13 @@ describe('native-safe i18n startup', () => {
     vi.resetModules();
   });
 
-  it('renders bundled Korean copy before touching native storage', async () => {
+  it('does not initialize translations or touch native storage during module evaluation', async () => {
     const module = await import('./index');
 
     expect(getItem).not.toHaveBeenCalled();
+    expect(module.default.isInitialized).not.toBe(true);
+
+    await module.initializeAppLanguage();
     expect(module.default.t('auth.createAccount')).toBe('회원가입');
 
     await module.hydrateAppLanguage();

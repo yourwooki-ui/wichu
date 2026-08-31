@@ -37,7 +37,7 @@ describe('translation coverage', () => {
 
   beforeAll(async () => {
     const module = await import('./index');
-    await module.i18nReady;
+    await module.initializeAppLanguage();
     i18n = module.default;
     languages = module.supportedLanguages;
   });

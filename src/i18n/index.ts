@@ -692,18 +692,6 @@ const resources = {
   },
 } as const;
 
-async function loadDisplayNamesPolyfill() {
-  try {
-    if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') return;
-
-    // 일부 Hermes 릴리스 런타임에는 Intl 자체가 없을 수 있다. 프로퍼티에
-    // 접근하기 전 전역 객체부터 확인하고, 폴리필 실패는 코드 표시 fallback으로 흡수한다.
-    await import('@/lib/intl-polyfills');
-  } catch {
-    // 국가·언어 표시명은 부가 기능이다. 실패해도 번역 초기화는 계속한다.
-  }
-}
-
 let activeLanguage: AppLanguage = DEFAULT_APP_LANGUAGE;
 const i18n = createInstance();
 
@@ -741,21 +729,27 @@ async function readStoredLanguage() {
   return isAppLanguage(legacyLanguage) ? legacyLanguage : null;
 }
 
-// 앱 모듈 평가 중에는 AsyncStorage 같은 네이티브 모듈을 호출하지 않는다.
-// 번들에 포함된 한국어 리소스만 순수 JS로 즉시 준비해 첫 화면을 항상 열 수 있게 한다.
-export const i18nReady = initializeTranslations(DEFAULT_APP_LANGUAGE).catch(() => undefined);
+let startupInitialization: Promise<void> | null = null;
+
+/** React가 마운트된 뒤 번역을 준비한다. 모듈 평가 중에는 i18next도 실행하지 않는다. */
+export function initializeAppLanguage() {
+  if (startupInitialization) return startupInitialization;
+
+  startupInitialization = initializeTranslations(DEFAULT_APP_LANGUAGE).catch(() => undefined);
+  return startupInitialization;
+}
 
 let languageHydration: Promise<void> | null = null;
 
 /**
- * React가 마운트된 뒤 저장 언어와 부가 Intl 폴리필을 복원한다.
+ * React가 마운트된 뒤 저장 언어를 복원한다.
  * 네이티브 저장소가 실패해도 이미 준비된 한국어 UI는 계속 동작한다.
  */
 export function hydrateAppLanguage() {
   if (languageHydration) return languageHydration;
 
   languageHydration = (async () => {
-    await i18nReady;
+    await initializeAppLanguage();
     const storedLanguage = await readStoredLanguage().catch(() => null);
     const nextLanguage = storedLanguage ?? DEFAULT_APP_LANGUAGE;
 
@@ -768,9 +762,8 @@ export function hydrateAppLanguage() {
     if (!storedLanguage) {
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage).catch(() => undefined);
     }
-    await loadDisplayNamesPolyfill();
   })().catch(() => {
-    // 저장소·폴리필 복원은 부가 작업이다. 실패해도 기본 한국어 리소스를 유지한다.
+    // 저장소 복원은 부가 작업이다. 실패해도 기본 한국어 리소스를 유지한다.
     activeLanguage = DEFAULT_APP_LANGUAGE;
   });
 

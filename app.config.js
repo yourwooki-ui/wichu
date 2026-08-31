@@ -14,7 +14,7 @@ const baseConfig = {
     },
   },
   android: {
-    versionCode: 21,
+    versionCode: 22,
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
       foregroundImage: './assets/brand/wichu-app-icon.png',

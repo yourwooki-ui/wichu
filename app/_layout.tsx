@@ -24,7 +24,12 @@ import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
 import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
-import i18n, { getAppLanguage, getAppTextDirection, hydrateAppLanguage, i18nReady } from '@/i18n';
+import i18n, {
+  getAppLanguage,
+  getAppTextDirection,
+  hydrateAppLanguage,
+  initializeAppLanguage,
+} from '@/i18n';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
 // 스플래시 설정도 모듈 평가 시점의 네이티브 호출이다. 여기서 예외가 나면
@@ -156,7 +161,9 @@ export default function RootLayout() {
     const syncLanguage = () => setLanguage(getAppLanguage());
 
     i18n.on('languageChanged', syncLanguage);
-    void i18nReady.then(() => {
+    // 앱 진입 모듈을 평가하는 동안에는 번역 초기화도 실행하지 않는다.
+    // React가 첫 안전 화면을 만든 뒤 시작하고 실패는 키 fallback으로 흡수한다.
+    void initializeAppLanguage().then(() => {
       if (!mounted) return;
       syncLanguage();
       setLanguageReady(true);
