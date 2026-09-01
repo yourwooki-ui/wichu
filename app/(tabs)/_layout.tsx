@@ -1,7 +1,14 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
@@ -9,6 +16,7 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { layout } from '@/constants/theme';
+import { hapticsService } from '@/services/haptics-service';
 
 export default function TabLayout() {
   const theme = useAppTheme();
@@ -32,7 +40,14 @@ export default function TabLayout() {
         tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: theme.colors.tabInactive,
         tabBarButton: ({ ref: _ref, ...props }) => (
-          <Pressable {...props} style={[props.style, styles.tabBarButton]} />
+          <Pressable
+            {...props}
+            onPress={(event) => {
+              hapticsService.selection();
+              props.onPress?.(event);
+            }}
+            style={[props.style, styles.tabBarButton]}
+          />
         ),
         tabBarStyle: {
           alignSelf: 'center',
@@ -63,29 +78,7 @@ export default function TabLayout() {
         ],
         tabBarIcon: ({ focused }) => {
           const name = route.name as TabName;
-          return (
-            <View
-              style={[
-                styles.iconFrame,
-                compactWebPreview && styles.iconFrameCompact,
-                name === 'discover' && styles.discoverFrame,
-                compactWebPreview && name === 'discover' && styles.discoverFrameCompact,
-              ]}
-            >
-              <Image
-                accessibilityIgnoresInvertColors
-                contentFit="contain"
-                source={tabIconSources[name]}
-                style={[
-                  styles.tabIcon,
-                  compactWebPreview && styles.tabIconCompact,
-                  name === 'discover' && styles.discoverIcon,
-                  compactWebPreview && name === 'discover' && styles.discoverIconCompact,
-                  { opacity: focused ? 1 : 0.7 },
-                ]}
-              />
-            </View>
-          );
+          return <AnimatedTabIcon compact={compactWebPreview} focused={focused} name={name} />;
         },
       })}
     >
@@ -102,6 +95,62 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="me" options={{ title: t('tabs.me') }} />
     </Tabs>
+  );
+}
+
+function AnimatedTabIcon({
+  compact,
+  focused,
+  name,
+}: {
+  compact: boolean;
+  focused: boolean;
+  name: TabName;
+}) {
+  const reduceMotion = useReducedMotion();
+  const active = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    active.set(
+      reduceMotion
+        ? focused
+          ? 1
+          : 0
+        : withSpring(focused ? 1 : 0, { damping: 18, mass: 0.7, stiffness: 260 }),
+    );
+  }, [active, focused, reduceMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: 0.7 + active.get() * 0.3,
+    transform: [
+      { translateY: -2 * active.get() },
+      { scale: 1 + active.get() * (name === 'discover' ? 0.07 : 0.045) },
+    ],
+  }));
+
+  return (
+    <View
+      style={[
+        styles.iconFrame,
+        compact && styles.iconFrameCompact,
+        name === 'discover' && styles.discoverFrame,
+        compact && name === 'discover' && styles.discoverFrameCompact,
+      ]}
+    >
+      <Animated.View style={animatedStyle}>
+        <Image
+          accessibilityIgnoresInvertColors
+          contentFit="contain"
+          source={tabIconSources[name]}
+          style={[
+            styles.tabIcon,
+            compact && styles.tabIconCompact,
+            name === 'discover' && styles.discoverIcon,
+            compact && name === 'discover' && styles.discoverIconCompact,
+          ]}
+        />
+      </Animated.View>
+    </View>
   );
 }
 

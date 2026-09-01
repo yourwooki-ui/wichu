@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import {
   BottomSheetCloseButton,
@@ -11,11 +12,14 @@ import {
 import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
+import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function NotificationsSheet({
   visible,
@@ -75,11 +79,14 @@ export function NotificationsSheet({
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
-          {items.map((item) => (
-            <Pressable
+          {items.map((item, index) => (
+            <AnimatedPressable
               accessibilityLabel={`${item.title}. ${item.body}`}
               accessibilityRole="button"
+              entering={listEntering(index)}
+              exiting={listExiting()}
               key={item.id}
+              layout={listLayout()}
               onPress={() => {
                 onClose();
                 router.push(`/chat/${item.matchId}`);
@@ -110,7 +117,7 @@ export function NotificationsSheet({
                 </Text>
               </View>
               <Text style={styles.rowTime}>{formatActivityTime(item.time)}</Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </ScrollView>
       ) : (

@@ -30,6 +30,12 @@ const ACTIVE_EVENTS = new Set([
 ]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function normalizeProductId(value: string | null | undefined) {
+  if (!value) return null;
+  const productId = value.split(':', 1)[0];
+  return PRODUCT_IDS.has(productId) ? productId : null;
+}
+
 function getAdminClient() {
   const url = Deno.env.get('SUPABASE_URL');
   const legacySecret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -90,9 +96,7 @@ Deno.serve(async (req) => {
 
   const userId = event.app_user_id;
   const productId =
-    event.new_product_id && PRODUCT_IDS.has(event.new_product_id)
-      ? event.new_product_id
-      : event.product_id;
+    normalizeProductId(event.new_product_id) ?? normalizeProductId(event.product_id);
   const platform = toPlatform(event.store);
   const status = statusFor(event);
   if (!userId || !UUID_PATTERN.test(userId) || !productId || !PRODUCT_IDS.has(productId)) {

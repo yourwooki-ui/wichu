@@ -6,6 +6,7 @@ type AdMobKeys = { keys?: AdMobKey[] };
 
 const KEY_SERVER_URL = 'https://www.gstatic.com/admob/reward/verifier-keys.json';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const VERIFICATION_PROBE_VALUE = 'admob_ssv_verification';
 const MAX_REWARD_AGE_MS = 24 * 60 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 let cachedKeys: { expiresAt: number; keys: AdMobKey[] } | null = null;
@@ -131,6 +132,18 @@ Deno.serve(async (req) => {
       .filter(Boolean),
   );
   const now = Date.now();
+
+  // AdMob's dashboard must receive HTTP 200 before it will save an SSV URL.
+  // The signed verification probe is a no-op: it proves endpoint ownership but
+  // never grants a credit, even when the supplied test user happens to exist.
+  if (
+    userId === VERIFICATION_PROBE_VALUE &&
+    placement === VERIFICATION_PROBE_VALUE &&
+    transactionId &&
+    timestamp
+  ) {
+    return Response.json({ ok: true, verification: true });
+  }
   if (
     !userId ||
     !UUID_PATTERN.test(userId) ||

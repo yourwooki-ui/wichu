@@ -7,16 +7,19 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { StateView } from '@/components/StateView';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
+import { sectionEntering } from '@/constants/motion';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
 import { getProfileCompletion } from '@/features/profile/utils/profile-completion';
@@ -236,7 +239,7 @@ export function MeScreen() {
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileHeroHeader}>
+        <Animated.View entering={sectionEntering(0)} style={styles.profileHeroHeader}>
           <View style={styles.profileHeroHeading}>
             <Text style={styles.profileHeroEyebrow}>WICHU PROFILE</Text>
             <Text style={styles.profileHeroTitle}>{t('experience.profile.publicProfile')}</Text>
@@ -251,9 +254,9 @@ export function MeScreen() {
             <Ionicons color={palette.white} name="pencil" size={14} />
             <Text style={styles.profileEditActionText}>수정</Text>
           </Pressable>
-        </View>
+        </Animated.View>
 
-        <View>
+        <Animated.View entering={sectionEntering(1)}>
           <Pressable
             accessibilityHint="상대방에게 보이는 전체 프로필을 확인합니다"
             accessibilityLabel="내 공개 프로필 전체 미리보기"
@@ -314,7 +317,8 @@ export function MeScreen() {
                   style={styles.previewFlag}
                 />
                 {tier === 'gold' ? (
-                  <IllustratedIcon
+                  <MotionIllustratedIcon
+                    motion="shine"
                     size={27}
                     source={illustratedIcons.goldPremium}
                     style={styles.previewDiamond}
@@ -337,10 +341,10 @@ export function MeScreen() {
               ) : null}
             </View>
           </Pressable>
-        </View>
+        </Animated.View>
 
         {photosUnderReview > 0 ? (
-          <View style={styles.pendingNotice}>
+          <Animated.View entering={sectionEntering(2)} style={styles.pendingNotice}>
             <View style={styles.pendingNoticeIcon}>
               <IllustratedIcon size={38} source={illustratedIcons.photoReview} />
             </View>
@@ -352,11 +356,11 @@ export function MeScreen() {
                 기존 승인 사진과 프로필 정보는 그대로 공개되고, 새 사진만 승인 전까지 제한돼요.
               </Text>
             </View>
-          </View>
+          </Animated.View>
         ) : null}
 
         {rejectedPhotos.length > 0 ? (
-          <View style={styles.reviewNotice}>
+          <Animated.View entering={sectionEntering(2)} style={styles.reviewNotice}>
             <IllustratedIcon size={34} source={illustratedIcons.photoRejected} />
             <View style={styles.reviewNoticeCopy}>
               <Text style={styles.reviewNoticeTitle}>반려된 사진이 있어요</Text>
@@ -364,10 +368,10 @@ export function MeScreen() {
                 {rejectedPhotos[0]?.reviewNote ?? '사진 기준을 확인한 뒤 해당 사진을 교체해주세요.'}
               </Text>
             </View>
-          </View>
+          </Animated.View>
         ) : null}
 
-        <View style={styles.statusStrip}>
+        <Animated.View entering={sectionEntering(2)} style={styles.statusStrip}>
           <StatusCell
             illustration={illustratedIcons.discoveryVisible}
             label="발견 노출"
@@ -402,10 +406,10 @@ export function MeScreen() {
             tone={tier === 'gold' ? 'gold' : 'neutral'}
             value={tierLabel}
           />
-        </View>
+        </Animated.View>
 
         {profile.profile_completeness < 100 || !photos.length ? (
-          <View style={styles.attentionCard}>
+          <Animated.View entering={sectionEntering(3)} style={styles.attentionCard}>
             <View style={styles.attentionTop}>
               <View style={styles.attentionCopy}>
                 <Text style={styles.attentionEyebrow}>프로필 완성도</Text>
@@ -458,10 +462,10 @@ export function MeScreen() {
             {photoRepairError ? (
               <Text style={styles.photoRepairError}>{photoRepairError}</Text>
             ) : null}
-          </View>
+          </Animated.View>
         ) : null}
 
-        <View>
+        <Animated.View entering={sectionEntering(3)}>
           <View style={styles.managementHeading}>
             <Text style={styles.groupTitle}>관리</Text>
             <Text style={styles.groupHint}>프로필, 탐색 조건과 이용권을 설정해요</Text>
@@ -494,9 +498,9 @@ export function MeScreen() {
               />
             ) : null}
           </View>
-        </View>
+        </Animated.View>
 
-        <View>
+        <Animated.View entering={sectionEntering(4)}>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/profile-preview')}
@@ -526,7 +530,7 @@ export function MeScreen() {
             </View>
             <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
           </Pressable>
-        </View>
+        </Animated.View>
       </ScrollView>
     </Screen>
   );

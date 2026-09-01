@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
@@ -121,7 +122,8 @@ export function AppPermissionOnboarding() {
             style={styles.visual}
           >
             <View style={[styles.iconCircle, !isLocation && styles.iconCircleYellow]}>
-              <IllustratedIcon
+              <MotionIllustratedIcon
+                motion={isLocation ? 'float' : 'bell'}
                 size={68}
                 source={isLocation ? illustratedIcons.location : illustratedIcons.notification}
               />

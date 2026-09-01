@@ -23,7 +23,6 @@ import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-loc
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
-import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
 import i18n, {
   getAppLanguage,
   getAppTextDirection,
@@ -39,7 +38,11 @@ try {
 } catch {
   // 스플래시 연출은 없어도 앱 실행에 지장이 없다.
 }
-void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+try {
+  void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+} catch {
+  // 네이티브 모듈 연결 자체가 동기적으로 실패해도 React 진입을 막지 않는다.
+}
 
 function AppLaunchSurface() {
   const theme = useAppTheme();
@@ -64,7 +67,6 @@ function RootNavigator() {
   const openedForUserRef = useRef<string | null>(null);
   useProfileLocationSync();
   useNotificationObserver(Boolean(session) && profileCompleted);
-  useMonetizationBootstrap(session?.user.id);
 
   useEffect(() => {
     if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);
@@ -104,30 +106,30 @@ function RootNavigator() {
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth/callback" />
+        <Stack.Screen name="index" options={{ animation: 'fade' }} />
+        <Stack.Screen name="auth/callback" options={{ animation: 'fade' }} />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="legal/[document]" />
         {/* Play Console 데이터 안전 섹션에 등록하는 공개 삭제 안내. 인증 밖이어야 한다. */}
         <Stack.Screen name="account-deletion" />
         <Stack.Protected guard={!session}>
-          <Stack.Screen name="login" />
+          <Stack.Screen name="login" options={{ animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session)}>
-          <Stack.Screen name="profile-setup" />
+          <Stack.Screen name="profile-setup" options={{ animation: 'fade_from_bottom' }} />
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session) && profileCompleted}>
           <Stack.Screen name="tutorial" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="profile-edit" />
-          <Stack.Screen name="profile-preview" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen name="profile-edit" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="profile-preview" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="profile/[id]" />
           <Stack.Screen name="chat/[matchId]" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="blocked-users" />
           <Stack.Screen name="support" />
-          <Stack.Screen name="ad-free" />
+          <Stack.Screen name="ad-free" options={{ animation: 'slide_from_bottom' }} />
         </Stack.Protected>
         <Stack.Protected guard={Boolean(session) && Boolean(adminRole)}>
           <Stack.Screen name="operations" />

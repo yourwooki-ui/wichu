@@ -1,0 +1,27 @@
+allprojects {
+  afterEvaluate { project ->
+    if (project.path != ':app') return
+
+    def storeFilePath = System.getenv('WICHU_UPLOAD_STORE_FILE')
+    def storePasswordValue = System.getenv('WICHU_UPLOAD_STORE_PASSWORD')
+    def keyAliasValue = System.getenv('WICHU_UPLOAD_KEY_ALIAS')
+    def keyPasswordValue = System.getenv('WICHU_UPLOAD_KEY_PASSWORD')
+    def values = [storeFilePath, storePasswordValue, keyAliasValue, keyPasswordValue]
+
+    if (values.any { it == null || it.trim().isEmpty() }) {
+      throw new GradleException('WICHU release signing environment is incomplete.')
+    }
+
+    def androidExtension = project.extensions.getByName('android')
+    def uploadSigning = androidExtension.signingConfigs.findByName('wichuUpload')
+    if (uploadSigning == null) {
+      uploadSigning = androidExtension.signingConfigs.create('wichuUpload')
+    }
+
+    uploadSigning.storeFile = project.file(storeFilePath)
+    uploadSigning.storePassword = storePasswordValue
+    uploadSigning.keyAlias = keyAliasValue
+    uploadSigning.keyPassword = keyPasswordValue
+    androidExtension.buildTypes.getByName('release').signingConfig = uploadSigning
+  }
+}
