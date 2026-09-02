@@ -35,7 +35,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '유료 상품',
-        body: '현재 버전에서는 유료 상품을 판매하지 않습니다. 추후 Gold Pass 또는 광고 제거 상품을 제공하는 경우 가격·기간·갱신 조건을 결제 화면에 표시하며, 실제 결제와 환불은 Apple App Store 또는 Google Play 정책을 따릅니다.',
+        body: 'WICHU는 월간 자동 갱신 상품인 Gold Pass와 Ad-Free를 제공할 수 있습니다. 실제 가격, 이용 기간, 갱신 및 취소 조건은 구매 전에 앱과 Google Play 또는 App Store 결제창에 표시합니다. 결제·취소·환불은 이용한 스토어의 정책과 구독 관리 화면을 따르며, 이용권 복원은 구매에 사용한 스토어 계정과 WICHU 계정을 확인해 처리합니다.',
       },
       {
         title: '계정 종료',
@@ -53,7 +53,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
     sections: [
       {
         title: '수집 정보',
-        body: '계정 이메일, 생년월일, 프로필 정보(이름·성별·국적·소개·관심사·언어), 업로드한 사진, 탐색 조건(관심 성별과 연령 범위), 주고받은 메시지, 앱 사용 기록, 기기 정보와 알림 토큰을 처리합니다. 위치 정보는 아래 항목에서 따로 안내합니다.',
+        body: '계정 이메일, 생년월일, 프로필 정보(이름·성별·국적·소개·관심사·언어), 업로드한 사진, 탐색 조건(관심 성별과 연령 범위), 주고받은 메시지, 앱 사용 기록, 기기 정보와 알림 토큰을 처리합니다. 유료 상품을 이용하면 스토어 상품 ID, 구매 상태, 구독 만료일과 스토어가 발급한 거래 식별자를 처리하며 카드번호 등 결제수단 원문은 WICHU가 수집하지 않습니다. 위치 정보는 아래 항목에서 따로 안내합니다.',
       },
       {
         title: '위치 정보',
@@ -61,11 +61,11 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '이용 목적',
-        body: '성인 여부 확인, 계정 인증, 프로필 탐색과 거리 표시, 매치·채팅·번역, 안전 심사, 신고 처리, 알림 제공, 서비스 품질 및 부정 이용 방지에 사용합니다.',
+        body: '성인 여부 확인, 계정 인증, 프로필 탐색과 거리 표시, 매치·채팅·번역, 안전 심사, 신고 처리, 알림 제공, 유료 이용권 확인과 복원, 광고 노출·보상 검증, 서비스 품질 및 부정 이용 방지에 사용합니다.',
       },
       {
         title: '처리 위탁',
-        body: '서비스 운영을 위해 Supabase(계정 인증, 서울 리전 데이터베이스·사진 저장·실시간 메시지), DeepL(이용자가 요청한 메시지 번역), 650 Industries의 Expo Push Service 및 Google Firebase Cloud Messaging·Apple Push Notification service(알림 발송)에 처리를 위탁합니다. Google 계정 로그인을 선택한 경우 Google이 제공한 이메일과 계정 식별자를 인증에 사용합니다. 수탁사는 서비스 제공에 필요한 범위에서만 정보를 처리합니다.',
+        body: '서비스 운영을 위해 Supabase(계정 인증, 서울 리전 데이터베이스·사진 저장·실시간 메시지), DeepL(이용자가 요청한 메시지 번역), 650 Industries의 Expo Push Service 및 Google Firebase Cloud Messaging·Apple Push Notification service(알림 발송), RevenueCat(스토어 구매 검증·구독 상태 동기화), Google AdMob(광고 제공·보상 검증)에 처리를 위탁합니다. Google 계정 로그인 또는 Google Play 결제를 선택한 경우 Google이 제공한 계정·상품·거래 정보를 해당 기능에 사용합니다. 수탁사는 서비스 제공에 필요한 범위에서만 정보를 처리합니다.',
       },
       {
         title: '국외 이전',

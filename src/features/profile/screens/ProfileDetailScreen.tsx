@@ -35,7 +35,6 @@ import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entit
 import { StandardProfileDetail } from '@/features/profile/components/StandardProfileDetail';
 import { profileService } from '@/features/profile/services/profile-service';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
-import { toMyPreviewProfile } from '@/features/profile/utils/my-profile-preview';
 import {
   getProfileDetailAction,
   resolveProfileContext,
@@ -76,6 +75,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const insets = useSafeAreaInsets();
   const viewport = useAppViewport();
   const { i18n, t } = useTranslation();
+  const activeLocale = i18n.resolvedLanguage ?? i18n.language ?? 'ko';
   const entitlement = usePassEntitlement();
   const deckProfile = useDiscoverStore((state) =>
     isPreview ? undefined : state.profiles.find((profile) => profile.id === id),
@@ -88,20 +88,21 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     ? undefined
     : (deckProfile ?? mockProfiles.find((item) => item.id === id));
   const myPreviewQuery = useQuery({
-    queryKey: ['me', 'operational-profile', id],
+    queryKey: ['my-profile-preview', id, activeLocale],
     enabled: Boolean(isPreview && id && session?.user.id),
     staleTime: 60_000,
-    queryFn: () => profileService.getMyOperationalProfile(id!),
-    select: (operational) => toMyPreviewProfile(operational, i18n.language),
+    placeholderData: (previousProfile) => previousProfile,
+    queryFn: () => profileService.getMyPreviewProfile(id!, activeLocale),
   });
   const publicProfileQuery = useQuery({
-    queryKey: ['profile-detail', id, i18n.language],
+    queryKey: ['profile-detail', id, activeLocale],
     enabled: Boolean(!isPreview && id && session?.user.id && !id.startsWith('mock-')),
     staleTime: 60_000,
-    queryFn: () => discoveryService.getProfileById(id!, i18n.language),
+    placeholderData: (previousProfile) => previousProfile,
+    queryFn: () => discoveryService.getProfileById(id!, activeLocale),
   });
-  // 마이 화면과 같은 query key를 사용해 미리보기 진입 시 이미 받은 프로필을 즉시 쓴다.
-  // 백그라운드 갱신이 실패해도 기존 정상 데이터는 유지된다.
+  // 언어별 표시명 변환 결과를 별도 캐시한다. 언어 전환 중에는 직전 프로필을 유지해
+  // 빈 화면이나 오류 상태가 먼저 노출되지 않도록 한다.
   const remoteProfileQuery = isPreview ? myPreviewQuery : publicProfileQuery;
   const loadedProfile = remoteProfileQuery.data ?? cachedProfile ?? undefined;
   const profile = useMemo(
@@ -160,7 +161,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     // 사진이 먼저 오는 화면이라 스피너 대신 실제 배치(대표 사진 → 이름 → 태그)를 미리 그린다.
     return (
       <Screen style={[styles.screen, styles.loadingScreen]}>
-        <View accessibilityLabel="프로필을 불러오는 중" accessibilityRole="progressbar">
+        <View accessibilityLabel={t('me.loading')} accessibilityRole="progressbar">
           <Skeleton style={styles.loadingPhoto} />
           <SkeletonLine height={24} style={{ marginTop: 20 }} width="52%" />
           <SkeletonLine height={13} style={{ marginTop: 10 }} width="34%" />
@@ -352,7 +353,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
       ]}
     >
       <Pressable
-        accessibilityLabel="이 프로필 패스"
+        accessibilityLabel="PASS"
         accessibilityRole="button"
         disabled={decisionBusy}
         hitSlop={6}
@@ -380,14 +381,14 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         <Ionicons color={palette.pink} name="chatbubble-ellipses" size={21} />
       </Pressable>
       <Pressable
-        accessibilityLabel="이 프로필 픽"
+        accessibilityLabel="PICK"
         accessibilityRole="button"
         disabled={decisionBusy}
         onPress={() => handleDecision('like')}
         style={({ pressed }) => [styles.pickButton, (pressed || decisionBusy) && styles.pressed]}
       >
         <Ionicons color={palette.white} name="heart" size={19} />
-        <Text style={styles.pickButtonText}>{decisionBusy ? '처리 중…' : 'PICK'}</Text>
+        <Text style={styles.pickButtonText}>{decisionBusy ? t('settings.checking') : 'PICK'}</Text>
       </Pressable>
     </View>
   ) : null;
@@ -413,8 +414,14 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
           }}
           onSafety={isPreview ? undefined : () => setSafetyOpen(true)}
-          photoBlurRadius={isPreview && !profile.isPhotoReviewed ? 18 : 0}
-          photoStatusLabel={isPreview && !profile.isPhotoReviewed ? '공개 사진 심사 중' : undefined}
+          photoBlurRadius={
+            isPreview && !profile.photoReviewStatuses?.length && !profile.isPhotoReviewed ? 18 : 0
+          }
+          photoStatusLabel={
+            isPreview && !profile.photoReviewStatuses?.length && !profile.isPhotoReviewed
+              ? t('profileReview.steps.reviewing')
+              : undefined
+          }
           profile={profile}
         />
         {decisionAction ? (

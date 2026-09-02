@@ -20,6 +20,7 @@ type ProfilePhotoPickerProps = {
   dark?: boolean;
   disabled?: boolean;
   photos: ProfilePhotoDraft[];
+  ready?: boolean;
   uploadProgress?: { completed: number; total: number } | null;
   onChange: (photos: ProfilePhotoDraft[]) => void;
   onError: (message: string) => void;
@@ -29,6 +30,7 @@ export function ProfilePhotoPicker({
   dark = false,
   disabled,
   photos,
+  ready = true,
   uploadProgress,
   onChange,
   onError,
@@ -37,17 +39,23 @@ export function ProfilePhotoPicker({
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
   const recoveredPendingResult = useRef(false);
+  const latestPhotos = useRef(photos);
   const textColor = dark ? '#FFFFFF' : theme.colors.text;
   const mutedColor = dark ? '#8F8F99' : theme.colors.textMuted;
   const surfaceColor = dark ? '#17171B' : theme.colors.surface;
   const borderColor = dark ? '#34343B' : theme.colors.border;
 
+  useEffect(() => {
+    latestPhotos.current = photos;
+  }, [photos]);
+
   const addAssets = useCallback(
     (assets: ImagePicker.ImagePickerAsset[]) => {
-      const remaining = MAX_PHOTOS - photos.length;
+      const currentPhotos = latestPhotos.current;
+      const remaining = MAX_PHOTOS - currentPhotos.length;
       if (remaining <= 0) return;
 
-      const knownIdentities = new Set(photos.map(getPhotoIdentity));
+      const knownIdentities = new Set(currentPhotos.map(getPhotoIdentity));
       const validAssets: ImagePicker.ImagePickerAsset[] = [];
       let skipped = 0;
 
@@ -72,15 +80,19 @@ export function ProfilePhotoPicker({
         draftId: `${asset.assetId ?? asset.uri}-${Date.now()}-${index}`,
       }));
 
-      if (drafts.length > 0) onChange([...photos, ...drafts]);
+      if (drafts.length > 0) {
+        const nextPhotos = [...currentPhotos, ...drafts];
+        latestPhotos.current = nextPhotos;
+        onChange(nextPhotos);
+      }
       if (skipped > 0) onError(t('profileSetup.photos.skipped', { count: skipped }));
       else onError('');
     },
-    [onChange, onError, photos, t],
+    [onChange, onError, t],
   );
 
   useEffect(() => {
-    if (Platform.OS !== 'android' || recoveredPendingResult.current) return;
+    if (!ready || Platform.OS !== 'android' || recoveredPendingResult.current) return;
     recoveredPendingResult.current = true;
 
     void ImagePicker.getPendingResultAsync()
@@ -88,11 +100,11 @@ export function ProfilePhotoPicker({
         if (result && 'assets' in result && !result.canceled) addAssets(result.assets);
       })
       .catch(() => undefined);
-  }, [addAssets]);
+  }, [addAssets, ready]);
 
   async function pickFromLibrary() {
-    const remaining = MAX_PHOTOS - photos.length;
-    if (remaining <= 0 || picking || disabled) return;
+    const remaining = MAX_PHOTOS - latestPhotos.current.length;
+    if (remaining <= 0 || picking || disabled || !ready) return;
 
     setPicking(true);
     try {
@@ -101,7 +113,7 @@ export function ProfilePhotoPicker({
         allowsMultipleSelection: true,
         orderedSelection: true,
         selectionLimit: remaining,
-        quality: 0.85,
+        quality: 1,
       });
 
       if (result.canceled) return;
@@ -114,7 +126,7 @@ export function ProfilePhotoPicker({
   }
 
   async function takePhoto() {
-    if (photos.length >= MAX_PHOTOS || picking || disabled) return;
+    if (latestPhotos.current.length >= MAX_PHOTOS || picking || disabled || !ready) return;
 
     setPicking(true);
     try {
@@ -128,7 +140,7 @@ export function ProfilePhotoPicker({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 5],
-        quality: 0.9,
+        quality: 1,
       });
       if (!result.canceled) addAssets(result.assets);
     } catch (error) {
@@ -139,26 +151,32 @@ export function ProfilePhotoPicker({
   }
 
   function movePhoto(index: number, direction: -1 | 1) {
+    const currentPhotos = latestPhotos.current;
     const target = index + direction;
-    if (target < 0 || target >= photos.length) return;
-    const next = [...photos];
+    if (target < 0 || target >= currentPhotos.length) return;
+    const next = [...currentPhotos];
     [next[index], next[target]] = [next[target], next[index]];
+    latestPhotos.current = next;
     onChange(next);
   }
 
   function removePhoto(draftId: string) {
-    onChange(photos.filter((photo) => photo.draftId !== draftId));
+    const next = latestPhotos.current.filter((photo) => photo.draftId !== draftId);
+    latestPhotos.current = next;
+    onChange(next);
   }
 
   function setPrimaryPhoto(index: number) {
     if (index === 0) return;
-    const next = [...photos];
+    const next = [...latestPhotos.current];
     const [primary] = next.splice(index, 1);
     if (!primary) return;
-    onChange([primary, ...next]);
+    const reordered = [primary, ...next];
+    latestPhotos.current = reordered;
+    onChange(reordered);
   }
 
-  const controlsDisabled = disabled || picking;
+  const controlsDisabled = disabled || picking || !ready;
 
   return (
     <View style={styles.section}>
@@ -223,11 +241,11 @@ export function ProfilePhotoPicker({
         {photos.map((photo, index) => (
           <View key={photo.draftId} style={[styles.photoTile, { backgroundColor: surfaceColor }]}>
             <Image
-              cachePolicy="memory"
+              cachePolicy="memory-disk"
               contentFit="cover"
-              recyclingKey={photo.uri}
-              source={{ uri: photo.uri }}
+              source={{ cacheKey: photo.storagePath ?? photo.draftId, uri: photo.uri }}
               style={StyleSheet.absoluteFill}
+              transition={140}
             />
             {photo.reviewStatus === 'pending' || photo.reviewStatus === 'rejected' ? (
               <View
@@ -468,6 +486,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: radius.pill,
+    zIndex: 2,
   },
   primaryText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   reviewBadge: {
@@ -481,6 +500,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 5,
     position: 'absolute',
+    zIndex: 2,
   },
   reviewBadgeRejected: { backgroundColor: 'rgba(196,45,63,0.88)' },
   reviewBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
@@ -492,6 +512,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 5,
     position: 'absolute',
+    zIndex: 2,
   },
   newPhotoBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   removeButton: {
@@ -504,6 +525,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 13,
     backgroundColor: 'rgba(0,0,0,0.68)',
+    zIndex: 3,
   },
   setPrimaryButton: {
     position: 'absolute',
@@ -515,6 +537,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.pill,
     backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 3,
   },
   orderButtons: {
     position: 'absolute',
@@ -522,6 +545,7 @@ const styles = StyleSheet.create({
     bottom: 6,
     flexDirection: 'row',
     gap: 4,
+    zIndex: 3,
   },
   orderButton: {
     width: 29,

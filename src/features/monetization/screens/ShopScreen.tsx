@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -18,82 +19,111 @@ import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const goldBenefits: {
   illustration: (typeof illustratedIcons)[keyof typeof illustratedIcons];
-  title: string;
-  detail: string;
+  titleKey: string;
+  detailKey: string;
 }[] = [
   {
     illustration: illustratedIcons.connections,
-    title: '방문자 확인',
-    detail: '최근 프로필 방문자를 확인합니다',
+    titleKey: 'shop.benefit.visitors.title',
+    detailKey: 'shop.benefit.visitors.detail',
   },
   {
     illustration: illustratedIcons.discoveryVisible,
-    title: '우선 노출',
-    detail: '조건이 맞는 후보에게 우선 노출됩니다',
+    titleKey: 'shop.benefit.exposure.title',
+    detailKey: 'shop.benefit.exposure.detail',
   },
   {
     illustration: illustratedIcons.goldPremium,
-    title: '골드 프로필',
-    detail: '골드 테두리와 다이아몬드가 표시됩니다',
+    titleKey: 'shop.benefit.profile.title',
+    detailKey: 'shop.benefit.profile.detail',
   },
   {
     illustration: illustratedIcons.adFree,
-    title: '광고 제거',
-    detail: '자동 광고가 표시되지 않습니다',
+    titleKey: 'shop.benefit.adFree.title',
+    detailKey: 'shop.benefit.adFree.detail',
   },
   {
     illustration: illustratedIcons.rewind,
-    title: '무제한 되돌리기',
-    detail: '광고 시청 없이 되돌릴 수 있습니다',
+    titleKey: 'shop.benefit.rewind.title',
+    detailKey: 'shop.benefit.rewind.detail',
   },
   {
     illustration: illustratedIcons.profilePhotos,
-    title: '채팅 사진 전송',
-    detail: '사진을 한 번에 최대 5장 보낼 수 있습니다',
+    titleKey: 'shop.benefit.chatPhotos.title',
+    detailKey: 'shop.benefit.chatPhotos.detail',
   },
 ];
 
 const planComparison = [
-  { label: '핵심 기능', free: 'yes', adFree: 'yes', gold: 'yes' },
-  { label: '자동 광고 제거', free: 'no', adFree: 'yes', gold: 'yes' },
-  { label: '방문자 확인', free: 'no', adFree: 'no', gold: 'yes' },
-  { label: '우선 노출', free: 'no', adFree: 'no', gold: 'yes' },
-  { label: '채팅 사진', free: 'no', adFree: 'no', gold: '최대 5장' },
-  { label: '되돌리기', free: '광고 1회', adFree: '광고 1회', gold: '무제한' },
+  { labelKey: 'shop.comparison.core', free: 'yes', adFree: 'yes', gold: 'yes' },
+  { labelKey: 'shop.comparison.autoAds', free: 'no', adFree: 'yes', gold: 'yes' },
+  { labelKey: 'shop.comparison.visitors', free: 'no', adFree: 'no', gold: 'yes' },
+  { labelKey: 'shop.comparison.exposure', free: 'no', adFree: 'no', gold: 'yes' },
+  { labelKey: 'shop.comparison.chatPhotos', free: 'no', adFree: 'no', gold: 'maxPhotos' },
+  { labelKey: 'shop.comparison.rewind', free: 'adOnce', adFree: 'adOnce', gold: 'unlimited' },
 ];
 
 export function ShopScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const entitlement = usePassEntitlement();
-  const tier = entitlement.data?.tier ?? 'free';
-  const tierLabel = tier === 'gold' ? 'Gold Pass' : tier === 'ad_free' ? 'Ad-Free' : 'Free';
+  const tier = entitlement.data?.tier;
+  const comparisonValue = (value: string) =>
+    ['adOnce', 'maxPhotos', 'unlimited'].includes(value) ? t(`shop.comparison.${value}`) : value;
+  const tierForVisual = tier ?? 'free';
+  const tierLabel = entitlement.isPending
+    ? t('shop.checking')
+    : entitlement.isError
+      ? t('shop.checkNeeded')
+      : tier === 'gold'
+        ? 'Gold Pass'
+        : tier === 'ad_free'
+          ? 'Ad-Free'
+          : 'Free';
 
   useEffect(() => {
-    productAnalyticsService.track('purchase_viewed', { surface: 'shop', tier }, '/shop');
+    productAnalyticsService.track(
+      'purchase_viewed',
+      { surface: 'shop', tier: tier ?? 'unknown' },
+      '/shop',
+    );
   }, [tier]);
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
-        actionAccessibilityLabel="구매 복원 및 이용권 관리"
+        actionAccessibilityLabel={t('shop.headerAction')}
         actionIcon={illustratedIcons.purchase}
-        eyebrow="상점"
+        eyebrow={t('shop.eyebrow')}
         onAction={() => router.push('/ad-free')}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={sectionEntering(0)} style={styles.currentPlan}>
           <View style={styles.currentPlanIcon}>
-            <IllustratedIcon size={38} source={getPassIllustration(tier)} />
+            <IllustratedIcon size={38} source={getPassIllustration(tierForVisual)} />
           </View>
           <View style={styles.currentPlanCopy}>
-            <Text style={styles.currentPlanLabel}>현재 이용권</Text>
+            <Text style={styles.currentPlanLabel}>{t('shop.currentPlan')}</Text>
             <Text style={styles.currentPlanName}>{tierLabel}</Text>
           </View>
-          <View style={[styles.activePill, tier === 'gold' && styles.activePillGold]}>
-            <View style={[styles.activeDot, tier === 'gold' && styles.activeDotGold]} />
-            <Text style={styles.activeText}>이용 중</Text>
-          </View>
+          {entitlement.isError ? (
+            <Pressable
+              accessibilityLabel={t('shop.retry')}
+              accessibilityRole="button"
+              onPress={() => entitlement.refetch()}
+              style={({ pressed }) => [styles.retryPill, pressed && styles.pressed]}
+            >
+              <Text style={styles.retryPillText}>{t('shop.retry')}</Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.activePill, tier === 'gold' && styles.activePillGold]}>
+              <View style={[styles.activeDot, tier === 'gold' && styles.activeDotGold]} />
+              <Text style={styles.activeText}>
+                {entitlement.isPending ? t('shop.checking') : t('shop.inUse')}
+              </Text>
+            </View>
+          )}
         </Animated.View>
 
         <Animated.View entering={sectionEntering(1)}>
@@ -109,18 +139,16 @@ export function ShopScreen() {
               </View>
               <View>
                 <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
-                <Text style={styles.goldMicrocopy}>방문자 확인 · 광고 제거 · 우선 노출</Text>
+                <Text style={styles.goldMicrocopy}>{t('shop.goldMicrocopy')}</Text>
               </View>
             </View>
-            <Text style={styles.goldTitle}>Gold 기능을{`\n`}한 번에 이용하세요.</Text>
-            <Text style={styles.goldDescription}>
-              방문자 확인, 무제한 되돌리기, 광고 제거와 우선 노출이 포함됩니다.
-            </Text>
+            <Text style={styles.goldTitle}>{t('shop.goldTitle')}</Text>
+            <Text style={styles.goldDescription}>{t('shop.goldDescription')}</Text>
             <View style={styles.goldHighlights}>
               {goldBenefits.slice(0, 3).map((benefit) => (
-                <View key={benefit.title} style={styles.highlightChip}>
+                <View key={benefit.titleKey} style={styles.highlightChip}>
                   <IllustratedIcon size={20} source={benefit.illustration} />
-                  <Text style={styles.highlightText}>{benefit.title}</Text>
+                  <Text style={styles.highlightText}>{t(benefit.titleKey)}</Text>
                 </View>
               ))}
             </View>
@@ -130,7 +158,7 @@ export function ShopScreen() {
               style={({ pressed }) => [styles.goldAction, pressed && styles.pressed]}
             >
               <Text style={styles.goldActionText}>
-                {tier === 'gold' ? 'Gold Pass 관리' : '혜택과 가격 확인'}
+                {tier === 'gold' ? t('shop.goldManage') : t('shop.benefitsPrice')}
               </Text>
               <Ionicons color={palette.white} name="arrow-forward" size={17} />
             </Pressable>
@@ -138,10 +166,10 @@ export function ShopScreen() {
         </Animated.View>
 
         <Animated.View entering={sectionEntering(2)}>
-          <Text style={styles.sectionTitle}>나에게 맞는 이용권</Text>
+          <Text style={styles.sectionTitle}>{t('shop.choosePlan')}</Text>
           <View style={styles.planRow}>
             <Pressable
-              accessibilityLabel="Ad-Free 자세히 보기"
+              accessibilityLabel={t('shop.adFreeA11y')}
               accessibilityRole="button"
               onPress={() => router.push('/ad-free?product=ad-free')}
               style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
@@ -150,16 +178,16 @@ export function ShopScreen() {
                 <IllustratedIcon size={42} source={illustratedIcons.adFree} />
               </View>
               <Text style={styles.planName}>Ad-Free</Text>
-              <Text style={styles.planDescription}>선택형 보상 광고를 제외한 자동 광고 제거</Text>
+              <Text style={styles.planDescription}>{t('shop.adFreeDescription')}</Text>
               <Text style={styles.planPrice}>{AD_FREE_PRODUCT.fallbackPriceLabelKo}</Text>
               <View style={styles.planLink}>
-                <Text style={styles.planLinkText}>자세히 보기</Text>
+                <Text style={styles.planLinkText}>{t('shop.details')}</Text>
                 <Ionicons color={palette.ink} name="chevron-forward" size={15} />
               </View>
             </Pressable>
 
             <Pressable
-              accessibilityLabel="Gold Pass 자세히 보기"
+              accessibilityLabel={t('shop.goldA11y')}
               accessibilityRole="button"
               onPress={() => router.push('/ad-free')}
               style={({ pressed }) => [
@@ -172,13 +200,13 @@ export function ShopScreen() {
                 <IllustratedIcon size={42} source={illustratedIcons.goldPass} />
               </View>
               <View style={styles.recommendPill}>
-                <Text style={styles.recommendText}>추천</Text>
+                <Text style={styles.recommendText}>{t('shop.recommended')}</Text>
               </View>
               <Text style={styles.planName}>Gold Pass</Text>
-              <Text style={styles.planDescription}>방문자·우선 노출·무제한 되돌리기·광고 제거</Text>
+              <Text style={styles.planDescription}>{t('shop.goldPlanDescription')}</Text>
               <Text style={styles.planPrice}>{GOLD_PRODUCT.fallbackPriceLabelKo}</Text>
               <View style={styles.planLink}>
-                <Text style={styles.planLinkText}>모든 혜택 보기</Text>
+                <Text style={styles.planLinkText}>{t('shop.allBenefits')}</Text>
                 <Ionicons color={palette.ink} name="chevron-forward" size={15} />
               </View>
             </Pressable>
@@ -187,18 +215,18 @@ export function ShopScreen() {
 
         <Animated.View entering={sectionEntering(3)} style={styles.benefitSection}>
           <View style={styles.sectionHeadingRow}>
-            <Text style={styles.sectionTitleInline}>Gold 혜택</Text>
-            <Text style={styles.sectionHint}>필요할 때만 선택하세요</Text>
+            <Text style={styles.sectionTitleInline}>{t('shop.goldBenefits')}</Text>
+            <Text style={styles.sectionHint}>{t('shop.hint')}</Text>
           </View>
           <View style={styles.benefitList}>
             {goldBenefits.map((benefit) => (
-              <View key={benefit.title} style={styles.benefitItem}>
+              <View key={benefit.titleKey} style={styles.benefitItem}>
                 <View style={styles.benefitIcon}>
                   <IllustratedIcon size={34} source={benefit.illustration} />
                 </View>
                 <View style={styles.benefitCopy}>
-                  <Text style={styles.benefitTitle}>{benefit.title}</Text>
-                  <Text style={styles.benefitDetail}>{benefit.detail}</Text>
+                  <Text style={styles.benefitTitle}>{t(benefit.titleKey)}</Text>
+                  <Text style={styles.benefitDetail}>{t(benefit.detailKey)}</Text>
                 </View>
                 <Ionicons color="#B1B1B7" name="checkmark-circle" size={19} />
               </View>
@@ -208,7 +236,7 @@ export function ShopScreen() {
 
         <Animated.View entering={sectionEntering(4)} style={styles.compareCard}>
           <View style={styles.compareHeader}>
-            <Text style={styles.compareTitle}>한눈에 비교</Text>
+            <Text style={styles.compareTitle}>{t('shop.compare')}</Text>
             <View style={styles.compareLabels}>
               <Text style={styles.compareLabel}>Free</Text>
               <Text style={styles.compareLabel}>Ad-Free</Text>
@@ -217,20 +245,20 @@ export function ShopScreen() {
           </View>
           {planComparison.map((item, index) => (
             <View
-              key={item.label}
+              key={item.labelKey}
               style={[styles.compareRow, index === 0 && styles.compareRowFirst]}
             >
-              <Text style={styles.compareFeature}>{item.label}</Text>
-              <CompareMark value={item.free} />
-              <CompareMark value={item.adFree} />
-              <CompareMark gold value={item.gold} />
+              <Text style={styles.compareFeature}>{t(item.labelKey)}</Text>
+              <CompareMark value={comparisonValue(item.free)} />
+              <CompareMark value={comparisonValue(item.adFree)} />
+              <CompareMark gold value={comparisonValue(item.gold)} />
             </View>
           ))}
         </Animated.View>
 
         <Animated.View entering={sectionEntering(5)}>
           <Pressable
-            accessibilityLabel="구매 복원 및 이용권 관리"
+            accessibilityLabel={t('shop.headerAction')}
             accessibilityRole="button"
             onPress={() => router.push('/ad-free')}
             style={({ pressed }) => [styles.purchaseManagement, pressed && styles.pressed]}
@@ -239,18 +267,15 @@ export function ShopScreen() {
               <IllustratedIcon size={30} source={illustratedIcons.purchase} />
             </View>
             <View style={styles.purchaseCopy}>
-              <Text style={styles.purchaseTitle}>구매 복원 및 이용권 관리</Text>
-              <Text style={styles.purchaseText}>기존 구매를 복원하거나 이용 상태를 확인해요</Text>
+              <Text style={styles.purchaseTitle}>{t('shop.purchaseTitle')}</Text>
+              <Text style={styles.purchaseText}>{t('shop.purchaseBody')}</Text>
             </View>
             <Ionicons color={palette.inkMuted} name="chevron-forward" size={18} />
           </Pressable>
 
           <View style={styles.notice}>
             <IllustratedIcon size={24} source={illustratedIcons.safety} />
-            <Text style={styles.noticeText}>
-              결제 여부와 관계없이 매치와 채팅 등 핵심 기능은 무료예요. 우선 노출은 필터와 안전
-              기준을 통과한 후보 안에서만 적용됩니다.
-            </Text>
+            <Text style={styles.noticeText}>{t('shop.notice')}</Text>
           </View>
         </Animated.View>
       </ScrollView>
@@ -313,6 +338,14 @@ const styles = StyleSheet.create({
   activeDot: { backgroundColor: palette.lime, borderRadius: 4, height: 7, width: 7 },
   activeDotGold: { backgroundColor: '#D2A20C' },
   activeText: { color: palette.ink, fontSize: 11, fontWeight: '900' },
+  retryPill: {
+    borderColor: '#D7A1AD',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  retryPillText: { color: '#8B2940', fontSize: 11, fontWeight: '900' },
   goldHero: {
     borderColor: '#E4CA73',
     borderRadius: radius.lg,

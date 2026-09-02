@@ -1,7 +1,7 @@
 const baseConfig = {
   name: 'WICHU',
   slug: 'wichu',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/brand/wichu-app-icon.png',
   scheme: 'wichu',
@@ -14,14 +14,14 @@ const baseConfig = {
     },
   },
   android: {
-    versionCode: 23,
+    versionCode: 25,
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
       foregroundImage: './assets/brand/wichu-app-icon.png',
     },
     package: 'app.wichu.mobile',
     predictiveBackGestureEnabled: false,
-    permissions: ['android.permission.ACCESS_COARSE_LOCATION'],
+    permissions: ['android.permission.ACCESS_COARSE_LOCATION', 'com.android.vending.BILLING'],
     blockedPermissions: [
       'android.permission.ACCESS_FINE_LOCATION',
       'android.permission.SYSTEM_ALERT_WINDOW',
@@ -47,7 +47,7 @@ const baseConfig = {
       'expo-build-properties',
       {
         android: {
-          // Stability first for the closed-test build. R8/resource shrinking can be
+          // Stability first for release builds. R8/resource shrinking can be
           // reintroduced only after a release APK has passed physical-device startup QA.
           enableMinifyInReleaseBuilds: false,
           enableShrinkResourcesInReleaseBuilds: false,
@@ -138,6 +138,18 @@ function enabled(value) {
   return value?.trim().toLowerCase() === 'true';
 }
 
+function validRevenueCatAndroidKey(value) {
+  return /^goog_[A-Za-z0-9_-]{8,}$/.test(value ?? '');
+}
+
+function validAdMobAppId(value) {
+  return /^ca-app-pub-\d{16}~\d{10}$/.test(value ?? '');
+}
+
+function validAdMobUnitId(value) {
+  return /^ca-app-pub-\d{16}\/\d{10}$/.test(value ?? '');
+}
+
 function getAdMobAppId(platform) {
   const configured =
     platform === 'android'
@@ -155,6 +167,7 @@ module.exports = () => {
   const testMode = enabled(process.env.EXPO_PUBLIC_MONETIZATION_TEST_MODE);
   const isProductionBuild = process.env.EAS_BUILD_PROFILE === 'production';
   const buildPlatform = process.env.EAS_BUILD_PLATFORM;
+  const isProductionAndroid = isProductionBuild && buildPlatform !== 'ios';
   const missingProductionAppId =
     (buildPlatform !== 'ios' && androidAppId === TEST_ADMOB_APP_IDS.android) ||
     (buildPlatform !== 'android' && iosAppId === TEST_ADMOB_APP_IDS.ios);
@@ -164,6 +177,50 @@ module.exports = () => {
   }
   if (isProductionBuild && adsEnabled && missingProductionAppId) {
     throw new Error('Production ads require a real AdMob app ID for the target platform.');
+  }
+  if (isProductionAndroid) {
+    const requiredProductionValues = [
+      [
+        'EXPO_PUBLIC_MONETIZATION_ENABLED=true',
+        enabled(process.env.EXPO_PUBLIC_MONETIZATION_ENABLED),
+      ],
+      [
+        'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_*',
+        validRevenueCatAndroidKey(process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY),
+      ],
+      [
+        'EXPO_PUBLIC_REWARDED_ADS_ENABLED=true',
+        enabled(process.env.EXPO_PUBLIC_REWARDED_ADS_ENABLED),
+      ],
+      [
+        'EXPO_PUBLIC_INTERSTITIAL_ADS_ENABLED=true',
+        enabled(process.env.EXPO_PUBLIC_INTERSTITIAL_ADS_ENABLED),
+      ],
+      [
+        'EXPO_PUBLIC_ADMOB_ANDROID_APP_ID',
+        androidAppId !== TEST_ADMOB_APP_IDS.android && validAdMobAppId(androidAppId),
+      ],
+      [
+        'EXPO_PUBLIC_ADMOB_REWARDED_UNDO_ANDROID_UNIT_ID',
+        validAdMobUnitId(process.env.EXPO_PUBLIC_ADMOB_REWARDED_UNDO_ANDROID_UNIT_ID),
+      ],
+      [
+        'EXPO_PUBLIC_ADMOB_DISCOVER_INTERSTITIAL_ANDROID_UNIT_ID',
+        validAdMobUnitId(process.env.EXPO_PUBLIC_ADMOB_DISCOVER_INTERSTITIAL_ANDROID_UNIT_ID),
+      ],
+      [
+        'EXPO_PUBLIC_ADMOB_BROWSE_INTERSTITIAL_ANDROID_UNIT_ID',
+        validAdMobUnitId(process.env.EXPO_PUBLIC_ADMOB_BROWSE_INTERSTITIAL_ANDROID_UNIT_ID),
+      ],
+    ];
+    const missing = requiredProductionValues
+      .filter(([, configured]) => !configured)
+      .map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(
+        `Production Android monetization configuration is incomplete: ${missing.join(', ')}`,
+      );
+    }
   }
 
   return {

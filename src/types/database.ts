@@ -703,6 +703,18 @@ export type Database = {
           unread_count: number;
         }[];
       };
+      get_my_match_connection: {
+        Args: { p_match_id: string };
+        Returns: {
+          match_id: string;
+          matched_at: string;
+          profile_id: string;
+          display_name: string;
+          country_code: string;
+          last_active_at: string | null;
+          photo_path: string | null;
+        }[];
+      };
       claim_my_message_translation: {
         Args: { p_message_id: string; p_target_language: string };
         Returns: {

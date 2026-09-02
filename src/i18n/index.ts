@@ -7,6 +7,9 @@ import { additionalResources } from './additional-resources';
 import { experienceResources } from './experience-resources';
 import { inAppNotificationResources } from './in-app-notification-resources';
 import { operationalResources } from './operational-resources';
+import { p1Resources } from './p1-resources';
+import { profileSurfaceResources } from './profile-surface-resources';
+import { profileEditorResources } from './profile-editor-resources';
 import { reliabilityResources } from './reliability-resources';
 import {
   type AppLanguage,
@@ -606,6 +609,9 @@ const resources = {
       ...reliabilityResources.en.translation,
       ...experienceResources.en.translation,
       ...inAppNotificationResources.en.translation,
+      ...p1Resources.en.translation,
+      ...profileSurfaceResources.en.translation,
+      ...profileEditorResources.en.translation,
     },
   },
   ko: {
@@ -616,6 +622,9 @@ const resources = {
       ...reliabilityResources.ko.translation,
       ...experienceResources.ko.translation,
       ...inAppNotificationResources.ko.translation,
+      ...p1Resources.ko.translation,
+      ...profileSurfaceResources.ko.translation,
+      ...profileEditorResources.ko.translation,
     },
   },
   vi: {
@@ -625,6 +634,9 @@ const resources = {
       ...reliabilityResources.vi.translation,
       ...experienceResources.vi.translation,
       ...inAppNotificationResources.vi.translation,
+      ...p1Resources.vi.translation,
+      ...profileSurfaceResources.vi.translation,
+      ...profileEditorResources.vi.translation,
     },
   },
   ja: {
@@ -634,6 +646,9 @@ const resources = {
       ...reliabilityResources.ja.translation,
       ...experienceResources.ja.translation,
       ...inAppNotificationResources.ja.translation,
+      ...p1Resources.ja.translation,
+      ...profileSurfaceResources.ja.translation,
+      ...profileEditorResources.ja.translation,
     },
   },
   fr: {
@@ -643,6 +658,9 @@ const resources = {
       ...reliabilityResources.fr.translation,
       ...experienceResources.fr.translation,
       ...inAppNotificationResources.fr.translation,
+      ...p1Resources.fr.translation,
+      ...profileSurfaceResources.fr.translation,
+      ...profileEditorResources.fr.translation,
     },
   },
   es: {
@@ -652,6 +670,9 @@ const resources = {
       ...reliabilityResources.es.translation,
       ...experienceResources.es.translation,
       ...inAppNotificationResources.es.translation,
+      ...p1Resources.es.translation,
+      ...profileSurfaceResources.es.translation,
+      ...profileEditorResources.es.translation,
     },
   },
   'pt-BR': {
@@ -661,6 +682,9 @@ const resources = {
       ...reliabilityResources['pt-BR'].translation,
       ...experienceResources['pt-BR'].translation,
       ...inAppNotificationResources['pt-BR'].translation,
+      ...p1Resources['pt-BR'].translation,
+      ...profileSurfaceResources['pt-BR'].translation,
+      ...profileEditorResources['pt-BR'].translation,
     },
   },
   'zh-TW': {
@@ -670,6 +694,9 @@ const resources = {
       ...reliabilityResources['zh-TW'].translation,
       ...experienceResources['zh-TW'].translation,
       ...inAppNotificationResources['zh-TW'].translation,
+      ...p1Resources['zh-TW'].translation,
+      ...profileSurfaceResources['zh-TW'].translation,
+      ...profileEditorResources['zh-TW'].translation,
     },
   },
   id: {
@@ -679,6 +706,9 @@ const resources = {
       ...reliabilityResources.id.translation,
       ...experienceResources.id.translation,
       ...inAppNotificationResources.id.translation,
+      ...p1Resources.id.translation,
+      ...profileSurfaceResources.id.translation,
+      ...profileEditorResources.id.translation,
     },
   },
   fa: {
@@ -688,6 +718,9 @@ const resources = {
       ...reliabilityResources.fa.translation,
       ...experienceResources.fa.translation,
       ...inAppNotificationResources.fa.translation,
+      ...p1Resources.fa.translation,
+      ...profileSurfaceResources.fa.translation,
+      ...profileEditorResources.fa.translation,
     },
   },
 } as const;
@@ -775,7 +808,7 @@ export async function setAppLanguage(language: AppLanguage) {
   activeLanguage = language;
   await i18n.changeLanguage(language);
   applyDocumentLanguage(language);
-  await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language).catch(() => undefined);
 }
 
 export function getAppLanguage(): AppLanguage {

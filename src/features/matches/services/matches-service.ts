@@ -13,6 +13,14 @@ export type MatchConnection = {
   };
 };
 
+export type MatchRoomConnection = {
+  matchId: string;
+  matchedAt: string;
+  profile: Pick<Tables<'profiles'>, 'id' | 'display_name' | 'country_code' | 'last_active_at'> & {
+    photo: string | null;
+  };
+};
+
 export type IncomingLike = {
   profileId: string;
   displayName: string;
@@ -72,6 +80,43 @@ export const matchesService = {
     if (error) throw error;
     return data;
   },
+  async getConnection(matchId: string): Promise<MatchRoomConnection | null> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .rpc('get_my_match_connection', { p_match_id: matchId })
+      .maybeSingle();
+    if (error) {
+      // 앱과 DB가 순차 배포되는 짧은 구간에는 기존 read model로 안전하게 폴백한다.
+      if (['42883', 'PGRST202'].includes(error.code)) {
+        const fallback = (await matchesService.listConnections()).find(
+          (connection) => connection.matchId === matchId,
+        );
+        return fallback ? toMatchRoomConnection(fallback) : null;
+      }
+      throw error;
+    }
+    if (!data) return null;
+
+    let photo: string | null = null;
+    if (data.photo_path) {
+      const { data: signedPhotoRows, error: signedPhotoError } =
+        await profilePhotoService.createSignedPhotoUrls([data.photo_path], 3600);
+      if (signedPhotoError) throw signedPhotoError;
+      photo = signedPhotoRows.find((row) => row.path === data.photo_path)?.signedUrl ?? null;
+    }
+
+    return {
+      matchId: data.match_id,
+      matchedAt: data.matched_at,
+      profile: {
+        id: data.profile_id,
+        display_name: data.display_name,
+        country_code: data.country_code,
+        last_active_at: data.last_active_at,
+        photo,
+      },
+    };
+  },
   async listConnections(_userId?: string): Promise<MatchConnection[]> {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('get_my_match_connections', { p_limit: 100 });
@@ -113,3 +158,17 @@ export const matchesService = {
     }));
   },
 };
+
+function toMatchRoomConnection(connection: MatchConnection): MatchRoomConnection {
+  return {
+    matchId: connection.matchId,
+    matchedAt: connection.matchedAt,
+    profile: {
+      id: connection.profile.id,
+      display_name: connection.profile.display_name,
+      country_code: connection.profile.country_code,
+      last_active_at: connection.profile.last_active_at,
+      photo: connection.profile.photo,
+    },
+  };
+}

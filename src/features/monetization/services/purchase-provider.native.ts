@@ -1,4 +1,5 @@
-import type { PurchasesError, PurchasesStoreProduct } from 'react-native-purchases';
+import type { PurchasesStoreProduct } from 'react-native-purchases';
+import { Platform } from 'react-native';
 
 import { monetizationConfig } from '@/features/monetization/config';
 import {
@@ -10,11 +11,20 @@ import type {
   PurchaseProvider,
   PurchaseResult,
   StoreProduct,
+  StoreProductsResult,
 } from '@/features/monetization/services/types';
+import {
+  classifyPurchaseError,
+  getActiveMonetizationProductIds,
+  getGooglePlayStoreIdentifier,
+  matchesMonetizationStoreProduct,
+} from '@/features/monetization/utils/purchase-state';
 
 type PurchasesModule = typeof import('react-native-purchases');
 
 const productIds: MonetizationProductId[] = [AD_FREE_PRODUCT.id, GOLD_PRODUCT.id];
+const storeProductIds =
+  Platform.OS === 'android' ? productIds.map(getGooglePlayStoreIdentifier) : productIds;
 let sdkLoading: Promise<PurchasesModule | null> | null = null;
 let configuredUserId: string | null = null;
 let initialization: Promise<boolean> | null = null;
@@ -23,10 +33,6 @@ let initialization: Promise<boolean> | null = null;
 function loadPurchasesSdk() {
   sdkLoading ??= import('react-native-purchases').catch(() => null);
   return sdkLoading;
-}
-
-function isCancelled(error: unknown) {
-  return Boolean((error as Partial<PurchasesError> | null)?.userCancelled);
 }
 
 async function configureForUser(userId: string) {
@@ -39,13 +45,13 @@ async function configureForUser(userId: string) {
     if (!sdk) return false;
     const Purchases = sdk.default;
     if (!configuredUserId) {
+      await Purchases.setLogLevel(__DEV__ ? sdk.LOG_LEVEL.DEBUG : sdk.LOG_LEVEL.ERROR);
       Purchases.configure({
         apiKey: monetizationConfig.revenueCatApiKey,
         appUserID: userId,
         automaticDeviceIdentifierCollectionEnabled: false,
         diagnosticsEnabled: __DEV__,
       });
-      await Purchases.setLogLevel(__DEV__ ? sdk.LOG_LEVEL.DEBUG : sdk.LOG_LEVEL.ERROR);
       configuredUserId = userId;
     } else if (configuredUserId !== userId || (await Purchases.getAppUserID()) !== userId) {
       await Purchases.logIn(userId);
@@ -67,51 +73,130 @@ async function initializeForUser(userId: string) {
   return initialization;
 }
 
-async function getStoreProducts(userId: string) {
-  if (!(await initializeForUser(userId))) return [];
+async function loadStoreProducts(userId: string): Promise<{
+  products: PurchasesStoreProduct[];
+  unavailableReason: StoreProductsResult['unavailableReason'];
+}> {
+  if (!monetizationConfig.purchasesEnabled) {
+    return { products: [], unavailableReason: 'not_configured' };
+  }
+  if (!(await initializeForUser(userId))) {
+    return { products: [], unavailableReason: 'sdk_unavailable' };
+  }
   const sdk = await loadPurchasesSdk();
-  if (!sdk) return [];
-  return sdk.default.getProducts(productIds);
+  if (!sdk) return { products: [], unavailableReason: 'sdk_unavailable' };
+
+  try {
+    const products = await sdk.default.getProducts(
+      storeProductIds,
+      sdk.PRODUCT_CATEGORY.SUBSCRIPTION,
+    );
+    return {
+      products,
+      unavailableReason: products.length > 0 ? null : 'product_not_found',
+    };
+  } catch (error) {
+    const reason = classifyPurchaseError(error);
+    return {
+      products: [],
+      unavailableReason: reason === 'cancelled' ? 'unknown' : reason,
+    };
+  }
+}
+
+async function getStoreProducts(userId: string): Promise<StoreProductsResult> {
+  const catalog = await loadStoreProducts(userId);
+  const products = catalog.products.flatMap((product) => {
+    const mapped = toStoreProduct(product);
+    return mapped ? [mapped] : [];
+  });
+  return {
+    products,
+    unavailableReason:
+      products.length > 0 ? null : (catalog.unavailableReason ?? 'product_not_found'),
+  };
 }
 
 function toStoreProduct(product: PurchasesStoreProduct): StoreProduct | null {
-  if (!productIds.includes(product.identifier as MonetizationProductId)) return null;
+  const productId = productIds.find((candidate) =>
+    matchesMonetizationStoreProduct(product.identifier, candidate),
+  );
+  if (!productId) return null;
   return {
-    id: product.identifier as MonetizationProductId,
+    id: productId,
     priceLabel: product.priceString,
   };
 }
 
 export const purchaseProvider: PurchaseProvider = {
   initialize: initializeForUser,
-  listProducts: async (userId) =>
-    (await getStoreProducts(userId)).flatMap((product) => {
-      const mapped = toStoreProduct(product);
-      return mapped ? [mapped] : [];
-    }),
-  purchase: async (userId, productId): Promise<PurchaseResult> => {
+  listProducts: getStoreProducts,
+  purchase: async (userId, productId, replacingProductId): Promise<PurchaseResult> => {
     try {
       const sdk = await loadPurchasesSdk();
-      if (!sdk) return 'unavailable';
-      const product = (await getStoreProducts(userId)).find(
-        (candidate) => candidate.identifier === productId,
+      if (!sdk) return { status: 'unavailable', reason: 'sdk_unavailable' };
+      const catalog = await loadStoreProducts(userId);
+      const product = catalog.products.find((candidate) =>
+        matchesMonetizationStoreProduct(candidate.identifier, productId),
       );
-      if (!product) return 'unavailable';
-      await sdk.default.purchaseStoreProduct(product);
-      return 'purchased';
+      if (!product) {
+        return {
+          status: 'unavailable',
+          reason: catalog.unavailableReason ?? 'product_not_found',
+        };
+      }
+      const productChangeInfo =
+        replacingProductId && Platform.OS === 'android'
+          ? {
+              oldProductIdentifier: getGooglePlayStoreIdentifier(replacingProductId),
+              replacementMode: sdk.STORE_REPLACEMENT_MODE.WITH_TIME_PRORATION,
+            }
+          : undefined;
+      const result = await sdk.default.purchaseStoreProduct(product, productChangeInfo);
+      return {
+        status: 'purchased',
+        activeProductIds: getActiveMonetizationProductIds(result.customerInfo),
+        managementUrl: result.customerInfo.managementURL,
+      };
     } catch (error) {
-      return isCancelled(error) ? 'cancelled' : 'unavailable';
+      const reason = classifyPurchaseError(error);
+      return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
     }
   },
   restore: async (userId): Promise<PurchaseResult> => {
     try {
-      if (!(await initializeForUser(userId))) return 'unavailable';
+      if (!(await initializeForUser(userId))) {
+        return { status: 'unavailable', reason: 'sdk_unavailable' };
+      }
       const sdk = await loadPurchasesSdk();
-      if (!sdk) return 'unavailable';
-      await sdk.default.restorePurchases();
-      return 'purchased';
+      if (!sdk) return { status: 'unavailable', reason: 'sdk_unavailable' };
+      const customerInfo = await sdk.default.restorePurchases();
+      return {
+        status: 'purchased',
+        activeProductIds: getActiveMonetizationProductIds(customerInfo),
+        managementUrl: customerInfo.managementURL,
+      };
     } catch (error) {
-      return isCancelled(error) ? 'cancelled' : 'unavailable';
+      const reason = classifyPurchaseError(error);
+      return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
+    }
+  },
+  getCustomerState: async (userId): Promise<PurchaseResult> => {
+    try {
+      if (!(await initializeForUser(userId))) {
+        return { status: 'unavailable', reason: 'sdk_unavailable' };
+      }
+      const sdk = await loadPurchasesSdk();
+      if (!sdk) return { status: 'unavailable', reason: 'sdk_unavailable' };
+      const customerInfo = await sdk.default.getCustomerInfo();
+      return {
+        status: 'purchased',
+        activeProductIds: getActiveMonetizationProductIds(customerInfo),
+        managementUrl: customerInfo.managementURL,
+      };
+    } catch (error) {
+      const reason = classifyPurchaseError(error);
+      return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
     }
   },
 };

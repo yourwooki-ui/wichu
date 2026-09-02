@@ -9,7 +9,7 @@
 - [x] 프로젝트 Data API 노출 설정과 migration의 명시적 grants 대조 — 새 public 객체 자동 노출 중지, 기존 19개 테이블 RLS·`anon` 차단·`authenticated` 최소 권한 원격 재검증 완료
 - [x] 적용 스키마와 일치하는 typed Supabase client 정의
 - [ ] Supabase 타입 자동 생성 — CLI 프로젝트 연결과 원격 타입 대조는 완료
-- [x] migration/RLS CI — Supabase CLI 2.115.0을 고정하고 main 배포 전에 격리 DB migration 재생, 함수 lint, pgTAP 38개 계약 테스트를 강제
+- [x] migration/RLS CI — Supabase CLI 2.115.0을 고정하고 main 배포 전에 격리 DB migration 재생, 함수 lint, pgTAP 48개 계약 테스트를 강제
 - [x] SQL Editor 적용분을 Supabase CLI migration history에 repair — 원격 객체 표식 확인 후 35개 기존 history 복구, 실제 누락된 rewarded undo migration만 별도 적용
 - [ ] development / preview / production 환경 분리
 - [ ] Expo 57 Metro 도구 체인의 `image-size`/`uuid` upstream advisory 추적 — 현재 강제 수정은 Expo 53으로 역다운그레이드하므로 적용 금지, 앱 사용자 업로드 런타임 경로와는 분리됨
@@ -44,7 +44,7 @@
 - [x] 신고 triage와 프로필 심사용 최소 운영 센터 — DB role 기반 진입, queue/approve/reject/resolve 전용 RPC 연결
 - [ ] Push 등록과 Match/메시지 deep link — 권한 재진입 token 갱신, Match/메시지 outbox, Edge Function 발송, 티켓/receipt 추적, `DeviceNotRegistered` 자동 비활성화, 안전한 앱 딥링크까지 완료; 15분 receipt 전용 Cron과 EAS 실기기 수신 QA 대기
 - [x] 개인정보 최소화, 민감 로그 redaction, rate limit — 좌표 30일·삭제 감사 1년·완료 Push 30일 자동 파기와 공개 정책 일치 검증 완료
-- [ ] 크래시·API 실패·핵심 funnel 관측성 연결
+- [ ] 크래시·API 실패·핵심 funnel 관측성 연결 — 개인정보 없는 앱 오류·구매 시작/취소/실패/완료/복원 이벤트와 UUID 세션 상관관계는 연결, 네이티브 crash symbolication/alert 대기
 
 ## P0 — 화면 구조 구현
 
@@ -60,6 +60,7 @@
 - [x] Gold 채팅 사진 묶음 전송 — private Storage, 서버 Gold/매치 검증, 최대 5장 선택·진행·재전송·전체 보기와 채팅 목록 미리보기 연결
 - [x] Chat List UI: 온라인 목록 + 검색 + unread/마지막 메시지/번역 상태
 - [x] Chat Room UI: 실제 메시지 조회·낙관적 전송 + 번역 표시 + 신고/차단 안전 메뉴
+- [x] Chat Room 진입 최적화: 목록 캐시로 상대 프로필 헤더를 즉시 표시하고 해당 Match 1건만 읽는 전용 RPC·구버전 DB 폴백 연결
 - [x] Matches/Chat 원격 데이터 연결: 매치·메시지·Realtime·unread·실패 재전송 및 선택 번역 Function 배포, DeepL secret 등록과 실번역 QA 완료
 - [x] Me: 실제 프로필/심사 상태/완성도/수정 진입
 - [x] 일반 프로필 편집을 기본/추가/취향/소개/사진으로 세분화하고 선택형 추가 정보·상세 공개 구조 구현
@@ -76,9 +77,9 @@
 
 ## P1 — 수익화와 품질
 
-- [ ] 광고 provider 연결 및 빈도/배치 정책 — AdMob SDK·UMP·SSV 공개키 검증, 12 Swipe/10분/3회 정책과 Gold/Ad-Free 제외까지 구현; AdMob 앱·unit 생성, app-ads.txt 승인, 실기기 callback QA 대기
+- [ ] 광고 provider 연결 및 빈도/배치 정책 — AdMob SDK·UMP·SSV 공개키 검증, 12 Swipe/10분/3회 Discover 슬롯과 프로필·채팅 10회/10분/5회 탐색 슬롯, 사전 로드·Gold/Ad-Free 제외까지 구현; app-ads.txt 승인과 실기기 callback QA 대기
 - [ ] Apple/Google Ad-Free·Gold 상품, restore, entitlement 검증 — RevenueCat SDK·현지화 가격·구매/복원·인증 webhook·중복/역순 방지 구현; Play/App Store 상품·RevenueCat 프로젝트 생성과 sandbox 실기기 QA 대기
-- [ ] 접근성 및 10개 출시 locale 실기기 QA — 한국어·영어·베트남어·일본어·프랑스어·스페인어·포르투갈어(브라질)·중국어(대만)·인도네시아어·페르시아어의 앱/OS 언어 선언, 권한 문구, 기기 언어 자동 감지, 설정 변경과 RTL 구조 완료. 포르투갈어 관리 키 누락 0건, 10개 언어 로그인·비밀번호 재설정·최초 권한 안내 번역 및 자동 회귀 검사 완료. Discover/Matches/Chat/Shop/Me와 편집·운영 화면의 기존 하드코딩 문구 이전, 스크린리더·줄바꿈 실기기 QA 대기
+- [ ] 접근성 및 10개 출시 locale 실기기 QA — 한국어·영어·베트남어·일본어·프랑스어·스페인어·포르투갈어(브라질)·중국어(대만)·인도네시아어·페르시아어의 앱/OS 언어 선언, 권한 문구, 기기 언어 자동 감지, 설정 변경과 RTL 구조 완료. 포르투갈어 관리 키 누락 0건, 10개 언어 로그인·비밀번호 재설정·최초 권한 안내·Chat 목록·Shop·구매/복원 화면 번역 키와 자동 회귀 검사 완료. Discover/Matches/Chat Room/Me와 편집·운영 화면의 기존 하드코딩 문구 이전, 비영어 Shop 세부 카피 감수, 스크린리더·줄바꿈 실기기 QA 대기
 - [ ] 단위·통합·RLS·핵심 E2E 테스트 — 단위 테스트와 원격 롤백형 `p0_rls_contract.sql` 38개 통과, 격리 DB CI 자동 실행 완료, 모바일 E2E 대기
 - [ ] 저사양 Android/iOS 실기기 성능 프로파일링
 - [x] Android R8 코드 축소·리소스 축소·AGP 8.12 최적 리소스 축소 설정과 대화면 하단 내비게이션 폭 제한

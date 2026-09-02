@@ -55,7 +55,9 @@ export const monetizationConfig = Object.freeze({
     (testMode || validAdUnitId(rewardedUndoAdUnitId)),
   interstitialAdsEnabled:
     enabled(process.env.EXPO_PUBLIC_INTERSTITIAL_ADS_ENABLED) &&
-    (testMode || validAdUnitId(discoverInterstitialAdUnitId)),
+    (testMode ||
+      validAdUnitId(discoverInterstitialAdUnitId) ||
+      validAdUnitId(browseInterstitialAdUnitId)),
 });
 
 export type MonetizationConfiguration = typeof monetizationConfig;

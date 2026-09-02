@@ -4,4 +4,6 @@ export const adsProvider: AdsProvider = {
   initialize: async () => false,
   showInterstitial: async () => undefined,
   showRewardedUndo: async () => 'unavailable',
+  getPrivacyOptionsStatus: async () => 'unavailable',
+  showPrivacyOptions: async () => false,
 };

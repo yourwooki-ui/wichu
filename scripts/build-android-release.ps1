@@ -8,6 +8,43 @@ $credentialsPath = Join-Path $workspace 'credentials.json'
 $androidPath = Join-Path $workspace 'android'
 $initScript = Join-Path $PSScriptRoot 'android-release-signing.gradle'
 
+function Import-LocalExpoEnvironment {
+  param([string]$Path)
+
+  $imported = @()
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $imported }
+
+  foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
+    if ($line -notmatch '^\s*(EXPO_PUBLIC_[A-Za-z0-9_]+)\s*=\s*(.*)$') { continue }
+
+    $name = $matches[1]
+    if (-not [string]::IsNullOrWhiteSpace([string](Get-Item -Path "Env:$name" -ErrorAction SilentlyContinue).Value)) {
+      continue
+    }
+
+    $value = $matches[2].Trim()
+    if (
+      $value.Length -ge 2 -and
+      (($value.StartsWith('"') -and $value.EndsWith('"')) -or
+        ($value.StartsWith("'") -and $value.EndsWith("'")))
+    ) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+
+    Set-Item -Path "Env:$name" -Value $value
+    $imported += $name
+  }
+
+  return $imported
+}
+
+# Expo evaluates app.config.js before its normal dotenv output appears. Load only
+# public app variables up front so local production prebuilds use the same values
+# as EAS. Private entries such as deployment tokens are intentionally ignored.
+$importedExpoEnvironment = Import-LocalExpoEnvironment (Join-Path $workspace '.env.local')
+
+try {
+
 if (-not (Test-Path -LiteralPath $credentialsPath -PathType Leaf)) {
   throw 'credentials.json is required for the Play upload signing key.'
 }
@@ -31,12 +68,29 @@ if (-not (Test-Path -LiteralPath $keystorePath -PathType Leaf)) {
 }
 
 if ($Prebuild) {
-  Push-Location $workspace
+  $previousPrebuildProfile = $env:EAS_BUILD_PROFILE
+  $previousPrebuildPlatform = $env:EAS_BUILD_PLATFORM
   try {
-    & npx.cmd expo prebuild --platform android --no-install
-    if ($LASTEXITCODE -ne 0) { throw "Expo prebuild failed with exit code $LASTEXITCODE." }
+    $env:EAS_BUILD_PROFILE = 'production'
+    $env:EAS_BUILD_PLATFORM = 'android'
+    Push-Location $workspace
+    try {
+      & npx.cmd expo prebuild --platform android --no-install
+      if ($LASTEXITCODE -ne 0) { throw "Expo prebuild failed with exit code $LASTEXITCODE." }
+    } finally {
+      Pop-Location
+    }
   } finally {
-    Pop-Location
+    if ($null -eq $previousPrebuildProfile) {
+      Remove-Item -Path 'Env:EAS_BUILD_PROFILE' -ErrorAction SilentlyContinue
+    } else {
+      $env:EAS_BUILD_PROFILE = $previousPrebuildProfile
+    }
+    if ($null -eq $previousPrebuildPlatform) {
+      Remove-Item -Path 'Env:EAS_BUILD_PLATFORM' -ErrorAction SilentlyContinue
+    } else {
+      $env:EAS_BUILD_PLATFORM = $previousPrebuildPlatform
+    }
   }
 }
 
@@ -45,6 +99,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $androidPath 'gradlew.bat') -PathTyp
 }
 
 $previousEnvironment = @{
+  EAS_BUILD_PLATFORM = $env:EAS_BUILD_PLATFORM
+  EAS_BUILD_PROFILE = $env:EAS_BUILD_PROFILE
   NODE_ENV = $env:NODE_ENV
   WICHU_UPLOAD_STORE_FILE = $env:WICHU_UPLOAD_STORE_FILE
   WICHU_UPLOAD_STORE_PASSWORD = $env:WICHU_UPLOAD_STORE_PASSWORD
@@ -53,6 +109,8 @@ $previousEnvironment = @{
 }
 
 try {
+  $env:EAS_BUILD_PLATFORM = 'android'
+  $env:EAS_BUILD_PROFILE = 'production'
   $env:NODE_ENV = 'production'
   $env:WICHU_UPLOAD_STORE_FILE = $keystorePath
   $env:WICHU_UPLOAD_STORE_PASSWORD = [string]$signing.keystorePassword
@@ -87,7 +145,7 @@ if (-not $versionMatch.Success) { throw 'Could not read Android versionCode.' }
 
 $artifactDirectory = Join-Path $workspace 'artifacts'
 New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
-$artifactPath = Join-Path $artifactDirectory "WICHU-v$($versionMatch.Groups[1].Value)-closed-test.aab"
+$artifactPath = Join-Path $artifactDirectory "WICHU-v$($versionMatch.Groups[1].Value)-open-test.aab"
 Copy-Item -LiteralPath $bundlePath -Destination $artifactPath -Force
 
 $artifact = Get-Item -LiteralPath $artifactPath
@@ -95,3 +153,8 @@ $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $artifactPath
 Write-Output "AAB: $($artifact.FullName)"
 Write-Output "SizeMB: $([math]::Round($artifact.Length / 1MB, 2))"
 Write-Output "SHA256: $($hash.Hash)"
+} finally {
+  foreach ($name in $importedExpoEnvironment) {
+    Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
+  }
+}

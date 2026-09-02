@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
+import { createAnalyticsSessionId } from '@/services/product-analytics-session';
 
 export type ProductEventName =
   | 'app_opened'
@@ -15,14 +16,19 @@ export type ProductEventName =
   | 'profile_reported'
   | 'profile_blocked'
   | 'date_plan_shared'
-  | 'purchase_viewed';
+  | 'purchase_viewed'
+  | 'purchase_started'
+  | 'purchase_cancelled'
+  | 'purchase_failed'
+  | 'purchase_completed'
+  | 'purchase_restored';
 
 type SafeEventValue = boolean | number | string;
 type ProductEventProperties = Record<string, SafeEventValue | null | undefined>;
 
-// 분석용 상관관계 ID에는 암호학적 UUID가 필요하지 않다. 네이티브 Crypto 모듈을
-// 앱 모듈 평가 시점에 호출하지 않아, 관측 기능이 실행 자체를 막을 수 없게 한다.
-const sessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+// DB 컬럼은 UUID를 요구하지만 분석 상관관계 ID에는 암호학적 난수가 필요하지 않다.
+// 순수 JS로 형식만 맞춰 네이티브 Crypto를 앱 모듈 평가 시점에 호출하지 않는다.
+let sessionId: string | null = null;
 const SAFE_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const MAX_STRING_LENGTH = 80;
 
@@ -46,7 +52,7 @@ export const productAnalyticsService = {
           event_name: eventName,
           properties: sanitizeProperties(properties),
           route: safeRoute,
-          session_id: sessionId,
+          session_id: (sessionId ??= createAnalyticsSessionId()),
         })
         .then(
           () => undefined,

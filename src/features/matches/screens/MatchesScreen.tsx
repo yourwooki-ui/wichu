@@ -34,6 +34,7 @@ import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -110,6 +111,7 @@ function includeReviewSamples(
 export function MatchesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigateWithAdGate = useAdGatedNavigation();
   const entitlement = usePassEntitlement();
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
@@ -232,12 +234,14 @@ export function MatchesScreen() {
         ? (realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`)
         : undefined;
     const matchQuery = matchId ? `&matchId=${encodeURIComponent(matchId)}` : '';
-    router.push(`/profile/${profile.id}?context=${context}${matchQuery}`);
+    void navigateWithAdGate(`/profile/${profile.id}?context=${context}${matchQuery}`);
   };
 
   const openChat = (profile: ConnectionProfile) => {
     const realMatch = matchesQuery.data?.find((match) => match.profile.id === profile.id);
-    router.push(`/chat/${realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`);
+    void navigateWithAdGate(
+      `/chat/${realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
+    );
   };
 
   const selectCategory = (nextCategory: MatchCategory) => {

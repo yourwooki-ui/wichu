@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import type { TFunction } from 'i18next';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Linking,
@@ -22,18 +24,45 @@ import { palette, pressFeedback, radius, touchSlop, typography } from '@/constan
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { purchaseService } from '@/features/monetization/services/purchase-service';
+import type { PurchaseUnavailableReason } from '@/features/monetization/services/types';
+import { getReplacementProductId } from '@/features/monetization/utils/purchase-state';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const GOLD_BENEFITS = [
-  { label: '골드 다이아몬드 배지와 프로필 테두리', icon: illustratedIcons.goldPremium },
-  { label: '내 프로필 방문자 확인', icon: illustratedIcons.connections },
-  { label: 'Discover 노출 우선순위', icon: illustratedIcons.discoveryVisible },
-  { label: '모든 광고 제거', icon: illustratedIcons.adFree },
-  { label: '광고 없이 무제한 되돌리기', icon: illustratedIcons.rewind },
+  { labelKey: 'shop.benefit.profile.title', icon: illustratedIcons.goldPremium },
+  { labelKey: 'shop.benefit.visitors.title', icon: illustratedIcons.connections },
+  { labelKey: 'shop.benefit.exposure.title', icon: illustratedIcons.discoveryVisible },
+  { labelKey: 'shop.benefit.adFree.title', icon: illustratedIcons.adFree },
+  { labelKey: 'shop.benefit.rewind.title', icon: illustratedIcons.rewind },
 ] as const;
 
-const AD_FREE_BENEFITS = [{ label: '자동 노출 광고 제거', icon: illustratedIcons.adFree }] as const;
+const AD_FREE_BENEFITS = [
+  { labelKey: 'shop.benefit.adFree.title', icon: illustratedIcons.adFree },
+] as const;
+
+function purchaseFailureCopy(reason: PurchaseUnavailableReason, t: TFunction) {
+  switch (reason) {
+    case 'network':
+      return t('shop.failure.network');
+    case 'not_allowed':
+      return t('shop.failure.notAllowed');
+    case 'payment_pending':
+      return t('shop.failure.pending');
+    case 'account_conflict':
+      return t('shop.failure.conflict');
+    case 'product_not_found':
+      return t('shop.failure.missing');
+    case 'not_configured':
+    case 'sdk_unavailable':
+      return t('shop.failure.sdk');
+    case 'store_unavailable':
+      return t('shop.failure.store');
+    default:
+      return t('shop.failure.unknown');
+  }
+}
 
 /** 결제 연동 전에는 직접 접근도 막는다 (딥링크·뒤로가기 포함). */
 export default function PassDetailRoute() {
@@ -43,11 +72,13 @@ export default function PassDetailRoute() {
 
 function PassDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { product } = useLocalSearchParams<{ product?: string }>();
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const adFreeOnly = product === 'ad-free';
   const [purchasePending, setPurchasePending] = useState(false);
+  const [managementUrl, setManagementUrl] = useState<string | null>(null);
   const selectedProduct = adFreeOnly ? AD_FREE_PRODUCT : GOLD_PRODUCT;
 
   useEffect(() => {
@@ -59,39 +90,102 @@ function PassDetailScreen() {
   }, [adFreeOnly]);
   const alreadyIncluded =
     entitlement.data?.tier === 'gold' || (adFreeOnly && entitlement.data?.tier === 'ad_free');
+  const replacingProductId = getReplacementProductId(entitlement.data?.tier, selectedProduct.id);
   const products = useQuery({
     enabled: Boolean(session?.user.id),
     queryFn: () => purchaseService.listProducts(session!.user.id),
     queryKey: ['store-products', session?.user.id],
+    retry: 2,
     staleTime: 5 * 60_000,
   });
-  const storeProduct = products.data?.find((item) => item.id === selectedProduct.id);
+  const storeProduct = products.data?.products.find((item) => item.id === selectedProduct.id);
+  const productUnavailableReason = storeProduct
+    ? null
+    : (products.data?.unavailableReason ?? 'product_not_found');
+
+  useEffect(() => {
+    const error = products.error ?? entitlement.error;
+    if (error) reportOperationalError('purchase_state_query', error, '/ad-free');
+  }, [entitlement.error, products.error]);
 
   const waitForServerEntitlement = async () => {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
       const refreshed = await entitlement.refetch();
       const tier = refreshed.data?.tier;
       if (tier === 'gold' || (adFreeOnly && tier === 'ad_free')) return true;
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
     return false;
   };
 
   const handlePurchase = async () => {
     if (!session?.user.id || !storeProduct || purchasePending) return;
+    if (!entitlement.isSuccess) {
+      Alert.alert(t('shop.pass.stateFirstTitle'), t('shop.pass.stateFirstBody'));
+      return;
+    }
     setPurchasePending(true);
+    productAnalyticsService.track(
+      'purchase_started',
+      { product: selectedProduct.id, replacing_product: replacingProductId ?? 'none' },
+      '/ad-free',
+    );
     try {
-      const result = await purchaseService.purchase(session.user.id, selectedProduct.id);
-      if (result === 'cancelled') return;
-      if (result === 'unavailable') {
-        Alert.alert('결제를 시작하지 못했어요', '잠시 후 다시 시도해 주세요.');
+      const result = await purchaseService.purchase(
+        session.user.id,
+        selectedProduct.id,
+        replacingProductId,
+      );
+      if (result.status === 'cancelled') {
+        productAnalyticsService.track(
+          'purchase_cancelled',
+          { product: selectedProduct.id },
+          '/ad-free',
+        );
         return;
       }
+      if (result.status === 'unavailable') {
+        productAnalyticsService.track(
+          'purchase_failed',
+          { product: selectedProduct.id, reason: result.reason },
+          '/ad-free',
+        );
+        Alert.alert(
+          result.reason === 'payment_pending'
+            ? t('shop.pass.pendingTitle')
+            : t('shop.pass.purchaseFailedTitle'),
+          purchaseFailureCopy(result.reason, t),
+        );
+        return;
+      }
+      setManagementUrl(result.managementUrl);
+      const storeConfirmed = result.activeProductIds.includes(selectedProduct.id);
       const confirmed = await waitForServerEntitlement();
-      Alert.alert(
-        confirmed ? '이용권이 활성화됐어요' : '구매를 확인하고 있어요',
-        confirmed ? '지금부터 혜택이 적용됩니다.' : '스토어 확인이 끝나면 자동으로 적용됩니다.',
+      productAnalyticsService.track(
+        'purchase_completed',
+        {
+          product: selectedProduct.id,
+          server_confirmed: confirmed,
+          store_confirmed: storeConfirmed,
+        },
+        '/ad-free',
       );
+      Alert.alert(
+        confirmed ? t('shop.pass.activeTitle') : t('shop.pass.verifyingTitle'),
+        confirmed
+          ? t('shop.pass.activeBody')
+          : storeConfirmed
+            ? t('shop.pass.paidAwaitBody')
+            : t('shop.pass.storeAwaitBody'),
+      );
+    } catch (error) {
+      reportOperationalError('purchase_action', error, '/ad-free');
+      productAnalyticsService.track(
+        'purchase_failed',
+        { product: selectedProduct.id, reason: 'unexpected_error' },
+        '/ad-free',
+      );
+      Alert.alert(t('shop.pass.purchaseFailedTitle'), purchaseFailureCopy('unknown', t));
     } finally {
       setPurchasePending(false);
     }
@@ -102,24 +196,59 @@ function PassDetailScreen() {
     setPurchasePending(true);
     try {
       const result = await purchaseService.restore(session.user.id);
-      if (result === 'unavailable') {
-        Alert.alert('구매 내역을 불러오지 못했어요', '잠시 후 다시 시도해 주세요.');
+      if (result.status === 'cancelled') return;
+      if (result.status === 'unavailable') {
+        productAnalyticsService.track(
+          'purchase_failed',
+          { product: 'restore', reason: result.reason },
+          '/ad-free',
+        );
+        Alert.alert(t('shop.pass.restoreFailedTitle'), purchaseFailureCopy(result.reason, t));
+        return;
+      }
+      setManagementUrl(result.managementUrl);
+      if (result.activeProductIds.length === 0) {
+        Alert.alert(t('shop.pass.noRestoreTitle'), t('shop.pass.noRestoreBody'));
         return;
       }
       const confirmed = await waitForServerEntitlement();
-      Alert.alert(confirmed ? '구매 내역을 복원했어요' : '복원할 활성 이용권이 없어요');
+      productAnalyticsService.track(
+        'purchase_restored',
+        { server_confirmed: confirmed },
+        '/ad-free',
+      );
+      Alert.alert(
+        confirmed ? t('shop.pass.restoredTitle') : t('shop.pass.restoreVerifyingTitle'),
+        confirmed ? t('shop.pass.restoredBody') : t('shop.pass.serverAwaitBody'),
+      );
+    } catch (error) {
+      reportOperationalError('purchase_restore', error, '/ad-free');
+      productAnalyticsService.track(
+        'purchase_failed',
+        { product: 'restore', reason: 'unexpected_error' },
+        '/ad-free',
+      );
+      Alert.alert(t('shop.pass.restoreFailedTitle'), purchaseFailureCopy('unknown', t));
     } finally {
       setPurchasePending(false);
     }
   };
 
-  const openSubscriptionManagement = () => {
-    const url =
+  const openSubscriptionManagement = async () => {
+    let url = managementUrl;
+    if (!url && session?.user.id) {
+      const state = await purchaseService.getCustomerState(session.user.id);
+      if (state.status === 'purchased') {
+        url = state.managementUrl;
+        setManagementUrl(state.managementUrl);
+      }
+    }
+    url ??=
       Platform.OS === 'ios'
         ? 'https://apps.apple.com/account/subscriptions'
         : 'https://play.google.com/store/account/subscriptions?package=app.wichu.mobile';
     void Linking.openURL(url).catch(() => {
-      Alert.alert('구독 설정을 열지 못했어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('shop.pass.manageFailedTitle'), t('shop.pass.retryBody'));
     });
   };
 
@@ -127,7 +256,7 @@ function PassDetailScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('shop.pass.back')}
           accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.back}
@@ -146,19 +275,17 @@ function PassDetailScreen() {
         </View>
         <Text style={styles.eyebrow}>{adFreeOnly ? 'WICHU AD-FREE' : 'WICHU GOLD PASS'}</Text>
         <Text style={styles.title}>
-          {adFreeOnly ? '광고 없이 깔끔하게' : '더 빛나고, 먼저 발견되게'}
+          {adFreeOnly ? t('shop.pass.adFreeTitle') : t('shop.pass.goldTitle')}
         </Text>
         <Text style={styles.description}>
-          {adFreeOnly
-            ? '핵심 기능은 그대로 유지하고 앱 내 광고만 제거해요.'
-            : '프로필 표현과 발견 기회를 강화하는 WICHU의 프리미엄 패스예요.'}
+          {adFreeOnly ? t('shop.pass.adFreeBody') : t('shop.pass.goldBody')}
         </Text>
 
         <View style={styles.benefits}>
           {(adFreeOnly ? AD_FREE_BENEFITS : GOLD_BENEFITS).map((benefit) => (
-            <View key={benefit.label} style={styles.benefitRow}>
+            <View key={benefit.labelKey} style={styles.benefitRow}>
               <IllustratedIcon size={36} source={benefit.icon} />
-              <Text style={styles.benefitText}>{benefit.label}</Text>
+              <Text style={styles.benefitText}>{t(benefit.labelKey)}</Text>
               <View style={[styles.check, !adFreeOnly && styles.checkGold]}>
                 <Ionicons
                   color={adFreeOnly ? palette.white : '#4A3500'}
@@ -171,26 +298,73 @@ function PassDetailScreen() {
         </View>
 
         <View style={styles.priceCard}>
-          <Text style={styles.priceLabel}>월간 이용권</Text>
+          <Text style={styles.priceLabel}>{t('shop.pass.monthly')}</Text>
           <Text style={styles.price}>
             {storeProduct?.priceLabel ?? selectedProduct.fallbackPriceLabelKo}
           </Text>
           <Text style={styles.priceHint}>
-            {adFreeOnly ? '매월 자동 갱신 · 언제든 취소 가능' : '자동 갱신 · 언제든 취소 가능'}
+            {adFreeOnly ? t('shop.pass.renewAdFree') : t('shop.pass.renewGold')}
           </Text>
         </View>
 
+        {!products.isPending && !storeProduct ? (
+          <View accessibilityRole="alert" style={styles.storeStatus}>
+            <Ionicons color="#9A6B00" name="information-circle" size={20} />
+            <Text style={styles.storeStatusText}>
+              {purchaseFailureCopy(productUnavailableReason ?? 'unknown', t)}
+            </Text>
+          </View>
+        ) : null}
+
+        {entitlement.isError ? (
+          <View accessibilityRole="alert" style={styles.entitlementStatus}>
+            <Ionicons color="#9A243A" name="alert-circle" size={20} />
+            <View style={styles.entitlementStatusCopy}>
+              <Text style={styles.entitlementStatusTitle}>{t('shop.pass.statusFailed')}</Text>
+              <Text style={styles.entitlementStatusText}>{t('shop.pass.statusHold')}</Text>
+            </View>
+            <Pressable
+              accessibilityLabel={t('shop.retry')}
+              accessibilityRole="button"
+              onPress={() => entitlement.refetch()}
+              style={({ pressed }) => [styles.entitlementRetry, pressed && pressFeedback.control]}
+            >
+              <Text style={styles.entitlementRetryText}>{t('shop.retry')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.purchaseSlot}>
           <PrimaryButton
-            disabled={!alreadyIncluded && !storeProduct}
-            label={alreadyIncluded ? '이용권 관리' : storeProduct ? '구독하기' : '상품 확인 중'}
-            loading={purchasePending}
-            onPress={alreadyIncluded ? openSubscriptionManagement : handlePurchase}
+            disabled={!alreadyIncluded && (products.isPending || !entitlement.isSuccess)}
+            label={
+              alreadyIncluded
+                ? t('shop.pass.manage')
+                : entitlement.isPending
+                  ? t('shop.pass.checking')
+                  : entitlement.isError
+                    ? t('shop.pass.checkRequired')
+                    : storeProduct
+                      ? replacingProductId
+                        ? t('shop.pass.upgrade')
+                        : t('shop.pass.subscribe')
+                      : products.isPending
+                        ? t('shop.pass.productChecking')
+                        : t('shop.pass.productRetry')
+            }
+            loading={purchasePending || products.isFetching}
+            onPress={
+              alreadyIncluded
+                ? () => void openSubscriptionManagement()
+                : storeProduct
+                  ? handlePurchase
+                  : () => void products.refetch()
+            }
             variant={alreadyIncluded ? 'secondary' : 'primary'}
           />
         </View>
         <Pressable
-          accessibilityLabel="구매 내역 복원"
+          accessibilityLabel={t('shop.pass.restore')}
           accessibilityRole="button"
           accessibilityState={{ busy: purchasePending, disabled: purchasePending }}
           disabled={purchasePending}
@@ -199,11 +373,9 @@ function PassDetailScreen() {
           style={({ pressed }) => [styles.restore, pressed && pressFeedback.control]}
         >
           <IllustratedIcon size={24} source={illustratedIcons.purchase} />
-          <Text style={styles.restoreText}>구매 복원</Text>
+          <Text style={styles.restoreText}>{t('shop.pass.restore')}</Text>
         </Pressable>
-        <Text style={styles.legal}>
-          구매 전 가격, 갱신 주기와 취소 조건을 App Store 또는 Google Play 결제창에서 확인합니다.
-        </Text>
+        <Text style={styles.legal}>{t('shop.pass.billingNotice')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -267,6 +439,50 @@ const styles = StyleSheet.create({
   price: { ...typography.heading, color: palette.ink, marginTop: 6 },
   priceHint: { ...typography.caption, color: palette.inkMuted, marginTop: 4 },
   purchaseSlot: { alignSelf: 'stretch', marginTop: 14 },
+  storeStatus: {
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFF8E6',
+    borderColor: '#F3D99B',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+  },
+  storeStatusText: {
+    ...typography.caption,
+    color: '#725000',
+    flex: 1,
+    lineHeight: 18,
+  },
+  entitlementStatus: {
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFF1F4',
+    borderColor: '#F4C4CE',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: 12,
+    padding: 12,
+  },
+  entitlementStatusCopy: { flex: 1 },
+  entitlementStatusTitle: { color: '#76192D', fontSize: 12, fontWeight: '900' },
+  entitlementStatusText: { color: '#8D4253', fontSize: 11, lineHeight: 16, marginTop: 3 },
+  entitlementRetry: {
+    alignItems: 'center',
+    borderColor: '#D88A9B',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 34,
+    paddingHorizontal: 11,
+  },
+  entitlementRetryText: { color: '#76192D', fontSize: 11, fontWeight: '900' },
   restore: {
     alignItems: 'center',
     flexDirection: 'row',

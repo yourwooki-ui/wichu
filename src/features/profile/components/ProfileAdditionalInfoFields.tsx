@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/FormField';
@@ -26,6 +27,7 @@ export function ProfileAdditionalInfoFields({
   section,
   value,
 }: ProfileAdditionalInfoFieldsProps) {
+  const { t } = useTranslation();
   const update = <Key extends keyof ProfileDetails>(key: Key, next: ProfileDetails[Key]) => {
     onChange({ ...value, [key]: next });
   };
@@ -34,37 +36,37 @@ export function ProfileAdditionalInfoFields({
     return (
       <View style={styles.container}>
         <View style={styles.sectionIntro}>
-          <Text style={styles.sectionIntroTitle}>나를 설명하는 기본 정보</Text>
-          <Text style={styles.sectionIntroBody}>학력, 직장과 키는 선택해서 공개할 수 있어요.</Text>
+          <Text style={styles.sectionIntroTitle}>{t('profileEditor.details.introTitle')}</Text>
+          <Text style={styles.sectionIntroBody}>{t('profileEditor.details.introBody')}</Text>
         </View>
         <View style={styles.card}>
           <View style={styles.fields}>
             <FormField
               autoCapitalize="words"
-              label="직장·하는 일"
+              label={t('profileEditor.details.occupation')}
               maxLength={80}
               onChangeText={(next) => update('occupation', next)}
-              placeholder="예: 브랜드 디자이너"
+              placeholder={t('profileEditor.details.occupationPlaceholder')}
               value={value.occupation}
             />
             <FormField
-              hint="120~220cm 사이에서 입력할 수 있어요."
+              hint={t('profileEditor.details.heightHint')}
               inputMode="numeric"
               keyboardType="number-pad"
-              label="키"
+              label={t('profileEditor.details.height')}
               maxLength={3}
               onChangeText={(next) => {
                 const digits = next.replace(/\D/g, '').slice(0, 3);
                 update('heightCm', digits ? Number(digits) : null);
               }}
-              placeholder="예: 170"
+              placeholder={t('profileEditor.details.heightPlaceholder')}
               value={value.heightCm ? String(value.heightCm) : ''}
             />
           </View>
         </View>
         <ChoiceSection
           icon="school-outline"
-          label="학력"
+          label={t('profileEditor.details.education')}
           onChange={(next) => update('educationLevel', next as ProfileDetails['educationLevel'])}
           options={EDUCATION_OPTIONS}
           value={value.educationLevel}
@@ -80,10 +82,8 @@ export function ProfileAdditionalInfoFields({
           <IllustratedIcon size={26} source={illustratedIcons.discoveryVisible} />
         </View>
         <View style={styles.noticeCopy}>
-          <Text style={styles.noticeTitle}>원하는 정보만 공개해요</Text>
-          <Text style={styles.noticeBody}>
-            모든 항목은 선택사항이며, 입력한 정보만 상대 프로필에 표시됩니다.
-          </Text>
+          <Text style={styles.noticeTitle}>{t('profileEditor.details.privacyTitle')}</Text>
+          <Text style={styles.noticeBody}>{t('profileEditor.details.privacyBody')}</Text>
         </View>
       </View>
 
@@ -96,28 +96,28 @@ export function ProfileAdditionalInfoFields({
       />
       <ChoiceSection
         icon="wine-outline"
-        label="음주"
+        label={t('profileEditor.details.drinking')}
         onChange={(next) => update('drinking', next as ProfileDetails['drinking'])}
         options={DRINKING_OPTIONS}
         value={value.drinking}
       />
       <ChoiceSection
         icon="ban-outline"
-        label="흡연"
+        label={t('profileEditor.details.smoking')}
         onChange={(next) => update('smoking', next as ProfileDetails['smoking'])}
         options={SMOKING_OPTIONS}
         value={value.smoking}
       />
       <ChoiceSection
         icon="barbell-outline"
-        label="운동"
+        label={t('profileEditor.details.exercise')}
         onChange={(next) => update('exercise', next as ProfileDetails['exercise'])}
         options={EXERCISE_OPTIONS}
         value={value.exercise}
       />
       <ChoiceSection
         icon="paw-outline"
-        label="반려동물"
+        label={t('profileEditor.details.pets')}
         onChange={(next) => update('pets', next as ProfileDetails['pets'])}
         options={PET_OPTIONS}
         value={value.pets}
@@ -139,6 +139,8 @@ function ChoiceSection({
   options: readonly { label: string; value: string }[];
   value: string | null;
 }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.card}>
       <View style={styles.choiceHeading}>
@@ -146,7 +148,7 @@ function ChoiceSection({
           <Ionicons color={palette.ink} name={icon} size={17} />
         </View>
         <Text style={styles.choiceTitle}>{label}</Text>
-        <Text style={styles.optional}>선택</Text>
+        <Text style={styles.optional}>{t('profileEditor.details.optional')}</Text>
       </View>
       <View accessibilityRole="radiogroup" style={styles.options}>
         {options.map((option) => {
@@ -164,7 +166,9 @@ function ChoiceSection({
               ]}
             >
               <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
-                {option.label}
+                {option.value.length <= 4 && option.value.toUpperCase() === option.value
+                  ? option.label
+                  : t(`me.detail.values.${option.value}`, { defaultValue: option.label })}
               </Text>
             </Pressable>
           );

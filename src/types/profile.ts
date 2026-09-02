@@ -2,6 +2,8 @@ export type Gender = 'woman' | 'man' | 'nonbinary' | 'other';
 
 export type ProfileLanguageLevel = 'native' | 'beginner' | 'intermediate' | 'advanced' | 'fluent';
 
+export type ProfilePhotoReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+
 export type ProfileLanguage = {
   code: string;
   level: ProfileLanguageLevel;
@@ -33,6 +35,7 @@ export type Profile = {
   interests: string[];
   connectionGoals?: string[];
   photos: string[];
+  photoReviewStatuses?: ProfilePhotoReviewStatus[];
   lastActiveAt: string | null;
   isPhotoReviewed?: boolean;
   isNew?: boolean;

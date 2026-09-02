@@ -29,40 +29,17 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { reportOperationalError } from '@/services/operational-error-service';
 
-type ReviewStatus = 'approved' | 'draft' | 'pending' | 'rejected';
-
-const TAG_LABELS: Record<string, string> = {
-  dating: '데이트',
-  friends: '새로운 친구',
-  language_exchange: '언어 교환',
-  travel_buddy: '여행 친구',
-  calm: '차분한',
-  playful: '유쾌한',
-  curious: '호기심 많은',
-  active: '활동적인',
-  creative: '창의적인',
-  spontaneous: '즉흥적인',
-  warm: '다정한',
-  independent: '독립적인',
-  early_bird: '아침형',
-  night_owl: '저녁형',
-  flexible: '유연한',
-  talkative: '대화를 이끄는',
-  listener: '잘 들어주는',
-  balanced: '균형 잡힌',
-};
-
-const INTEREST_LABELS: Record<string, string> = {
-  Music: '음악',
-  Travel: '여행',
-  Photography: '사진',
-  Cafe: '카페',
-  Movies: '영화',
-  Fitness: '운동',
-  Gaming: '게임',
-  Fashion: '패션',
-  'Language Exchange': '언어 교환',
-  Food: '음식',
+const INTEREST_KEYS: Record<string, string> = {
+  Music: 'music',
+  Travel: 'travel',
+  Photography: 'photography',
+  Cafe: 'cafe',
+  Movies: 'movies',
+  Fitness: 'fitness',
+  Gaming: 'gaming',
+  Fashion: 'fashion',
+  'Language Exchange': 'language-exchange',
+  Food: 'food',
 };
 
 export function MeScreen() {
@@ -145,15 +122,15 @@ export function MeScreen() {
         <View style={styles.emptyIcon}>
           <IllustratedIcon size={58} source={illustratedIcons.profileEdit} />
         </View>
-        <Text style={styles.emptyTitle}>프로필이 아직 준비되지 않았어요.</Text>
-        <Text style={styles.emptyText}>WICHU를 이용하려면 프로필 설정을 완료해주세요.</Text>
+        <Text style={styles.emptyTitle}>{t('me.emptyTitle')}</Text>
+        <Text style={styles.emptyText}>{t('me.emptyBody')}</Text>
         <Pressable
-          accessibilityLabel="프로필 완성하기"
+          accessibilityLabel={t('me.completeProfile')}
           accessibilityRole="button"
           onPress={() => router.push('/profile-setup')}
           style={styles.emptyAction}
         >
-          <Text style={styles.emptyActionText}>프로필 완성하기</Text>
+          <Text style={styles.emptyActionText}>{t('me.completeProfile')}</Text>
         </Pressable>
       </Screen>
     );
@@ -167,12 +144,24 @@ export function MeScreen() {
   const photosUnderReview = photos.filter((photo) => photo.reviewStatus === 'pending').length;
   const rejectedPhotos = photos.filter((photo) => photo.reviewStatus === 'rejected');
   const primaryPhotoUnderReview = primaryPhoto?.reviewStatus === 'pending';
-  const interestLabels = interests.map(
-    (interest) => INTEREST_LABELS[interest.label] ?? interest.label,
+  const interestLabels = interests.map((interest) => {
+    const key = INTEREST_KEYS[interest.label];
+    return key ? t(`profileSetup.interests.${key}`) : interest.label;
+  });
+  const tags = profileTags.map((tag) =>
+    t(`profileSetup.profileTags.values.${tag.value}`, { defaultValue: tag.value }),
   );
-  const tags = profileTags.map((tag) => TAG_LABELS[tag.value] ?? tag.value);
-  const tier = entitlement.data?.tier ?? 'free';
-  const tierLabel = tier === 'gold' ? 'Gold Pass' : tier === 'ad_free' ? 'Ad-Free' : 'Free';
+  const tier = entitlement.data?.tier;
+  const tierForVisual = tier ?? 'free';
+  const tierLabel = entitlement.isPending
+    ? t('me.checking')
+    : entitlement.isError
+      ? t('me.checkNeeded')
+      : tier === 'gold'
+        ? 'Gold Pass'
+        : tier === 'ad_free'
+          ? 'Ad-Free'
+          : 'Free';
   const isDiscoverable = settings?.discovery_enabled ?? true;
   const previewTags = [
     details?.personality_type,
@@ -202,7 +191,7 @@ export function MeScreen() {
         asset.height >= 600,
     );
     if (!validPhotos.length) {
-      setPhotoRepairError('600 × 600픽셀 이상의 JPG, PNG 또는 WebP 사진을 선택해주세요.');
+      setPhotoRepairError(t('me.invalidPhoto'));
       return;
     }
 
@@ -228,9 +217,9 @@ export function MeScreen() {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
-        actionAccessibilityLabel="설정 열기"
+        actionAccessibilityLabel={t('me.settings')}
         actionIcon={illustratedIcons.settings}
-        eyebrow="내 프로필"
+        eyebrow={t('me.eyebrow')}
         onAction={() => router.push('/settings')}
       />
 
@@ -243,23 +232,23 @@ export function MeScreen() {
           <View style={styles.profileHeroHeading}>
             <Text style={styles.profileHeroEyebrow}>WICHU PROFILE</Text>
             <Text style={styles.profileHeroTitle}>{t('experience.profile.publicProfile')}</Text>
-            <Text style={styles.profileHeroAccount}>공개 사진과 프로필 정보를 관리합니다</Text>
+            <Text style={styles.profileHeroAccount}>{t('me.manageProfile')}</Text>
           </View>
           <Pressable
-            accessibilityLabel="프로필 수정"
+            accessibilityLabel={t('me.editProfile')}
             accessibilityRole="button"
             onPress={() => router.push('/profile-edit')}
             style={({ pressed }) => [styles.profileEditAction, pressed && styles.pressed]}
           >
             <Ionicons color={palette.white} name="pencil" size={14} />
-            <Text style={styles.profileEditActionText}>수정</Text>
+            <Text style={styles.profileEditActionText}>{t('me.edit')}</Text>
           </Pressable>
         </Animated.View>
 
         <Animated.View entering={sectionEntering(1)}>
           <Pressable
-            accessibilityHint="상대방에게 보이는 전체 프로필을 확인합니다"
-            accessibilityLabel="내 공개 프로필 전체 미리보기"
+            accessibilityHint={t('me.previewHint')}
+            accessibilityLabel={t('me.preview')}
             accessibilityRole="button"
             onPress={() => router.push('/profile-preview')}
             style={({ pressed }) => [
@@ -282,12 +271,10 @@ export function MeScreen() {
                   <IllustratedIcon size={48} source={illustratedIcons.profilePhotos} />
                 </View>
                 <Text style={styles.previewPlaceholderTitle}>
-                  {photosUnderReview ? '사진 확인 중' : '대표 사진이 필요해요'}
+                  {photosUnderReview ? t('me.photosChecking') : t('me.primaryRequired')}
                 </Text>
                 <Text style={styles.previewPlaceholderText}>
-                  {photosUnderReview > 0
-                    ? '승인 전에는 공개 사진이 제한돼요'
-                    : '사진을 1장 이상 추가해주세요'}
+                  {photosUnderReview > 0 ? t('me.photosLimited') : t('me.addOnePhoto')}
                 </Text>
               </LinearGradient>
             )}
@@ -299,12 +286,14 @@ export function MeScreen() {
             {photosUnderReview > 0 ? (
               <View style={styles.previewReviewBadge}>
                 <IllustratedIcon size={18} source={illustratedIcons.photoReview} />
-                <Text style={styles.previewReviewText}>{photosUnderReview}장 심사 중</Text>
+                <Text style={styles.previewReviewText}>
+                  {t('me.photosReviewing', { count: photosUnderReview })}
+                </Text>
               </View>
             ) : null}
             <View style={styles.previewModeBadge}>
               <IllustratedIcon size={18} source={illustratedIcons.discoveryVisible} />
-              <Text style={styles.previewModeText}>전체 미리보기</Text>
+              <Text style={styles.previewModeText}>{t('me.fullPreview')}</Text>
             </View>
             <View style={styles.previewCopy}>
               <View style={styles.previewNameRow}>
@@ -350,11 +339,9 @@ export function MeScreen() {
             </View>
             <View style={styles.pendingNoticeCopy}>
               <Text style={styles.pendingNoticeTitle}>
-                새 사진 {photosUnderReview}장을 확인하고 있어요
+                {t('me.newPhotosReviewing', { count: photosUnderReview })}
               </Text>
-              <Text style={styles.pendingNoticeText}>
-                기존 승인 사진과 프로필 정보는 그대로 공개되고, 새 사진만 승인 전까지 제한돼요.
-              </Text>
+              <Text style={styles.pendingNoticeText}>{t('me.newPhotosReviewingBody')}</Text>
             </View>
           </Animated.View>
         ) : null}
@@ -363,9 +350,9 @@ export function MeScreen() {
           <Animated.View entering={sectionEntering(2)} style={styles.reviewNotice}>
             <IllustratedIcon size={34} source={illustratedIcons.photoRejected} />
             <View style={styles.reviewNoticeCopy}>
-              <Text style={styles.reviewNoticeTitle}>반려된 사진이 있어요</Text>
+              <Text style={styles.reviewNoticeTitle}>{t('me.rejectedTitle')}</Text>
               <Text style={styles.reviewNoticeText}>
-                {rejectedPhotos[0]?.reviewNote ?? '사진 기준을 확인한 뒤 해당 사진을 교체해주세요.'}
+                {rejectedPhotos[0]?.reviewNote ?? t('me.rejectedFallback')}
               </Text>
             </View>
           </Animated.View>
@@ -374,14 +361,14 @@ export function MeScreen() {
         <Animated.View entering={sectionEntering(2)} style={styles.statusStrip}>
           <StatusCell
             illustration={illustratedIcons.discoveryVisible}
-            label="발견 노출"
+            label={t('me.discoveryVisibility')}
             tone={isDiscoverable ? 'green' : 'neutral'}
-            value={isDiscoverable ? '켜짐' : '꺼짐'}
+            value={isDiscoverable ? t('me.on') : t('me.off')}
           />
           <View style={styles.statusDivider} />
           <StatusCell
             illustration={illustratedIcons.photoReview}
-            label="사진 상태"
+            label={t('me.photoStatus')}
             tone={
               photosUnderReview > 0
                 ? 'amber'
@@ -393,16 +380,16 @@ export function MeScreen() {
             }
             value={
               photosUnderReview > 0
-                ? `${photosUnderReview}장 확인 중`
+                ? t('me.reviewingCount', { count: photosUnderReview })
                 : rejectedPhotos.length > 0
-                  ? `${rejectedPhotos.length}장 반려`
-                  : shortReviewLabel(reviewStatus)
+                  ? t('me.rejectedCount', { count: rejectedPhotos.length })
+                  : t(`me.reviewStatus.${reviewStatus}`)
             }
           />
           <View style={styles.statusDivider} />
           <StatusCell
-            illustration={getPassIllustration(tier)}
-            label="이용권"
+            illustration={getPassIllustration(tierForVisual)}
+            label={t('me.pass')}
             tone={tier === 'gold' ? 'gold' : 'neutral'}
             value={tierLabel}
           />
@@ -412,13 +399,13 @@ export function MeScreen() {
           <Animated.View entering={sectionEntering(3)} style={styles.attentionCard}>
             <View style={styles.attentionTop}>
               <View style={styles.attentionCopy}>
-                <Text style={styles.attentionEyebrow}>프로필 완성도</Text>
+                <Text style={styles.attentionEyebrow}>{t('me.completion')}</Text>
                 <Text style={styles.attentionTitle}>
                   {!photos.length
-                    ? '대표 사진을 다시 등록해주세요'
+                    ? t('me.registerMainPhoto')
                     : completion.missing.length
-                      ? `${completion.missing.length}개 항목만 채우면 완성돼요`
-                      : '미입력 프로필 항목이 있어요'}
+                      ? t('me.remainingItems', { count: completion.missing.length })
+                      : t('me.incompleteItems')}
                 </Text>
               </View>
               <Text style={styles.attentionValue}>{profile.profile_completeness}%</Text>
@@ -430,15 +417,17 @@ export function MeScreen() {
               <View style={styles.missingList}>
                 {completion.missing.map((item) => (
                   <Pressable
-                    accessibilityHint="프로필 수정 화면의 해당 항목으로 이동합니다"
-                    accessibilityLabel={`${item.label} 입력하기`}
+                    accessibilityHint={t('me.editItemHint')}
+                    accessibilityLabel={t('me.enterItem', {
+                      item: t(`me.completionItems.${item.key}`),
+                    })}
                     accessibilityRole="button"
                     key={item.key}
                     onPress={() => router.push(`/profile-edit?section=${item.section}`)}
                     style={({ pressed }) => [styles.missingChip, pressed && pressFeedback.control]}
                   >
                     <Ionicons color={palette.pink} name="add-circle" size={15} />
-                    <Text style={styles.missingLabel}>{item.label}</Text>
+                    <Text style={styles.missingLabel}>{t(`me.completionItems.${item.key}`)}</Text>
                     <Text style={styles.missingPoints}>+{item.points}</Text>
                   </Pressable>
                 ))}
@@ -446,7 +435,7 @@ export function MeScreen() {
             ) : null}
             {!photos.length ? (
               <Pressable
-                accessibilityLabel="사진 추가하기"
+                accessibilityLabel={t('me.addPhoto')}
                 accessibilityRole="button"
                 accessibilityState={{ busy: photoRepairing, disabled: photoRepairing }}
                 disabled={photoRepairing}
@@ -454,7 +443,7 @@ export function MeScreen() {
                 style={({ pressed }) => [styles.attentionAction, pressed && styles.pressed]}
               >
                 <Text style={styles.attentionActionText}>
-                  {photoRepairing ? '사진 저장 중…' : '사진 추가하기'}
+                  {photoRepairing ? t('me.savingPhoto') : t('me.addPhoto')}
                 </Text>
                 <Ionicons color={palette.white} name="arrow-forward" size={16} />
               </Pressable>
@@ -467,33 +456,33 @@ export function MeScreen() {
 
         <Animated.View entering={sectionEntering(3)}>
           <View style={styles.managementHeading}>
-            <Text style={styles.groupTitle}>관리</Text>
-            <Text style={styles.groupHint}>프로필, 탐색 조건과 이용권을 설정해요</Text>
+            <Text style={styles.groupTitle}>{t('me.manage')}</Text>
+            <Text style={styles.groupHint}>{t('me.manageHint')}</Text>
           </View>
           <View style={styles.quickGrid}>
             <QuickAction
-              detail="사진 · 소개 · 관심사"
+              detail={t('me.editProfileDetail')}
               illustration={illustratedIcons.profileEdit}
-              label="프로필 수정"
+              label={t('me.editProfile')}
               onPress={() => router.push('/profile-edit')}
             />
             <QuickAction
-              detail="연령 · 국가 · 거리"
+              detail={t('me.discoverySettingsDetail')}
               illustration={illustratedIcons.discoverySettings}
-              label="탐색 설정"
+              label={t('me.discoverySettings')}
               onPress={() => router.push('/settings')}
             />
             <QuickAction
-              detail="픽 · 매치 · 방문자"
+              detail={t('me.connectionManagementDetail')}
               illustration={illustratedIcons.connections}
-              label="연결 관리"
+              label={t('me.connectionManagement')}
               onPress={() => router.push('/(tabs)/matches')}
             />
             {MONETIZATION_ENABLED ? (
               <QuickAction
                 detail={tierLabel}
-                illustration={getPassIllustration(tier)}
-                label="이용권"
+                illustration={getPassIllustration(tierForVisual)}
+                label={t('me.pass')}
                 onPress={() => router.push('/(tabs)/shop')}
               />
             ) : null}
@@ -510,13 +499,13 @@ export function MeScreen() {
               <IllustratedIcon size={30} source={illustratedIcons.discoveryVisible} />
             </View>
             <View style={styles.detailsToggleCopy}>
-              <Text style={styles.detailsTitle}>공개 프로필 전체 보기</Text>
-              <Text style={styles.detailsHint}>상대방에게 보이는 실제 순서로 확인해요</Text>
+              <Text style={styles.detailsTitle}>{t('me.viewPublicProfile')}</Text>
+              <Text style={styles.detailsHint}>{t('me.viewPublicProfileHint')}</Text>
             </View>
             <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
           </Pressable>
           <Pressable
-            accessibilityLabel="계정 및 개인정보 설정"
+            accessibilityLabel={t('me.accountSettings')}
             accessibilityRole="button"
             onPress={() => router.push('/settings')}
             style={({ pressed }) => [styles.settingsAction, pressed && styles.pressed]}
@@ -525,8 +514,8 @@ export function MeScreen() {
               <IllustratedIcon size={46} source={illustratedIcons.settings} />
             </View>
             <View style={styles.settingsCopy}>
-              <Text style={styles.settingsTitle}>계정 및 개인정보 설정</Text>
-              <Text style={styles.settingsText}>알림, 안전 및 계정 관리</Text>
+              <Text style={styles.settingsTitle}>{t('me.accountSettings')}</Text>
+              <Text style={styles.settingsText}>{t('me.accountSettingsHint')}</Text>
             </View>
             <Ionicons color={palette.inkMuted} name="chevron-forward" size={19} />
           </Pressable>
@@ -599,11 +588,13 @@ function QuickAction({
 
 /** 실제 Me 화면과 같은 골격(헤더 → 미리보기 카드 → 섹션)으로 그려 로딩 후 위치가 유지된다. */
 function MeSkeleton() {
+  const { t } = useTranslation();
+
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <AppTabHeader actionIcon={illustratedIcons.settings} eyebrow="내 프로필" />
+      <AppTabHeader actionIcon={illustratedIcons.settings} eyebrow={t('me.eyebrow')} />
       <View
-        accessibilityLabel="프로필을 불러오는 중"
+        accessibilityLabel={t('me.loading')}
         accessibilityRole="progressbar"
         style={styles.content}
       >
@@ -615,13 +606,6 @@ function MeSkeleton() {
       </View>
     </Screen>
   );
-}
-
-function shortReviewLabel(status: ReviewStatus) {
-  if (status === 'approved') return '승인 완료';
-  if (status === 'rejected') return '수정 필요';
-  if (status === 'pending') return '심사 중';
-  return '작성 중';
 }
 
 const styles = StyleSheet.create({

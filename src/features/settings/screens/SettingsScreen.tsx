@@ -20,6 +20,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { INTERSTITIAL_ADS_ENABLED, REWARDED_ADS_ENABLED } from '@/constants/features';
 import { palette, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
 import { LanguagePickerModal } from '@/features/auth/components/LanguagePicker';
@@ -43,11 +44,21 @@ export function SettingsScreen() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountBusy, setAccountBusy] = useState(false);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
+  const [adPrivacyBusy, setAdPrivacyBusy] = useState(false);
   const queryKey = ['settings', userId];
   const settingsQuery = useQuery({
     enabled: Boolean(userId),
     queryKey,
     queryFn: () => settingsService.getMySettings(userId!),
+  });
+  const adPrivacyQuery = useQuery({
+    enabled: INTERSTITIAL_ADS_ENABLED || REWARDED_ADS_ENABLED,
+    queryFn: async () => {
+      const { adsService } = await import('@/features/monetization/services/ads-service');
+      return adsService.getPrivacyOptionsStatus();
+    },
+    queryKey: ['ads-privacy-options'],
+    staleTime: 5 * 60_000,
   });
   const updateSetting = useMutation({
     mutationFn: ({ key, value }: { key: BooleanSetting; value: boolean }) =>
@@ -115,6 +126,21 @@ export function SettingsScreen() {
       );
     } finally {
       setAccountBusy(false);
+    }
+  };
+
+  const openAdPrivacyOptions = async () => {
+    if (adPrivacyBusy) return;
+    setAdPrivacyBusy(true);
+    try {
+      const { adsService } = await import('@/features/monetization/services/ads-service');
+      const opened = await adsService.showPrivacyOptions();
+      if (!opened) Alert.alert(t('settings.adPrivacyUnavailable'), t('settings.tryAgainLater'));
+      await adPrivacyQuery.refetch();
+    } catch {
+      Alert.alert(t('settings.adPrivacyUnavailable'), t('settings.tryAgainLater'));
+    } finally {
+      setAdPrivacyBusy(false);
     }
   };
 
@@ -225,6 +251,15 @@ export function SettingsScreen() {
               label={t('settings.privacyPolicy')}
               onPress={() => router.push('/legal/privacy')}
             />
+            {adPrivacyQuery.data === 'required' ? (
+              <SettingLink
+                description={t('settings.adPrivacyHint')}
+                icon="options-outline"
+                label={t('settings.adPrivacy')}
+                onPress={() => void openAdPrivacyOptions()}
+                value={adPrivacyBusy ? t('settings.checking') : undefined}
+              />
+            ) : null}
           </SettingSection>
 
           {adminRole ? (

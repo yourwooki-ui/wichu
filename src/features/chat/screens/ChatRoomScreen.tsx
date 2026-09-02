@@ -50,6 +50,7 @@ import {
 } from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
+import { ChatRoomSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
@@ -70,7 +71,11 @@ import {
   translationService,
 } from '@/features/chat/services/translation-service';
 import { getMockConversation, mockConversations } from '@/features/matches/data/mock-connections';
-import { matchesService } from '@/features/matches/services/matches-service';
+import {
+  matchesService,
+  type MatchConnection,
+  type MatchRoomConnection,
+} from '@/features/matches/services/matches-service';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { safetyService } from '@/features/settings/services/safety-service';
 import {
@@ -79,6 +84,7 @@ import {
 } from '@/features/settings/components/ReportReasonSheet';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
 type ChatRoomScreenProps = { matchId: string };
@@ -142,12 +148,17 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const connectionQuery = useQuery({
     enabled: !isMock && Boolean(userId),
     queryFn: async () => {
-      const connections = await matchesService.listConnections(userId!);
-      const connection = connections.find((item) => item.matchId === matchId);
+      const connection = await matchesService.getConnection(matchId);
       if (!connection) throw new Error('Match not found');
       return connection;
     },
     queryKey: ['match', matchId, userId],
+    placeholderData: () => {
+      const cached = queryClient
+        .getQueryData<MatchConnection[]>(['matches', 'connections', userId])
+        ?.find((item) => item.matchId === matchId);
+      return cached ? toMatchRoomConnection(cached) : undefined;
+    },
     staleTime: 30_000,
   });
 
@@ -159,6 +170,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     queryKey: ['chat', matchId],
     staleTime: 10_000,
   });
+
+  useEffect(() => {
+    const error = connectionQuery.error ?? messagesQuery.error;
+    if (error) reportOperationalError('chat_room_query', error, `/chat/${matchId}`);
+  }, [connectionQuery.error, matchId, messagesQuery.error]);
 
   const displayedMessages = useMemo(() => {
     if (isMock || !userId) return messages;
@@ -243,8 +259,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   if (!isMock && connectionQuery.isLoading) {
     return (
       <Screen edges={['top', 'left', 'right']} style={styles.connectionStateScreen}>
-        <ActivityIndicator color={palette.pink} size="small" />
-        <Text style={styles.stateText}>{t('reliability.messagesBody')}</Text>
+        <ChatRoomSkeleton />
       </Screen>
     );
   }
@@ -1082,6 +1097,20 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       />
     </Screen>
   );
+}
+
+function toMatchRoomConnection(connection: MatchConnection): MatchRoomConnection {
+  return {
+    matchId: connection.matchId,
+    matchedAt: connection.matchedAt,
+    profile: {
+      id: connection.profile.id,
+      display_name: connection.profile.display_name,
+      country_code: connection.profile.country_code,
+      last_active_at: connection.profile.last_active_at,
+      photo: connection.profile.photo,
+    },
+  };
 }
 
 function createMockMessages(conversation: (typeof mockConversations)[number]): LocalMessage[] {

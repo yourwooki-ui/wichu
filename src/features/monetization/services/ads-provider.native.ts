@@ -1,20 +1,38 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { monetizationConfig } from '@/features/monetization/config';
-import type { AdsProvider, RewardedAdResult } from '@/features/monetization/services/types';
+import type {
+  AdsPrivacyOptionsStatus,
+  AdsProvider,
+  RewardedAdResult,
+} from '@/features/monetization/services/types';
 import {
   recordInterstitialShown,
+  registerBrowseAction,
   registerDiscoverAction,
   type InterstitialFrequencyState,
 } from '@/features/monetization/utils/ad-frequency-policy';
 
 type MobileAdsModule = typeof import('react-native-google-mobile-ads');
 
-const FREQUENCY_STATE_KEY = 'wichu:ads:discover-frequency:v1';
+const DISCOVER_FREQUENCY_STATE_KEY = 'wichu:ads:discover-frequency:v1';
+const BROWSE_FREQUENCY_STATE_KEY = 'wichu:ads:browse-frequency:v1';
 const LOAD_TIMEOUT_MS = 45_000;
+const SHOW_TIMEOUT_MS = 65_000;
 let sdkLoading: Promise<MobileAdsModule | null> | null = null;
 let initialization: Promise<boolean> | null = null;
 let interstitialInFlight = false;
+type InterstitialInstance = ReturnType<MobileAdsModule['InterstitialAd']['createForAdRequest']>;
+let discoverInterstitial: {
+  ad: InterstitialInstance;
+  adUnitId: string;
+  loaded: boolean;
+} | null = null;
+let browseInterstitial: {
+  ad: InterstitialInstance;
+  adUnitId: string;
+  loaded: boolean;
+} | null = null;
 
 /**
  * 네이티브 광고 모듈은 로그인과 프로필 설정이 끝난 뒤에만 평가한다.
@@ -27,6 +45,72 @@ function loadMobileAdsSdk() {
 
 function shouldUseTestAds() {
   return __DEV__ || monetizationConfig.testMode;
+}
+
+function getDiscoverInterstitialAdUnitId(sdk: MobileAdsModule) {
+  return shouldUseTestAds()
+    ? sdk.TestIds.INTERSTITIAL
+    : monetizationConfig.discoverInterstitialAdUnitId;
+}
+
+function getBrowseInterstitialAdUnitId(sdk: MobileAdsModule) {
+  return shouldUseTestAds()
+    ? sdk.TestIds.INTERSTITIAL
+    : monetizationConfig.browseInterstitialAdUnitId;
+}
+
+function clearDiscoverInterstitial(slot = discoverInterstitial) {
+  if (!slot) return;
+  slot.ad.removeAllListeners();
+  if (discoverInterstitial === slot) discoverInterstitial = null;
+}
+
+function ensureDiscoverInterstitialPreloaded(sdk: MobileAdsModule) {
+  const adUnitId = getDiscoverInterstitialAdUnitId(sdk);
+  if (!adUnitId || interstitialInFlight) return;
+  if (discoverInterstitial?.adUnitId === adUnitId) return;
+
+  clearDiscoverInterstitial();
+  const slot = {
+    ad: sdk.InterstitialAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: true,
+    }),
+    adUnitId,
+    loaded: false,
+  };
+  discoverInterstitial = slot;
+  slot.ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
+    if (discoverInterstitial === slot) slot.loaded = true;
+  });
+  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => clearDiscoverInterstitial(slot));
+  slot.ad.load();
+}
+
+function clearBrowseInterstitial(slot = browseInterstitial) {
+  if (!slot) return;
+  slot.ad.removeAllListeners();
+  if (browseInterstitial === slot) browseInterstitial = null;
+}
+
+function ensureBrowseInterstitialPreloaded(sdk: MobileAdsModule) {
+  const adUnitId = getBrowseInterstitialAdUnitId(sdk);
+  if (!adUnitId || interstitialInFlight) return;
+  if (browseInterstitial?.adUnitId === adUnitId) return;
+
+  clearBrowseInterstitial();
+  const slot = {
+    ad: sdk.InterstitialAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: true,
+    }),
+    adUnitId,
+    loaded: false,
+  };
+  browseInterstitial = slot;
+  slot.ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
+    if (browseInterstitial === slot) slot.loaded = true;
+  });
+  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => clearBrowseInterstitial(slot));
+  slot.ad.load();
 }
 
 async function initializeMobileAds() {
@@ -51,15 +135,19 @@ async function initializeMobileAds() {
       testDeviceIdentifiers: testDeviceIdentifiers ?? [],
     });
     await sdk.default().initialize();
+    if (monetizationConfig.interstitialAdsEnabled) {
+      ensureDiscoverInterstitialPreloaded(sdk);
+      ensureBrowseInterstitialPreloaded(sdk);
+    }
     return true;
   } catch {
     return false;
   }
 }
 
-async function readFrequencyState(): Promise<InterstitialFrequencyState | null> {
+async function readFrequencyState(key: string): Promise<InterstitialFrequencyState | null> {
   try {
-    const stored = await AsyncStorage.getItem(FREQUENCY_STATE_KEY);
+    const stored = await AsyncStorage.getItem(key);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as Partial<InterstitialFrequencyState>;
     if (
@@ -76,31 +164,57 @@ async function readFrequencyState(): Promise<InterstitialFrequencyState | null> 
   }
 }
 
-async function saveFrequencyState(state: InterstitialFrequencyState) {
-  await AsyncStorage.setItem(FREQUENCY_STATE_KEY, JSON.stringify(state)).catch(() => undefined);
+async function saveFrequencyState(key: string, state: InterstitialFrequencyState) {
+  await AsyncStorage.setItem(key, JSON.stringify(state)).catch(() => undefined);
 }
 
-async function showLoadedInterstitial(sdk: MobileAdsModule, adUnitId: string) {
-  const ad = sdk.InterstitialAd.createForAdRequest(adUnitId, {
-    requestNonPersonalizedAdsOnly: true,
-  });
-
+async function showPreloadedInterstitial(sdk: MobileAdsModule) {
+  ensureDiscoverInterstitialPreloaded(sdk);
+  const slot = discoverInterstitial;
+  if (!slot?.loaded) return false;
+  interstitialInFlight = true;
   return new Promise<boolean>((resolve) => {
     let settled = false;
     const finish = (shown: boolean) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      ad.removeAllListeners();
+      clearDiscoverInterstitial(slot);
+      interstitialInFlight = false;
+      ensureDiscoverInterstitialPreloaded(sdk);
+      ensureBrowseInterstitialPreloaded(sdk);
       resolve(shown);
     };
-    const timeout = setTimeout(() => finish(false), LOAD_TIMEOUT_MS);
-    ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
-      void ad.show().catch(() => finish(false));
-    });
-    ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(true));
-    ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish(false));
-    ad.load();
+    const timeout = setTimeout(() => finish(false), SHOW_TIMEOUT_MS);
+    slot.ad.removeAllListeners();
+    slot.ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(true));
+    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish(false));
+    void slot.ad.show().catch(() => finish(false));
+  });
+}
+
+async function showPreloadedBrowseInterstitial(sdk: MobileAdsModule) {
+  ensureBrowseInterstitialPreloaded(sdk);
+  const slot = browseInterstitial;
+  if (!slot?.loaded) return false;
+  interstitialInFlight = true;
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (shown: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      clearBrowseInterstitial(slot);
+      interstitialInFlight = false;
+      ensureBrowseInterstitialPreloaded(sdk);
+      ensureDiscoverInterstitialPreloaded(sdk);
+      resolve(shown);
+    };
+    const timeout = setTimeout(() => finish(false), SHOW_TIMEOUT_MS);
+    slot.ad.removeAllListeners();
+    slot.ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(true));
+    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish(false));
+    void slot.ad.show().catch(() => finish(false));
   });
 }
 
@@ -150,7 +264,7 @@ export const adsProvider: AdsProvider = {
   },
   showInterstitial: async (placement) => {
     if (
-      placement !== 'discover_swipe' ||
+      !['browse_transition', 'discover_swipe'].includes(placement) ||
       !monetizationConfig.interstitialAdsEnabled ||
       interstitialInFlight ||
       !(await adsProvider.initialize())
@@ -161,20 +275,19 @@ export const adsProvider: AdsProvider = {
     const sdk = await loadMobileAdsSdk();
     if (!sdk) return;
     const now = Date.now();
-    const decision = registerDiscoverAction(await readFrequencyState(), now);
-    await saveFrequencyState(decision.state);
+    const isBrowse = placement === 'browse_transition';
+    const frequencyKey = isBrowse ? BROWSE_FREQUENCY_STATE_KEY : DISCOVER_FREQUENCY_STATE_KEY;
+    const decision = isBrowse
+      ? registerBrowseAction(await readFrequencyState(frequencyKey), now)
+      : registerDiscoverAction(await readFrequencyState(frequencyKey), now);
+    await saveFrequencyState(frequencyKey, decision.state);
     if (!decision.shouldShow) return;
 
-    interstitialInFlight = true;
-    try {
-      const adUnitId = shouldUseTestAds()
-        ? sdk.TestIds.INTERSTITIAL
-        : monetizationConfig.discoverInterstitialAdUnitId;
-      if (!adUnitId) return;
-      const shown = await showLoadedInterstitial(sdk, adUnitId);
-      if (shown) await saveFrequencyState(recordInterstitialShown(decision.state, Date.now()));
-    } finally {
-      interstitialInFlight = false;
+    const shown = isBrowse
+      ? await showPreloadedBrowseInterstitial(sdk)
+      : await showPreloadedInterstitial(sdk);
+    if (shown) {
+      await saveFrequencyState(frequencyKey, recordInterstitialShown(decision.state, Date.now()));
     }
   },
   showRewardedUndo: async (placement, userId) => {
@@ -188,5 +301,34 @@ export const adsProvider: AdsProvider = {
       : monetizationConfig.rewardedUndoAdUnitId;
     if (!adUnitId) return 'unavailable';
     return showRewarded(sdk, adUnitId, placement, userId);
+  },
+  getPrivacyOptionsStatus: async (): Promise<AdsPrivacyOptionsStatus> => {
+    const sdk = await loadMobileAdsSdk();
+    if (!sdk) return 'unavailable';
+    try {
+      const consent = await sdk.AdsConsent.getConsentInfo();
+      if (
+        consent.privacyOptionsRequirementStatus ===
+        sdk.AdsConsentPrivacyOptionsRequirementStatus.REQUIRED
+      ) {
+        return 'required';
+      }
+      return consent.privacyOptionsRequirementStatus ===
+        sdk.AdsConsentPrivacyOptionsRequirementStatus.NOT_REQUIRED
+        ? 'not_required'
+        : 'unavailable';
+    } catch {
+      return 'unavailable';
+    }
+  },
+  showPrivacyOptions: async () => {
+    const sdk = await loadMobileAdsSdk();
+    if (!sdk) return false;
+    try {
+      await sdk.AdsConsent.showPrivacyOptionsForm();
+      return true;
+    } catch {
+      return false;
+    }
   },
 };

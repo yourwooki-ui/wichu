@@ -20,6 +20,7 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useProfileLocationSync } from '@/features/profile/hooks/use-profile-location-sync';
+import { useMonetizationBootstrap } from '@/features/monetization/hooks/use-monetization-bootstrap';
 import { queryClient } from '@/lib/query-client';
 import { useNotificationObserver } from '@/services/use-notification-observer';
 import { PostProfileOnboardingCoordinator } from '@/features/onboarding/components/PostProfileOnboardingCoordinator';
@@ -66,6 +67,7 @@ function RootNavigator() {
   const { t } = useTranslation();
   const openedForUserRef = useRef<string | null>(null);
   useProfileLocationSync();
+  useMonetizationBootstrap(profileCompleted ? session?.user.id : undefined);
   useNotificationObserver(Boolean(session) && profileCompleted);
 
   useEffect(() => {

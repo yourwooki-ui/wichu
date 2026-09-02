@@ -39,26 +39,6 @@ const DETAIL_ICON_TONES = {
   pets: { background: '#F6EEE7', foreground: '#87603E' },
 } as const;
 
-const DETAIL_LABELS: Record<string, string> = {
-  high_school: '고등학교',
-  vocational: '전문대·직업교육',
-  college: '대학교',
-  graduate: '대학원',
-  other: '기타',
-  never: '하지 않음',
-  sometimes: '가끔',
-  socially: '분위기에 따라',
-  often: '자주',
-  regularly: '흡연',
-  quitting: '금연 중',
-  rarely: '거의 안 함',
-  daily: '거의 매일',
-  none: '없음',
-  dog: '강아지',
-  cat: '고양이',
-  both: '강아지·고양이',
-};
-
 const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
   Deutsch: 'de',
   English: 'en',
@@ -68,17 +48,17 @@ const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
   日本語: 'ja',
 };
 
-const KO_INTEREST_LABELS: Record<string, string> = {
-  Music: '음악',
-  Travel: '여행',
-  Photography: '사진',
-  Cafe: '카페',
-  Movies: '영화',
-  Fitness: '운동',
-  Gaming: '게임',
-  Fashion: '패션',
-  'Language Exchange': '언어 교환',
-  Food: '음식',
+const INTEREST_KEYS: Record<string, string> = {
+  Music: 'music',
+  Travel: 'travel',
+  Photography: 'photography',
+  Cafe: 'cafe',
+  Movies: 'movies',
+  Fitness: 'fitness',
+  Gaming: 'gaming',
+  Fashion: 'fashion',
+  'Language Exchange': 'language-exchange',
+  Food: 'food',
 };
 
 export type ProfileDetailHeaderAction = {
@@ -115,6 +95,19 @@ export function StandardProfileDetail({
   const heroHeight = Math.min((photoWidth || 430) * HERO_HEIGHT_RATIO, HERO_MAX_HEIGHT);
   const primaryPhoto = profile.photos[0];
   const additionalPhotos = profile.photos.slice(1);
+  const photoReviewStatuses = profile.photoReviewStatuses;
+  const getPhotoStatus = (index: number) => photoReviewStatuses?.[index];
+  const getPhotoBlurRadius = (index: number) => {
+    const status = getPhotoStatus(index);
+    return status && status !== 'approved' ? Math.max(photoBlurRadius, 18) : photoBlurRadius;
+  };
+  const getPhotoStatusLabel = (index: number) => {
+    const status = getPhotoStatus(index);
+    if (status === 'pending' || status === 'draft') return t('profileReview.steps.reviewing');
+    if (status === 'rejected') return t('profileReview.rejected.title');
+    return status ? undefined : photoStatusLabel;
+  };
+  const primaryPhotoStatusLabel = getPhotoStatusLabel(0);
   const presence = useMemo(
     () => getProfilePresence(profile.lastActiveAt, now),
     [now, profile.lastActiveAt],
@@ -134,11 +127,10 @@ export function StandardProfileDetail({
       level: index === 0 ? ('native' as const) : ('intermediate' as const),
       isNative: index === 0,
     }));
-  const interests = profile.interests.map((interest) =>
-    i18n.language.toLowerCase().startsWith('ko')
-      ? (KO_INTEREST_LABELS[interest] ?? interest)
-      : interest,
-  );
+  const interests = profile.interests.map((interest) => {
+    const key = INTEREST_KEYS[interest];
+    return key ? t(`profileSetup.interests.${key}`) : interest;
+  });
   const basicDetails = compactProfileDetails([
     profile.details?.occupation
       ? {
@@ -153,7 +145,9 @@ export function StandardProfileDetail({
           icon: 'school' as const,
           iconBackground: DETAIL_ICON_TONES.education.background,
           iconColor: DETAIL_ICON_TONES.education.foreground,
-          label: DETAIL_LABELS[profile.details.educationLevel] ?? profile.details.educationLevel,
+          label: t(`me.detail.values.${profile.details.educationLevel}`, {
+            defaultValue: profile.details.educationLevel,
+          }),
         }
       : null,
     profile.details?.heightCm
@@ -179,7 +173,9 @@ export function StandardProfileDetail({
           icon: 'glass-wine' as const,
           iconBackground: DETAIL_ICON_TONES.drinking.background,
           iconColor: DETAIL_ICON_TONES.drinking.foreground,
-          label: DETAIL_LABELS[profile.details.drinking] ?? profile.details.drinking,
+          label: t(`me.detail.values.${profile.details.drinking}`, {
+            defaultValue: profile.details.drinking,
+          }),
         }
       : null,
     profile.details?.smoking
@@ -190,7 +186,9 @@ export function StandardProfileDetail({
               : ('smoking' as const),
           iconBackground: DETAIL_ICON_TONES.smoking.background,
           iconColor: DETAIL_ICON_TONES.smoking.foreground,
-          label: DETAIL_LABELS[profile.details.smoking] ?? profile.details.smoking,
+          label: t(`me.detail.values.${profile.details.smoking}`, {
+            defaultValue: profile.details.smoking,
+          }),
         }
       : null,
     profile.details?.exercise
@@ -198,7 +196,9 @@ export function StandardProfileDetail({
           icon: 'dumbbell' as const,
           iconBackground: DETAIL_ICON_TONES.exercise.background,
           iconColor: DETAIL_ICON_TONES.exercise.foreground,
-          label: DETAIL_LABELS[profile.details.exercise] ?? profile.details.exercise,
+          label: t(`me.detail.values.${profile.details.exercise}`, {
+            defaultValue: profile.details.exercise,
+          }),
         }
       : null,
     profile.details?.pets
@@ -206,7 +206,9 @@ export function StandardProfileDetail({
           icon: 'paw' as const,
           iconBackground: DETAIL_ICON_TONES.pets.background,
           iconColor: DETAIL_ICON_TONES.pets.foreground,
-          label: DETAIL_LABELS[profile.details.pets] ?? profile.details.pets,
+          label: t(`me.detail.values.${profile.details.pets}`, {
+            defaultValue: profile.details.pets,
+          }),
         }
       : null,
   ]);
@@ -230,7 +232,7 @@ export function StandardProfileDetail({
           {primaryPhoto ? (
             <Image
               accessibilityLabel={`${profile.name} ${t('profileDetail.photo', { index: 1 })}`}
-              blurRadius={photoBlurRadius}
+              blurRadius={getPhotoBlurRadius(0)}
               cachePolicy="memory-disk"
               contentFit="cover"
               priority="high"
@@ -242,7 +244,7 @@ export function StandardProfileDetail({
             <LinearGradient colors={['#D9DAE1', '#B7B9C4']} style={StyleSheet.absoluteFill}>
               <View style={styles.photoPlaceholder}>
                 <IllustratedIcon size={54} source={illustratedIcons.profilePhotos} />
-                <Text style={styles.photoPlaceholderText}>대표 사진을 준비 중이에요</Text>
+                <Text style={styles.photoPlaceholderText}>{t('me.detail.photoPreparing')}</Text>
               </View>
             </LinearGradient>
           )}
@@ -265,10 +267,10 @@ export function StandardProfileDetail({
               <Text style={styles.photoCountText}>1 / {profile.photos.length}</Text>
             </View>
           ) : null}
-          {photoStatusLabel ? (
+          {primaryPhotoStatusLabel ? (
             <View style={styles.photoStatus}>
               <IllustratedIcon size={18} source={illustratedIcons.photoReview} />
-              <Text style={styles.photoStatusText}>{photoStatusLabel}</Text>
+              <Text style={styles.photoStatusText}>{primaryPhotoStatusLabel}</Text>
             </View>
           ) : null}
           <View pointerEvents="none" style={styles.heroInfo}>
@@ -360,13 +362,13 @@ export function StandardProfileDetail({
           ) : null}
 
           {basicDetails.length ? (
-            <DetailSection title="기본 정보">
+            <DetailSection title={t('me.detail.basic')}>
               <DetailPills items={basicDetails} />
             </DetailSection>
           ) : null}
 
           {lifestyleDetails.length ? (
-            <DetailSection title="취향과 라이프스타일">
+            <DetailSection title={t('me.detail.lifestyle')}>
               <DetailPills items={lifestyleDetails} />
             </DetailSection>
           ) : null}
@@ -422,7 +424,7 @@ export function StandardProfileDetail({
                   <View key={`${photo}-${index}`} style={styles.galleryPhotoFrame}>
                     <Image
                       accessibilityLabel={`${profile.name} ${t('profileDetail.photo', { index: index + 2 })}`}
-                      blurRadius={photoBlurRadius}
+                      blurRadius={getPhotoBlurRadius(index + 1)}
                       cachePolicy="memory-disk"
                       contentFit="cover"
                       priority="normal"
@@ -430,10 +432,12 @@ export function StandardProfileDetail({
                       style={StyleSheet.absoluteFill}
                       transition={160}
                     />
-                    {photoStatusLabel ? (
+                    {getPhotoStatusLabel(index + 1) ? (
                       <View style={styles.galleryPhotoStatus}>
                         <IllustratedIcon size={17} source={illustratedIcons.photoReview} />
-                        <Text style={styles.galleryPhotoStatusText}>{photoStatusLabel}</Text>
+                        <Text style={styles.galleryPhotoStatusText}>
+                          {getPhotoStatusLabel(index + 1)}
+                        </Text>
                       </View>
                     ) : null}
                     <View pointerEvents="none" style={styles.galleryPhotoCount}>
@@ -688,6 +692,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     position: 'absolute',
+    zIndex: 2,
   },
   galleryPhotoStatusText: { color: palette.white, fontSize: 10, fontWeight: '900' },
   galleryPhotoCount: {
@@ -698,6 +703,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     position: 'absolute',
     right: 14,
+    zIndex: 2,
   },
   galleryPhotoCountText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   safetyLink: {

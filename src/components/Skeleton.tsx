@@ -110,6 +110,36 @@ export function ChatRowsSkeleton({ count = 5 }: { count?: number }) {
   );
 }
 
+/** 채팅방의 상대 프로필 헤더·메시지·입력창을 같은 프레임에 먼저 표시한다. */
+export function ChatRoomSkeleton() {
+  return (
+    <View
+      accessibilityLabel="대화방을 불러오는 중"
+      accessibilityRole="progressbar"
+      style={styles.chatRoom}
+    >
+      <View style={styles.chatRoomHeader}>
+        <SkeletonCircle size={42} />
+        <View style={styles.chatRoomHeaderCopy}>
+          <SkeletonLine height={14} width="36%" />
+          <SkeletonLine height={10} style={{ marginTop: 7 }} width="24%" />
+        </View>
+        <SkeletonCircle size={34} />
+      </View>
+      <View style={styles.chatRoomMessages}>
+        <Skeleton style={[styles.chatBubble, styles.chatBubbleReceived]} />
+        <Skeleton style={[styles.chatBubble, styles.chatBubbleSent]} />
+        <Skeleton style={[styles.chatBubbleShort, styles.chatBubbleReceived]} />
+      </View>
+      <View style={styles.chatRoomComposer}>
+        <SkeletonCircle size={42} />
+        <Skeleton style={styles.chatRoomInput} />
+        <SkeletonCircle size={42} />
+      </View>
+    </View>
+  );
+}
+
 /** 단순 세로 목록(차단 목록, 설정 항목 등) 로딩 골격. */
 export function ListRowsSkeleton({ count = 4, height = 72 }: { count?: number; height?: number }) {
   return (
@@ -138,5 +168,31 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   chatRowCopy: { flex: 1 },
+  chatRoom: { flex: 1 },
+  chatRoomHeader: {
+    alignItems: 'center',
+    borderBottomColor: '#E4E4E8',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 11,
+    minHeight: 68,
+    paddingHorizontal: 14,
+  },
+  chatRoomHeaderCopy: { flex: 1 },
+  chatRoomMessages: { flex: 1, gap: 16, paddingHorizontal: 16, paddingTop: 28 },
+  chatBubble: { borderRadius: 20, height: 58, width: '68%' },
+  chatBubbleShort: { borderRadius: 20, height: 46, width: '48%' },
+  chatBubbleReceived: { alignSelf: 'flex-start' },
+  chatBubbleSent: { alignSelf: 'flex-end' },
+  chatRoomComposer: {
+    alignItems: 'center',
+    borderTopColor: '#E4E4E8',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 70,
+    paddingHorizontal: 12,
+  },
+  chatRoomInput: { borderRadius: 22, flex: 1, height: 42 },
   rows: { gap: spacing.sm },
 });

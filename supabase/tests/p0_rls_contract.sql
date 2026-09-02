@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(48);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -63,6 +63,10 @@ select is(
 );
 select is((select count(*) from public.get_my_admin_access()), 0::bigint, 'member has no admin access');
 select throws_ok($$select * from public.get_pending_reports()$$, 'P0001', 'Administrator access required', 'member cannot read report queue');
+select lives_ok(
+  $$insert into public.product_events (event_name, session_id, properties) values ('purchase_failed', '50000000-0000-4000-8000-000000000001', '{"reason":"network"}')$$,
+  'member can record a known purchase observability event'
+);
 
 insert into public.user_settings (user_id, exclude_same_country)
 values ('30000000-0000-4000-8000-000000000001', true)
@@ -225,6 +229,14 @@ select is(
   (select last_message_content from public.get_my_match_connections() limit 1),
   'hello',
   'match read model returns the latest message per match'
+);
+select is(
+  (
+    select count(*)
+    from public.get_my_match_connection((select id from public.matches limit 1))
+  ),
+  1::bigint,
+  'single match read model returns the active connection for its participant'
 );
 
 select set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000002', false);

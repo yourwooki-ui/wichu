@@ -70,53 +70,56 @@ function getFormSection(step: SetupStep, editMode: boolean): FormSection {
 
 const EDIT_SECTIONS: {
   key: SetupStep;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  body: string;
+  titleKey: string;
+  bodyKey: string;
 }[] = [
   {
     key: 0,
-    label: '기본',
+    labelKey: 'basic',
     icon: 'person-outline',
-    title: '기본 정보',
-    body: '이름, 생년월일, 성별, 국적과 프로필 기본정보를 관리해요.',
+    titleKey: 'basicTitle',
+    bodyKey: 'basicBody',
   },
   {
     key: 1,
-    label: '추가',
+    labelKey: 'additional',
     icon: 'id-card-outline',
-    title: '추가 정보',
-    body: '성격과 라이프스타일 중 원하는 항목만 공개해요.',
+    titleKey: 'additionalTitle',
+    bodyKey: 'additionalBody',
   },
   {
     key: 2,
-    label: '취향',
+    labelKey: 'preferences',
     icon: 'options-outline',
-    title: '탐색 취향',
-    body: '만나고 싶은 사람과 관심사를 설정해요.',
+    titleKey: 'preferencesTitle',
+    bodyKey: 'preferencesBody',
   },
   {
     key: 3,
-    label: '소개',
+    labelKey: 'about',
     icon: 'chatbubbles-outline',
-    title: '소개와 언어',
-    body: '나를 설명하는 키워드와 대화 언어를 관리해요.',
+    titleKey: 'aboutTitle',
+    bodyKey: 'aboutBody',
   },
   {
     key: 4,
-    label: '사진',
+    labelKey: 'photos',
     icon: 'images-outline',
-    title: '프로필 사진',
-    body: '대표 사진과 공개 사진의 순서를 관리해요.',
+    titleKey: 'photosTitle',
+    bodyKey: 'photosBody',
   },
 ];
 
 const ONBOARDING_SECTIONS = [
-  { illustration: illustratedIcons.profileEdit, label: '기본 정보' },
-  { illustration: illustratedIcons.discoverySettings, label: '만남 취향' },
-  { illustration: illustratedIcons.translation, label: '소개와 언어' },
-  { illustration: illustratedIcons.profilePhotos, label: '프로필 사진' },
+  { illustration: illustratedIcons.profileEdit, labelKey: 'profileEditor.sections.basicTitle' },
+  {
+    illustration: illustratedIcons.discoverySettings,
+    labelKey: 'profileEditor.sections.preferencesTitle',
+  },
+  { illustration: illustratedIcons.translation, labelKey: 'profileEditor.sections.aboutTitle' },
+  { illustration: illustratedIcons.profilePhotos, labelKey: 'profileEditor.sections.photosTitle' },
 ] as const;
 
 type ProfileFormMode = 'onboarding' | 'edit';
@@ -329,9 +332,13 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       router.replace('/(tabs)/me');
       return;
     }
-    Alert.alert('저장하지 않고 나갈까요?', '변경한 내용이 사라져요.', [
-      { text: '계속 편집', style: 'cancel' },
-      { text: '나가기', style: 'destructive', onPress: () => router.replace('/(tabs)/me') },
+    Alert.alert(t('profileEditor.unsavedTitle'), t('profileEditor.unsavedBody'), [
+      { text: t('profileEditor.keepEditing'), style: 'cancel' },
+      {
+        text: t('profileEditor.leave'),
+        style: 'destructive',
+        onPress: () => router.replace('/(tabs)/me'),
+      },
     ]);
   }
 
@@ -386,7 +393,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         profileDetails.heightCm !== null &&
         (profileDetails.heightCm < 120 || profileDetails.heightCm > 220)
       ) {
-        return issue('키는 120~220cm 사이로 입력해주세요.');
+        return issue(t('profileEditor.heightError'));
       }
     }
 
@@ -535,8 +542,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.editState}>
           <ActivityIndicator color={palette.pink} size="small" />
-          <Text style={styles.editStateTitle}>프로필을 불러오는 중이에요</Text>
-          <Text style={styles.editStateBody}>저장된 정보를 안전하게 준비하고 있어요.</Text>
+          <Text style={styles.editStateTitle}>{t('profileEditor.loadingTitle')}</Text>
+          <Text style={styles.editStateBody}>{t('profileEditor.loadingBody')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -549,24 +556,22 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
           <View style={styles.editStateIcon}>
             <IllustratedIcon size={58} source={illustratedIcons.connectionError} />
           </View>
-          <Text style={styles.editStateTitle}>프로필을 불러오지 못했어요</Text>
-          <Text style={styles.editStateBody}>
-            잠시 후 다시 시도하거나 마이페이지로 돌아가 주세요.
-          </Text>
+          <Text style={styles.editStateTitle}>{t('profileEditor.loadErrorTitle')}</Text>
+          <Text style={styles.editStateBody}>{t('profileEditor.loadErrorBody')}</Text>
           <View style={styles.editStateActions}>
             <Pressable
               accessibilityRole="button"
               onPress={() => router.replace('/(tabs)/me')}
               style={styles.editStateSecondaryButton}
             >
-              <Text style={styles.editStateSecondaryLabel}>돌아가기</Text>
+              <Text style={styles.editStateSecondaryLabel}>{t('profileEditor.back')}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={() => existingProfileQuery.refetch()}
               style={styles.editStatePrimaryButton}
             >
-              <Text style={styles.editStatePrimaryLabel}>다시 시도</Text>
+              <Text style={styles.editStatePrimaryLabel}>{t('profileEditor.retry')}</Text>
             </Pressable>
           </View>
         </View>
@@ -608,7 +613,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
               <>
                 <View style={styles.editHeaderTopRow}>
                   <Pressable
-                    accessibilityLabel="프로필 수정 뒤로가기"
+                    accessibilityLabel={t('profileEditor.backA11y')}
                     accessibilityRole="button"
                     onPress={leaveEditor}
                     hitSlop={6}
@@ -616,9 +621,9 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                   >
                     <Ionicons color={palette.ink} name="chevron-back" size={22} />
                   </Pressable>
-                  <Text style={styles.editTitle}>프로필 편집</Text>
+                  <Text style={styles.editTitle}>{t('profileEditor.title')}</Text>
                   <Pressable
-                    accessibilityLabel="내 공개 프로필 미리보기"
+                    accessibilityLabel={t('profileEditor.preview')}
                     accessibilityRole="button"
                     onPress={() => router.push('/profile-preview')}
                     hitSlop={6}
@@ -645,7 +650,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                         <Text
                           style={[styles.editTabLabel, selected && styles.editTabLabelSelected]}
                         >
-                          {section.label}
+                          {t(`profileEditor.tabs.${section.labelKey}`)}
                         </Text>
                       </Pressable>
                     );
@@ -656,8 +661,12 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     {String(step + 1).padStart(2, '0')} /{' '}
                     {String(EDIT_SECTIONS.length).padStart(2, '0')}
                   </Text>
-                  <Text style={styles.editSectionTitle}>{activeEditSection.title}</Text>
-                  <Text style={styles.editSectionBody}>{activeEditSection.body}</Text>
+                  <Text style={styles.editSectionTitle}>
+                    {t(`profileEditor.sections.${activeEditSection.titleKey}`)}
+                  </Text>
+                  <Text style={styles.editSectionBody}>
+                    {t(`profileEditor.sections.${activeEditSection.bodyKey}`)}
+                  </Text>
                 </View>
               </>
             ) : (
@@ -686,7 +695,9 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                     <IllustratedIcon size={44} source={activeOnboardingSection.illustration} />
                   </View>
                   <View style={styles.onboardingStepCopy}>
-                    <Text style={styles.onboardingStepText}>{activeOnboardingSection.label}</Text>
+                    <Text style={styles.onboardingStepText}>
+                      {t(activeOnboardingSection.labelKey)}
+                    </Text>
                     <Text style={styles.title}>{t(`profileSetup.steps.${step}.title`)}</Text>
                     <Text style={styles.subtitle}>{t(`profileSetup.steps.${step}.body`)}</Text>
                   </View>
@@ -817,6 +828,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                 <ProfilePhotoPicker
                   disabled={loading}
                   photos={photos}
+                  ready={!requestedEditMode || profileHydrated}
                   uploadProgress={uploadProgress}
                   onChange={setPhotos}
                   onError={(value) => {
@@ -846,7 +858,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
               </View>
             ) : null}
             {isEditingProfile ? (
-              <PrimaryButton label="변경사항 저장" loading={loading} onPress={saveProfile} />
+              <PrimaryButton
+                label={t('profileEditor.save')}
+                loading={loading}
+                onPress={saveProfile}
+              />
             ) : (
               <View style={styles.actions}>
                 {step > 0 ? (

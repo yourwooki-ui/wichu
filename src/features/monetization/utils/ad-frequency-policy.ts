@@ -4,6 +4,18 @@ export const DISCOVER_INTERSTITIAL_POLICY = Object.freeze({
   dailyLimit: 3,
 });
 
+export const BROWSE_INTERSTITIAL_POLICY = Object.freeze({
+  actionsPerAd: 10,
+  minimumIntervalMs: 10 * 60 * 1000,
+  dailyLimit: 5,
+});
+
+type InterstitialPolicy = {
+  actionsPerAd: number;
+  minimumIntervalMs: number;
+  dailyLimit: number;
+};
+
 export type InterstitialFrequencyState = {
   actionsSinceLastAd: number;
   dailyCount: number;
@@ -36,14 +48,37 @@ export function normalizeFrequencyState(
 }
 
 export function registerDiscoverAction(previous: InterstitialFrequencyState | null, now: number) {
+  return registerInterstitialAction(previous, now, DISCOVER_INTERSTITIAL_POLICY);
+}
+
+export function registerBrowseAction(previous: InterstitialFrequencyState | null, now: number) {
+  const state = normalizeFrequencyState(previous, now);
+  const intervalSatisfied =
+    state.lastShownAt === null ||
+    now - state.lastShownAt >= BROWSE_INTERSTITIAL_POLICY.minimumIntervalMs;
+  const shouldShow =
+    state.actionsSinceLastAd >= BROWSE_INTERSTITIAL_POLICY.actionsPerAd &&
+    state.dailyCount < BROWSE_INTERSTITIAL_POLICY.dailyLimit &&
+    intervalSatisfied;
+
+  return {
+    state: { ...state, actionsSinceLastAd: state.actionsSinceLastAd + 1 },
+    shouldShow,
+  };
+}
+
+function registerInterstitialAction(
+  previous: InterstitialFrequencyState | null,
+  now: number,
+  policy: InterstitialPolicy,
+) {
   const state = normalizeFrequencyState(previous, now);
   const next = { ...state, actionsSinceLastAd: state.actionsSinceLastAd + 1 };
   const intervalSatisfied =
-    next.lastShownAt === null ||
-    now - next.lastShownAt >= DISCOVER_INTERSTITIAL_POLICY.minimumIntervalMs;
+    next.lastShownAt === null || now - next.lastShownAt >= policy.minimumIntervalMs;
   const shouldShow =
-    next.actionsSinceLastAd >= DISCOVER_INTERSTITIAL_POLICY.actionsPerAd &&
-    next.dailyCount < DISCOVER_INTERSTITIAL_POLICY.dailyLimit &&
+    next.actionsSinceLastAd >= policy.actionsPerAd &&
+    next.dailyCount < policy.dailyLimit &&
     intervalSatisfied;
 
   return { state: next, shouldShow };

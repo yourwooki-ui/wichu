@@ -25,11 +25,18 @@ export const purchaseService = {
   listProducts(userId: string) {
     return purchaseProvider.listProducts(userId);
   },
-  purchase(userId: string, productId: MonetizationProductId) {
-    return purchaseProvider.purchase(userId, productId);
+  purchase(
+    userId: string,
+    productId: MonetizationProductId,
+    replacingProductId?: MonetizationProductId,
+  ) {
+    return purchaseProvider.purchase(userId, productId, replacingProductId);
   },
   restore(userId: string) {
     return purchaseProvider.restore(userId);
+  },
+  getCustomerState(userId: string) {
+    return purchaseProvider.getCustomerState(userId);
   },
   async getEntitlement(userId: string): Promise<PassEntitlement> {
     const supabase = getSupabaseClient();

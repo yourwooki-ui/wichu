@@ -42,12 +42,19 @@ describe('translation coverage', () => {
     languages = module.supportedLanguages;
   });
 
-  it('resolves every reference key for every supported language', () => {
+  it('resolves every supported language without exposing keys or breaking placeholders', () => {
     const reference = flatten(i18n.getResourceBundle('en', 'translation'));
 
     for (const { code } of languages) {
-      for (const key of Object.keys(reference)) {
+      const translated = flatten(i18n.getResourceBundle(code, 'translation'));
+      for (const [key, fallbackValue] of Object.entries(reference)) {
         expect(i18n.exists(key, { lng: code }), `${code} cannot resolve ${key}`).toBe(true);
+        expect(i18n.t(key, { lng: code }), `${code} exposed ${key}`).not.toBe(key);
+        if (key in translated) {
+          expect(placeholders(translated[key]), `${code} placeholders for ${key}`).toEqual(
+            placeholders(fallbackValue),
+          );
+        }
       }
     }
   });

@@ -40,7 +40,7 @@
 
 되돌리기는 `undo_my_swipe`가 서버에서 가장 최근 Swipe인지와 활성 Match 발생 여부를 다시 확인한다. Gold Pass는 크레딧 없이 연속 사용하고, 그 외 사용자는 private 크레딧 계정에서 1회를 원자 차감한다. 보상 크레딧 지급 RPC는 `service_role` 전용이며 광고 공급자의 검증된 고유 event ID를 중복 방지 키로 사용한다.
 
-메시지는 클라이언트가 생성한 UUID를 `client_id`로 `send_my_message` RPC에 전달한다. `(sender_id,client_id)` unique constraint로 응답 유실 뒤 같은 요청을 재시도해도 한 행만 유지한다. 대화방 진입 및 상대 메시지 수신 시 `mark_match_read`가 사용자별 읽음 시각을 저장한다. Match 목록은 `get_my_match_connections`가 Match마다 lateral query로 최신 메시지 한 건과 unread를 함께 반환한다. 전 대화에 하나의 전역 message limit을 적용하지 않는다. `swipes`와 `messages`의 클라이언트 직접 쓰기 권한은 제거한다.
+메시지는 클라이언트가 생성한 UUID를 `client_id`로 `send_my_message` RPC에 전달한다. `(sender_id,client_id)` unique constraint로 응답 유실 뒤 같은 요청을 재시도해도 한 행만 유지한다. 대화방 진입 및 상대 메시지 수신 시 `mark_match_read`가 사용자별 읽음 시각을 저장한다. Match 목록은 `get_my_match_connections`가 Match마다 lateral query로 최신 메시지 한 건과 unread를 함께 반환한다. 대화방은 목록 전체를 다시 읽지 않고 `get_my_match_connection(match_id)`로 활성 Match 참가자·차단 상태·승인 사진을 검증한 상대 프로필 1건만 가져온다. 앱과 DB의 순차 배포 중 함수가 아직 없으면 기존 목록 read model로만 일시 폴백한다. 전 대화에 하나의 전역 message limit을 적용하지 않는다. `swipes`와 `messages`의 클라이언트 직접 쓰기 권한은 제거한다.
 
 상호작용 수명은 서버의 `swipes.expires_at`으로 강제한다. Pick은 보낸 기록과 받은 기록 모두 생성 후 24시간 동안만 활성이고, Pass는 3일 동안 후보 재노출을 막은 뒤 같은 프로필이 Discover에 다시 들어올 수 있다. Discover 후보는 `last_active_at`이 최근 7일 이내인 활성 사용자로 한정한다. Match와 메시지는 자동 만료하지 않으며, 참여자가 명시적으로 `end_my_match`를 실행할 때만 대화가 종료되고 양쪽 목록에서 숨겨진다.
 

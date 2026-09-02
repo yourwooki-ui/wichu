@@ -21,4 +21,12 @@ describe('display name compatibility', () => {
     expect(getRegionDisplayName('ko', 'kr')).toBe('KR');
     expect(getLanguageDisplayName('ko', 'en')).toBe('EN');
   });
+
+  it('does not throw when persisted profile locale values are empty', async () => {
+    const { getLanguageDisplayName, getRegionDisplayName } = await import('./display-names');
+
+    expect(getRegionDisplayName(undefined, null)).toBe('');
+    expect(getRegionDisplayName('', 'kr')).toBeTruthy();
+    expect(getLanguageDisplayName(null, undefined)).toBe('');
+  });
 });

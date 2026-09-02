@@ -3,6 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -23,6 +24,7 @@ import {
   mockConversations,
 } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { reportOperationalError } from '@/services/operational-error-service';
@@ -31,6 +33,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ChatListScreen() {
   const router = useRouter();
+  const navigateWithAdGate = useAdGatedNavigation();
   const { t } = useTranslation();
   const { session } = useAuthSession();
   const currentUserId = session?.user.id;
@@ -56,19 +59,23 @@ export function ChatListScreen() {
           countryCode: connection.profile.country_code,
           distanceKm: 0,
           photo: connection.profile.photo ?? '',
-          matchedAt: formatRelativeTime(connection.matchedAt, now),
+          matchedAt: formatRelativeTime(connection.matchedAt, now, t),
           isOnline:
             Boolean(connection.profile.last_active_at) &&
             now - new Date(connection.profile.last_active_at!).getTime() < 5 * 60_000,
           isNew: now - new Date(connection.matchedAt).getTime() < 24 * 60 * 60_000,
         } satisfies ConnectionProfile,
-        message: connection.lastMessage?.content ?? '새로운 매치예요. 먼저 인사해보세요.',
-        time: formatRelativeTime(connection.lastMessage?.created_at ?? connection.matchedAt, now),
+        message: connection.lastMessage?.content ?? t('chatList.newMatch'),
+        time: formatRelativeTime(
+          connection.lastMessage?.created_at ?? connection.matchedAt,
+          now,
+          t,
+        ),
         unreadCount: connection.unreadCount,
         isYourTurn:
           Boolean(connection.lastMessage) && connection.lastMessage?.sender_id !== currentUserId,
       })),
-    [currentUserId, matchesQuery.data, now],
+    [currentUserId, matchesQuery.data, now, t],
   );
   const sourceConversations =
     realConversations.length || !__DEV__ ? realConversations : mockConversations;
@@ -94,10 +101,10 @@ export function ChatListScreen() {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
-        actionAccessibilityLabel="채팅 알림 설정"
+        actionAccessibilityLabel={t('chatList.headerAction')}
         actionIcon={illustratedIcons.notification}
         actionMotion={unreadCount > 0 ? 'bell' : undefined}
-        eyebrow="메시지"
+        eyebrow={t('chatList.eyebrow')}
         onAction={() => router.push('/settings')}
       />
 
@@ -107,8 +114,8 @@ export function ChatListScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.title}>채팅</Text>
-          <Text style={styles.subtitle}>매치한 사용자와 메시지를 주고받아요.</Text>
+          <Text style={styles.title}>{t('chatList.title')}</Text>
+          <Text style={styles.subtitle}>{t('chatList.subtitle')}</Text>
         </View>
 
         {activeProfiles.length ? (
@@ -123,7 +130,7 @@ export function ChatListScreen() {
                   const conversation = sourceConversations.find(
                     (item) => item.profile.id === profile.id,
                   );
-                  router.push(
+                  void navigateWithAdGate(
                     `/chat/${conversation?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
                   );
                 }}
@@ -141,14 +148,14 @@ export function ChatListScreen() {
             <TextInput
               autoCapitalize="none"
               onChangeText={setQuery}
-              placeholder="이름 검색"
+              placeholder={t('chatList.searchPlaceholder')}
               placeholderTextColor="#9999A1"
               style={styles.searchInput}
               value={query}
             />
             {query ? (
               <Pressable
-                accessibilityLabel="검색어 지우기"
+                accessibilityLabel={t('chatList.clearSearch')}
                 accessibilityRole="button"
                 onPress={() => setQuery('')}
               >
@@ -160,10 +167,12 @@ export function ChatListScreen() {
 
         {hasConversations ? (
           <View style={styles.listHeading}>
-            <Text style={styles.listTitle}>메시지</Text>
+            <Text style={styles.listTitle}>{t('chatList.sectionTitle')}</Text>
             {unreadCount ? (
               <View style={styles.unreadPill}>
-                <Text style={styles.unreadPillText}>새 메시지 {unreadCount}</Text>
+                <Text style={styles.unreadPillText}>
+                  {t('chatList.unread', { count: unreadCount })}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -188,9 +197,11 @@ export function ChatListScreen() {
                   entering={listEntering(index)}
                   exiting={listExiting()}
                   layout={listLayout()}
-                  accessibilityLabel={`${conversation.profile.name}님과의 대화 열기`}
+                  accessibilityLabel={t('chatList.openChat', {
+                    name: conversation.profile.name,
+                  })}
                   key={conversation.matchId}
-                  onPress={() => router.push(`/chat/${conversation.matchId}`)}
+                  onPress={() => void navigateWithAdGate(`/chat/${conversation.matchId}`)}
                   style={({ pressed }: { pressed: boolean }) => [
                     styles.row,
                     pressed && styles.rowPressed,
@@ -226,7 +237,7 @@ export function ChatListScreen() {
                           conversation.unreadCount > 0 && styles.messageUnread,
                         ]}
                       >
-                        {conversation.isTyping ? '입력 중…' : conversation.message}
+                        {conversation.isTyping ? t('chatList.typing') : conversation.message}
                       </Text>
                       {conversation.unreadCount > 0 ? (
                         <View style={styles.unreadCount}>
@@ -237,7 +248,9 @@ export function ChatListScreen() {
                     {conversation.isTranslated ? (
                       <View style={styles.translatedRow}>
                         <IllustratedIcon size={17} source={illustratedIcons.translation} />
-                        <Text style={styles.translatedText}>번역 가능</Text>
+                        <Text style={styles.translatedText}>
+                          {t('chatList.translationAvailable')}
+                        </Text>
                       </View>
                     ) : null}
                     {conversation.isYourTurn && conversation.unreadCount === 0 ? (
@@ -255,19 +268,19 @@ export function ChatListScreen() {
           {!matchesQuery.isLoading && !listError && !conversations.length ? (
             query ? (
               <StateView
-                body="철자나 다른 이름으로 다시 검색해보세요."
+                body={t('chatList.searchEmptyBody')}
                 container="plain"
                 illustration={illustratedIcons.searchEmpty}
-                title="검색 결과가 없어요"
+                title={t('chatList.searchEmptyTitle')}
               />
             ) : (
               <StateView
-                actionLabel="발견하러 가기"
-                body="서로 Pick하면 채팅을 시작할 수 있어요."
+                actionLabel={t('chatList.discoverAction')}
+                body={t('chatList.emptyBody')}
                 container="plain"
                 illustration={illustratedIcons.chatEmpty}
                 onAction={() => router.push('/(tabs)/discover')}
-                title="아직 시작된 대화가 없어요"
+                title={t('chatList.emptyTitle')}
               />
             )
           ) : null}
@@ -277,12 +290,12 @@ export function ChatListScreen() {
   );
 }
 
-function formatRelativeTime(value: string, now: number) {
+function formatRelativeTime(value: string, now: number, t: TFunction) {
   const minutes = Math.max(0, Math.floor((now - new Date(value).getTime()) / 60_000));
-  if (minutes < 1) return '방금';
-  if (minutes < 60) return `${minutes}분`;
-  if (minutes < 1_440) return `${Math.floor(minutes / 60)}시간`;
-  return `${Math.floor(minutes / 1_440)}일`;
+  if (minutes < 1) return t('chatList.time.now');
+  if (minutes < 60) return t('chatList.time.minutes', { count: minutes });
+  if (minutes < 1_440) return t('chatList.time.hours', { count: Math.floor(minutes / 60) });
+  return t('chatList.time.days', { count: Math.floor(minutes / 1_440) });
 }
 
 const styles = StyleSheet.create({

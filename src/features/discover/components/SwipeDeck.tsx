@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -25,6 +24,7 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
+import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { hapticsService } from '@/services/haptics-service';
 import { Profile, SwipeAction } from '@/types/profile';
 
@@ -55,7 +55,7 @@ export function SwipeDeck({
   onRetry,
   restoredSwipe,
 }: SwipeDeckProps) {
-  const router = useRouter();
+  const navigateWithAdGate = useAdGatedNavigation();
   const { t } = useTranslation();
   const theme = useAppTheme();
   const { height, width } = useAppViewport();
@@ -96,8 +96,10 @@ export function SwipeDeck({
   }, []);
 
   const openProfile = useCallback(() => {
-    if (currentProfile) router.push(`/profile/${currentProfile.id}?context=discover`);
-  }, [currentProfile, router]);
+    if (currentProfile) {
+      void navigateWithAdGate(`/profile/${currentProfile.id}?context=discover`);
+    }
+  }, [currentProfile, navigateWithAdGate]);
 
   const startSwipe = useCallback(
     (action: SwipeAction) => {
