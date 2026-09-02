@@ -114,6 +114,7 @@ const baseConfig = {
         experimentalLauncherActivity: false,
       },
     ],
+    './plugins/with-android-main-activity-launch-mode',
     'expo-font',
     'expo-secure-store',
   ],
