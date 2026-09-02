@@ -9,6 +9,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { pressFeedback, radius, spacing } from '@/constants/theme';
+import { normalizeProfilePhotoAsset } from '@/features/profile/services/profile-photo-normalizer';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
 
 const MAX_PHOTOS = 6;
@@ -38,6 +39,7 @@ export function ProfilePhotoPicker({
   const theme = useAppTheme();
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
+  const pickingRef = useRef(false);
   const recoveredPendingResult = useRef(false);
   const latestPhotos = useRef(photos);
   const textColor = dark ? '#FFFFFF' : theme.colors.text;
@@ -50,16 +52,20 @@ export function ProfilePhotoPicker({
   }, [photos]);
 
   const addAssets = useCallback(
-    (assets: ImagePicker.ImagePickerAsset[]) => {
+    async (assets: ImagePicker.ImagePickerAsset[]) => {
       const currentPhotos = latestPhotos.current;
       const remaining = MAX_PHOTOS - currentPhotos.length;
       if (remaining <= 0) return;
+
+      const normalizedAssets = await Promise.all(
+        assets.slice(0, remaining).map((asset) => normalizeProfilePhotoAsset(asset)),
+      );
 
       const knownIdentities = new Set(currentPhotos.map(getPhotoIdentity));
       const validAssets: ImagePicker.ImagePickerAsset[] = [];
       let skipped = 0;
 
-      for (const asset of assets) {
+      for (const asset of normalizedAssets) {
         const identity = getPhotoIdentity(asset);
         const isUnsupported = asset.mimeType && !SUPPORTED_MIME_TYPES.has(asset.mimeType);
         const isTooLarge = (asset.fileSize ?? 0) > MAX_PHOTO_BYTES;
@@ -97,15 +103,16 @@ export function ProfilePhotoPicker({
 
     void ImagePicker.getPendingResultAsync()
       .then((result) => {
-        if (result && 'assets' in result && !result.canceled) addAssets(result.assets);
+        if (result && 'assets' in result && !result.canceled) return addAssets(result.assets);
       })
       .catch(() => undefined);
   }, [addAssets, ready]);
 
   async function pickFromLibrary() {
     const remaining = MAX_PHOTOS - latestPhotos.current.length;
-    if (remaining <= 0 || picking || disabled || !ready) return;
+    if (remaining <= 0 || pickingRef.current || disabled || !ready) return;
 
+    pickingRef.current = true;
     setPicking(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -113,21 +120,68 @@ export function ProfilePhotoPicker({
         allowsMultipleSelection: true,
         orderedSelection: true,
         selectionLimit: remaining,
-        quality: 1,
+        quality: 0.86,
       });
 
       if (result.canceled) return;
-      addAssets(result.assets);
+      await addAssets(result.assets);
     } catch (error) {
       onError(error instanceof Error ? error.message : t('profileSetup.photos.pickFailed'));
     } finally {
+      pickingRef.current = false;
+      setPicking(false);
+    }
+  }
+
+  async function replaceFromLibrary(index: number) {
+    const currentPhoto = latestPhotos.current[index];
+    if (!currentPhoto || pickingRef.current || disabled || !ready) return;
+
+    pickingRef.current = true;
+    setPicking(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.86,
+      });
+      if (result.canceled) return;
+
+      const pickedAsset = result.assets[0];
+      if (!pickedAsset) return;
+      const asset = await normalizeProfilePhotoAsset(pickedAsset);
+      const otherPhotos = latestPhotos.current.filter((_, photoIndex) => photoIndex !== index);
+      const isUnsupported = asset.mimeType && !SUPPORTED_MIME_TYPES.has(asset.mimeType);
+      const isTooLarge = (asset.fileSize ?? 0) > MAX_PHOTO_BYTES;
+      const isTooSmall = asset.width < MIN_PHOTO_EDGE || asset.height < MIN_PHOTO_EDGE;
+      const isDuplicate = new Set(otherPhotos.map(getPhotoIdentity)).has(getPhotoIdentity(asset));
+
+      if (isUnsupported || isTooLarge || isTooSmall || isDuplicate) {
+        onError(t('profileSetup.photos.skipped', { count: 1 }));
+        return;
+      }
+
+      const nextPhotos = [...latestPhotos.current];
+      nextPhotos[index] = {
+        ...asset,
+        draftId: `${asset.assetId ?? asset.uri}-replacement`,
+      };
+      latestPhotos.current = nextPhotos;
+      onChange(nextPhotos);
+      onError('');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : t('profileSetup.photos.pickFailed'));
+    } finally {
+      pickingRef.current = false;
       setPicking(false);
     }
   }
 
   async function takePhoto() {
-    if (latestPhotos.current.length >= MAX_PHOTOS || picking || disabled || !ready) return;
+    if (latestPhotos.current.length >= MAX_PHOTOS || pickingRef.current || disabled || !ready)
+      return;
 
+    pickingRef.current = true;
     setPicking(true);
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -140,12 +194,13 @@ export function ProfilePhotoPicker({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 5],
-        quality: 1,
+        quality: 0.86,
       });
-      if (!result.canceled) addAssets(result.assets);
+      if (!result.canceled) await addAssets(result.assets);
     } catch (error) {
       onError(error instanceof Error ? error.message : t('profileSetup.photos.cameraFailed'));
     } finally {
+      pickingRef.current = false;
       setPicking(false);
     }
   }
@@ -263,12 +318,14 @@ export function ProfilePhotoPicker({
                   }
                 />
                 <Text style={styles.reviewBadgeText}>
-                  {photo.reviewStatus === 'pending' ? '사진 심사 중' : '사진 반려'}
+                  {photo.reviewStatus === 'pending'
+                    ? t('profilePhotos.reviewPending')
+                    : t('profilePhotos.reviewRejected')}
                 </Text>
               </View>
             ) : !photo.storagePath ? (
               <View style={styles.newPhotoBadge}>
-                <Text style={styles.newPhotoBadgeText}>새 사진 · 저장 후 심사</Text>
+                <Text style={styles.newPhotoBadgeText}>{t('profilePhotos.newPending')}</Text>
               </View>
             ) : null}
             {index === 0 ? (
@@ -285,6 +342,16 @@ export function ProfilePhotoPicker({
               style={styles.removeButton}
             >
               <Ionicons name="close" size={16} color="#FFFFFF" />
+            </Pressable>
+            <Pressable
+              accessibilityLabel={t('profilePhotos.replace', { index: index + 1 })}
+              accessibilityRole="button"
+              disabled={controlsDisabled}
+              hitSlop={10}
+              onPress={() => replaceFromLibrary(index)}
+              style={styles.replaceButton}
+            >
+              <Ionicons name="refresh" size={14} color="#FFFFFF" />
             </Pressable>
             {index > 0 ? (
               <Pressable
@@ -518,6 +585,18 @@ const styles = StyleSheet.create({
   removeButton: {
     position: 'absolute',
     top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    zIndex: 3,
+  },
+  replaceButton: {
+    position: 'absolute',
+    top: 38,
     right: 6,
     width: 26,
     height: 26,

@@ -2,7 +2,15 @@ import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -50,8 +58,16 @@ export default function ResetPasswordRoute() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.page}>
-        <View style={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.page}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
           <BrandWordmark size={26} />
           <Text style={styles.title}>{t('passwordReset.title')}</Text>
           <Text style={styles.body}>{t('passwordReset.body')}</Text>
@@ -103,8 +119,8 @@ export default function ResetPasswordRoute() {
               ) : null}
             </>
           )}
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -112,7 +128,8 @@ export default function ResetPasswordRoute() {
 const styles = StyleSheet.create({
   safeArea: { alignItems: 'center', backgroundColor: '#08080A', flex: 1 },
   page: { flex: 1, maxWidth: 430, width: '100%' },
-  content: { flex: 1, gap: 18, justifyContent: 'center', padding: 22, paddingBottom: 74 },
+  scroll: { flex: 1, minHeight: 0 },
+  content: { flexGrow: 1, gap: 18, justifyContent: 'center', padding: 22, paddingBottom: 74 },
   title: { color: palette.white, fontSize: 29, fontWeight: '900', letterSpacing: -0.8 },
   body: { color: '#9B9BA4', fontSize: 13, lineHeight: 20, marginBottom: 6 },
   preparing: { alignItems: 'center', gap: 12, paddingVertical: 28 },

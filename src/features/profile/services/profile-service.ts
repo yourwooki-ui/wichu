@@ -120,8 +120,9 @@ export const profileService = {
     spokenLanguages: SpokenLanguage[];
     tags: ProfileTag[];
     photoPaths: string[];
+    profileDetails?: ProfileDetails | null;
   }) {
-    return getSupabaseClient().rpc('save_my_profile_for_review', {
+    return getSupabaseClient().rpc('save_my_profile_bundle_for_review', {
       p_display_name: values.displayName,
       p_birth_date: values.birthDate,
       p_gender: values.gender,
@@ -137,6 +138,18 @@ export const profileService = {
       p_spoken_languages: values.spokenLanguages as unknown as Json,
       p_tags: values.tags as unknown as Json,
       p_photo_paths: values.photoPaths,
+      p_profile_details: values.profileDetails
+        ? ({
+            occupation: values.profileDetails.occupation.trim(),
+            educationLevel: values.profileDetails.educationLevel,
+            heightCm: values.profileDetails.heightCm,
+            personalityType: values.profileDetails.personalityType,
+            drinking: values.profileDetails.drinking,
+            smoking: values.profileDetails.smoking,
+            exercise: values.profileDetails.exercise,
+            pets: values.profileDetails.pets,
+          } as Json)
+        : null,
     });
   },
   deleteMyProfile(userId: string) {

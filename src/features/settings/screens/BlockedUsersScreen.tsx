@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -19,34 +20,45 @@ const queryKey = ['safety', 'blocked-users'] as const;
 
 export function BlockedUsersScreen() {
   const router = useRouter();
+  const { i18n, t } = useTranslation();
   const queryClient = useQueryClient();
   const blockedQuery = useQuery({ queryKey, queryFn: safetyService.listBlockedUsers });
   const unblockMutation = useMutation({
     mutationFn: safetyService.unblock,
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
     onError: () =>
-      Alert.alert('차단을 해제하지 못했어요', '연결 상태를 확인하고 다시 시도해 주세요.'),
+      Alert.alert(
+        t('safetySurfaces.blocked.unblockFailed'),
+        t('safetySurfaces.blocked.unblockFailedBody'),
+      ),
   });
 
   const confirmUnblock = (blockId: string, name: string) => {
-    Alert.alert(`${name}님의 차단을 해제할까요?`, '해제 후 탐색에서 다시 만날 수 있어요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '차단 해제', onPress: () => unblockMutation.mutate(blockId) },
-    ]);
+    Alert.alert(
+      t('safetySurfaces.blocked.confirmTitle', { name }),
+      t('safetySurfaces.blocked.confirmBody'),
+      [
+        { text: t('safetySurfaces.blocked.cancel'), style: 'cancel' },
+        {
+          text: t('safetySurfaces.blocked.confirm'),
+          onPress: () => unblockMutation.mutate(blockId),
+        },
+      ],
+    );
   };
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('safetySurfaces.blocked.back')}
           accessibilityRole="button"
           onPress={() => router.back()}
           style={styles.headerButton}
         >
           <Ionicons color={palette.ink} name="chevron-back" size={24} />
         </Pressable>
-        <Text style={styles.headerTitle}>차단한 사용자</Text>
+        <Text style={styles.headerTitle}>{t('safetySurfaces.blocked.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
@@ -56,22 +68,26 @@ export function BlockedUsersScreen() {
         </View>
       ) : blockedQuery.isError ? (
         <EmptyState
-          actionLabel="다시 시도"
-          description="연결 상태를 확인하고 다시 불러와 주세요."
+          actionLabel={t('reliability.retry')}
+          description={t('safetySurfaces.blocked.unblockFailedBody')}
           illustration={illustratedIcons.connectionError}
           onAction={() => void blockedQuery.refetch()}
-          title="차단 목록을 불러오지 못했어요"
+          title={t('safetySurfaces.blocked.loadFailed')}
           tone="error"
         />
       ) : blockedQuery.data?.length === 0 ? (
         <EmptyState
-          description="차단한 사용자가 없어요."
+          description={t('safetySurfaces.blocked.emptyBody')}
           illustration={illustratedIcons.safety}
-          title="차단 목록이 비어 있어요"
+          title={t('safetySurfaces.blocked.emptyTitle')}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.helper}>차단한 사용자는 서로의 프로필과 메시지를 볼 수 없어요.</Text>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          <Text style={styles.helper}>{t('safetySurfaces.blocked.helper')}</Text>
           <View style={styles.list}>
             {(blockedQuery.data ?? []).map((item, index) => (
               <Animated.View
@@ -108,7 +124,9 @@ export function BlockedUsersScreen() {
                       />
                     ) : null}
                   </View>
-                  <Text style={styles.date}>{formatDate('ko-KR', new Date(item.blocked_at))}</Text>
+                  <Text style={styles.date}>
+                    {formatDate(i18n.resolvedLanguage ?? 'ko-KR', new Date(item.blocked_at))}
+                  </Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"
@@ -116,7 +134,7 @@ export function BlockedUsersScreen() {
                   onPress={() => confirmUnblock(item.block_id, item.display_name)}
                   style={({ pressed }) => [styles.unblock, pressed && styles.pressed]}
                 >
-                  <Text style={styles.unblockText}>해제</Text>
+                  <Text style={styles.unblockText}>{t('safetySurfaces.blocked.action')}</Text>
                 </Pressable>
               </Animated.View>
             ))}
@@ -138,6 +156,7 @@ const styles = StyleSheet.create({
   },
   headerButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerTitle: { ...typography.subheading, color: palette.ink, fontWeight: '900' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 32, paddingHorizontal: 18 },
   helper: { ...typography.caption, color: palette.inkMuted, marginBottom: 12 },
   list: { backgroundColor: palette.white, borderRadius: 22, overflow: 'hidden' },

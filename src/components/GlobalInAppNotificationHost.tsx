@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { type Href, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ import { useInAppNotificationCenter } from '@/services/in-app-notification-cente
 
 const DISPLAY_DURATION_MS = 3000;
 const HIDDEN_OFFSET = -132;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
   const router = useRouter();
@@ -49,7 +50,7 @@ export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
     Animated.timing(translateY, {
       duration: 170,
       toValue: HIDDEN_OFFSET,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start(({ finished }) => {
       if (finished) completeDismiss(notice.id);
     });
@@ -80,12 +81,12 @@ export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
         mass: 0.76,
         stiffness: 245,
         toValue: 0,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
       Animated.timing(progress, {
         duration: DISPLAY_DURATION_MS,
         toValue: 0,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
     }
 
@@ -125,7 +126,7 @@ export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
             damping: 19,
             stiffness: 260,
             toValue: 0,
-            useNativeDriver: true,
+            useNativeDriver: USE_NATIVE_DRIVER,
           }).start();
         },
         onPanResponderTerminate: () => {

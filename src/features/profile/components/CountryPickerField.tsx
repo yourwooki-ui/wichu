@@ -137,6 +137,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
           initialNumToRender={18}
           keyboardShouldPersistTaps="handled"
           keyExtractor={(country) => country.code}
+          nestedScrollEnabled
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons color={palette.inkMuted} name="search-outline" size={26} />
@@ -174,6 +175,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
             );
           }}
           showsVerticalScrollIndicator={false}
+          style={styles.listViewport}
         />
       </InteractiveBottomSheet>
     </View>
@@ -294,6 +296,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
   },
+  listViewport: { flex: 1, minHeight: 0 },
   countryRow: {
     alignItems: 'center',
     borderRadius: radius.lg,

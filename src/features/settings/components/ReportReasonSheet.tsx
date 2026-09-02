@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
@@ -8,13 +9,13 @@ import {
 import { palette, pressFeedback, radius } from '@/constants/theme';
 
 export const REPORT_REASONS = [
-  { value: 'inappropriate_content', label: '부적절한 사진 또는 콘텐츠', icon: 'images-outline' },
-  { value: 'harassment', label: '괴롭힘 또는 불쾌한 대화', icon: 'alert-circle-outline' },
-  { value: 'spam', label: '스팸 또는 홍보', icon: 'megaphone-outline' },
-  { value: 'fake_profile', label: '허위 또는 도용 프로필', icon: 'person-remove-outline' },
-  { value: 'underage', label: '미성년자로 의심됨', icon: 'shield-outline' },
-  { value: 'scam', label: '금전 요구 또는 사기 의심', icon: 'card-outline' },
-  { value: 'other', label: '기타 안전 문제', icon: 'ellipsis-horizontal-circle-outline' },
+  { value: 'inappropriate_content', icon: 'images-outline' },
+  { value: 'harassment', icon: 'alert-circle-outline' },
+  { value: 'spam', icon: 'megaphone-outline' },
+  { value: 'fake_profile', icon: 'person-remove-outline' },
+  { value: 'underage', icon: 'shield-outline' },
+  { value: 'scam', icon: 'card-outline' },
+  { value: 'other', icon: 'ellipsis-horizontal-circle-outline' },
 ] as const;
 
 export type ReportReason = (typeof REPORT_REASONS)[number]['value'];
@@ -27,48 +28,61 @@ type ReportReasonSheetProps = {
 };
 
 export function ReportReasonSheet({ busy, onClose, onSelect, visible }: ReportReasonSheetProps) {
+  const { t } = useTranslation();
+
   return (
     <InteractiveBottomSheet
-      accessibilityLabel="신고 이유"
-      contentStyle={styles.sheetContent}
+      accessibilityLabel={t('safetySurfaces.report.label')}
+      contentStyle={styles.sheetFrame}
       dismissEnabled={!busy}
       onClose={onClose}
       sheetStyle={styles.sheet}
       visible={visible}
     >
-      <Text style={styles.eyebrow}>SAFETY FIRST</Text>
-      <Text style={styles.title}>신고 이유를 알려주세요</Text>
-      <Text style={styles.subtitle}>신고 내용은 상대에게 공개되지 않으며 운영팀이 확인합니다.</Text>
-      <View style={styles.reasonList}>
-        {REPORT_REASONS.map((reason) => (
-          <Pressable
-            accessibilityRole="button"
-            disabled={busy}
-            key={reason.value}
-            onPress={() => onSelect(reason.value)}
-            style={({ pressed }) => [styles.reason, pressed && styles.pressed]}
-          >
-            <View style={styles.reasonIcon}>
-              <Ionicons
-                color={palette.ink}
-                name={reason.icon as keyof typeof Ionicons.glyphMap}
-                size={19}
-              />
-            </View>
-            <Text style={styles.reasonLabel}>{reason.label}</Text>
-            <Ionicons color="#A3A3AA" name="chevron-forward" size={17} />
-          </Pressable>
-        ))}
-      </View>
-      <BottomSheetCloseButton
-        accessibilityLabel="취소"
-        accessibilityRole="button"
-        accessibilityState={{ busy: busy, disabled: busy }}
-        disabled={busy}
-        style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}
+      <ScrollView
+        contentContainerStyle={styles.sheetContent}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
-        <Text style={styles.cancelText}>{busy ? '접수 중…' : '취소'}</Text>
-      </BottomSheetCloseButton>
+        <Text style={styles.eyebrow}>{t('safetySurfaces.report.eyebrow')}</Text>
+        <Text style={styles.title}>{t('safetySurfaces.report.title')}</Text>
+        <Text style={styles.subtitle}>{t('safetySurfaces.report.body')}</Text>
+        <View style={styles.reasonList}>
+          {REPORT_REASONS.map((reason) => (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              key={reason.value}
+              onPress={() => onSelect(reason.value)}
+              style={({ pressed }) => [styles.reason, pressed && styles.pressed]}
+            >
+              <View style={styles.reasonIcon}>
+                <Ionicons
+                  color={palette.ink}
+                  name={reason.icon as keyof typeof Ionicons.glyphMap}
+                  size={19}
+                />
+              </View>
+              <Text style={styles.reasonLabel}>
+                {t(`safetySurfaces.report.reasons.${reason.value}`)}
+              </Text>
+              <Ionicons color="#A3A3AA" name="chevron-forward" size={17} />
+            </Pressable>
+          ))}
+        </View>
+        <BottomSheetCloseButton
+          accessibilityLabel={t('safetySurfaces.report.cancel')}
+          accessibilityRole="button"
+          accessibilityState={{ busy: busy, disabled: busy }}
+          disabled={busy}
+          style={({ pressed }) => [styles.cancel, pressed && pressFeedback.control]}
+        >
+          <Text style={styles.cancelText}>
+            {busy ? t('safetySurfaces.report.submitting') : t('safetySurfaces.report.cancel')}
+          </Text>
+        </BottomSheetCloseButton>
+      </ScrollView>
     </InteractiveBottomSheet>
   );
 }
@@ -77,6 +91,8 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: palette.white,
   },
+  sheetFrame: { minHeight: 0 },
+  scroll: { flexShrink: 1, minHeight: 0 },
   sheetContent: {
     paddingBottom: 24,
     paddingHorizontal: 18,

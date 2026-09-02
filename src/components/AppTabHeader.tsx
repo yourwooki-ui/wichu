@@ -5,6 +5,7 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { AmbientIconMotion, type IconMotion } from '@/components/MotionIllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
+import { pressFeedback, typography } from '@/constants/theme';
 
 type AppTabHeaderProps = {
   actionAccessibilityLabel?: string;
@@ -27,7 +28,13 @@ export function AppTabHeader({
     <View style={styles.header}>
       <View>
         <BrandWordmark color={theme.colors.text} size={23} />
-        <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>{eyebrow}</Text>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          numberOfLines={1}
+          style={[typography.overline, styles.eyebrow, { color: theme.colors.textMuted }]}
+        >
+          {eyebrow}
+        </Text>
       </View>
       {actionIcon && onAction ? (
         <Pressable
@@ -35,7 +42,7 @@ export function AppTabHeader({
           accessibilityRole="button"
           hitSlop={4}
           onPress={onAction}
-          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.action, pressed && pressFeedback.icon]}
         >
           {actionMotion ? (
             <AmbientIconMotion motion={actionMotion}>
@@ -71,10 +78,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   eyebrow: {
-    fontSize: 11,
-    fontWeight: '900',
     letterSpacing: 1.8,
-    lineHeight: 15,
     marginTop: 2,
   },
   action: {
@@ -83,5 +87,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 52,
   },
-  pressed: { opacity: 0.62, transform: [{ scale: 0.96 }] },
 });

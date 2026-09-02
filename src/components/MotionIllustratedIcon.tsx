@@ -1,12 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ImageSource } from 'expo-image';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 export type IconMotion = 'bell' | 'float' | 'pulse' | 'shine';
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 type AmbientIconMotionProps = {
   active?: boolean;
@@ -38,7 +47,7 @@ export function AmbientIconMotion({
         duration,
         easing: Easing.inOut(Easing.quad),
         toValue,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       });
     const animation = Animated.loop(
       motion === 'bell'

@@ -14,7 +14,8 @@ const baseConfig = {
     },
   },
   android: {
-    versionCode: 25,
+    versionCode: 26,
+    softwareKeyboardLayoutMode: 'resize',
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
       foregroundImage: './assets/brand/wichu-app-icon.png',

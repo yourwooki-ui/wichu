@@ -2,7 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -50,7 +57,12 @@ export default function ForgotPasswordRoute() {
         >
           <Ionicons color={palette.white} name="arrow-back" size={20} />
         </Pressable>
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
           <BrandWordmark size={26} />
           <Text style={styles.title}>
             {t(sent ? 'passwordReset.sentTitle' : 'passwordReset.requestTitle')}
@@ -84,7 +96,7 @@ export default function ForgotPasswordRoute() {
               />
             </>
           )}
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -93,8 +105,9 @@ export default function ForgotPasswordRoute() {
 const styles = StyleSheet.create({
   safeArea: { alignItems: 'center', backgroundColor: '#08080A', flex: 1 },
   page: { flex: 1, maxWidth: 430, width: '100%' },
+  scroll: { flex: 1, minHeight: 0 },
   back: { alignItems: 'center', height: 44, justifyContent: 'center', marginLeft: 10, width: 44 },
-  content: { flex: 1, gap: 18, justifyContent: 'center', padding: 22, paddingBottom: 84 },
+  content: { flexGrow: 1, gap: 18, justifyContent: 'center', padding: 22, paddingBottom: 84 },
   title: { color: palette.white, fontSize: 29, fontWeight: '900', letterSpacing: -0.8 },
   body: { color: '#9B9BA4', fontSize: 13, lineHeight: 20, marginBottom: 6 },
   message: { color: '#FF769F', fontSize: 12, fontWeight: '700', lineHeight: 17 },

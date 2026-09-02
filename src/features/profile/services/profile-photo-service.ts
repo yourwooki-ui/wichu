@@ -198,12 +198,15 @@ export const profilePhotoService = {
   async removeUploadedPhotos(profileId: string, storagePaths: string[]) {
     if (storagePaths.length === 0) return;
     const supabase = getSupabaseClient();
-    await supabase
+    const { error: rowError } = await supabase
       .from('profile_photos')
       .delete()
       .eq('profile_id', profileId)
       .in('storage_path', storagePaths);
-    await supabase.storage.from(PHOTO_BUCKET).remove(storagePaths);
+    if (rowError) throw rowError;
+
+    const { error: storageError } = await supabase.storage.from(PHOTO_BUCKET).remove(storagePaths);
+    if (storageError) throw storageError;
   },
   async removeStorageFiles(storagePaths: string[]) {
     if (storagePaths.length === 0) return;

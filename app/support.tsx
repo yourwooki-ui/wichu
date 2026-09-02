@@ -37,7 +37,7 @@ export default function SupportRoute() {
   };
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로"
@@ -50,7 +50,11 @@ export default function SupportRoute() {
         <Text style={styles.headerTitle}>도움말 및 문의</Text>
         <View style={styles.headerButton} />
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Ionicons color={palette.pink} name="chatbubbles" size={26} />
@@ -120,6 +124,7 @@ const styles = StyleSheet.create({
   },
   headerButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 40, paddingHorizontal: 18 },
   hero: { alignItems: 'center', backgroundColor: palette.white, borderRadius: 26, padding: 24 },
   heroIcon: {

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -43,7 +43,11 @@ export function ProfileReviewState({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
         <BrandWordmark color={palette.ink} size={25} />
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
           <View style={styles.statusCard}>
             <View style={styles.illustrationShell}>
               <IllustratedIcon
@@ -72,7 +76,7 @@ export function ProfileReviewState({
               </View>
             ) : null}
           </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <PrimaryButton
@@ -136,7 +140,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 20,
   },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  scroll: { flex: 1, minHeight: 0 },
+  content: {
+    alignItems: 'center',
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
   statusCard: {
     alignItems: 'center',
     backgroundColor: palette.white,

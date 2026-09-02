@@ -9,6 +9,13 @@ export type NotificationItem = {
   title: string;
 };
 
+type NotificationCopy = {
+  matchBody: string;
+  matchTitle: (name: string) => string;
+  messageFallback: string;
+  messageTitle: (name: string) => string;
+};
+
 /**
  * 앱 안 알림 목록.
  *
@@ -19,17 +26,23 @@ export type NotificationItem = {
  */
 export function buildNotificationItems(
   connections: readonly MatchConnection[] | undefined,
+  copy: NotificationCopy = {
+    matchBody: 'Send the first hello.',
+    matchTitle: (name) => `You matched with ${name}`,
+    messageFallback: 'You received a new message.',
+    messageTitle: (name) => `New message from ${name}`,
+  },
 ): NotificationItem[] {
   return (connections ?? []).flatMap((connection) => {
     if (connection.unreadCount > 0) {
       return [
         {
-          body: connection.lastMessage?.content ?? '새 메시지가 도착했어요.',
+          body: connection.lastMessage?.content ?? copy.messageFallback,
           id: `message:${connection.matchId}`,
           matchId: connection.matchId,
           photo: connection.profile.photo,
           time: connection.lastMessage?.created_at ?? connection.matchedAt,
-          title: `${connection.profile.display_name}님의 새 메시지`,
+          title: copy.messageTitle(connection.profile.display_name),
         },
       ];
     }
@@ -38,12 +51,12 @@ export function buildNotificationItems(
     if (!connection.lastMessage) {
       return [
         {
-          body: '지금 첫 인사를 보내보세요.',
+          body: copy.matchBody,
           id: `match:${connection.matchId}`,
           matchId: connection.matchId,
           photo: connection.profile.photo,
           time: connection.matchedAt,
-          title: `${connection.profile.display_name}님과 매치됐어요`,
+          title: copy.matchTitle(connection.profile.display_name),
         },
       ];
     }

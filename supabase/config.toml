@@ -447,6 +447,12 @@ verify_jwt = true
 import_map = "./functions/translate-message/deno.json"
 entrypoint = "./functions/translate-message/index.ts"
 
+[functions.translate-profile-bio]
+enabled = true
+verify_jwt = true
+import_map = "./functions/translate-profile-bio/deno.json"
+entrypoint = "./functions/translate-profile-bio/index.ts"
+
 [functions.revenuecat-webhook]
 enabled = true
 verify_jwt = false

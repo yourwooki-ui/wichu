@@ -196,9 +196,9 @@ export default function RootLayout() {
         <AppErrorBoundary>
           <I18nextProvider i18n={i18n}>
             <QueryClientProvider client={queryClient}>
-              <QueryLifecycleManager />
               <AuthProvider>
                 <ThemeProvider>
+                  <QueryLifecycleManager />
                   <NativePreviewFrame>
                     <RootNavigator />
                   </NativePreviewFrame>

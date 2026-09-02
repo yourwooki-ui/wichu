@@ -16,12 +16,7 @@ import {
 import type { DiscoveryFilters } from '@/features/discover/services/discovery-service';
 import { AgeRangeField } from '@/features/profile/components/AgeRangeField';
 
-const GENDERS = [
-  { value: 'woman', label: '여성' },
-  { value: 'man', label: '남성' },
-  { value: 'nonbinary', label: '논바이너리' },
-  { value: 'other', label: '기타' },
-];
+const GENDERS = ['woman', 'man', 'nonbinary', 'other'] as const;
 
 const CONNECTION_GOALS = ['dating', 'friends', 'language_exchange', 'travel_buddy'] as const;
 
@@ -90,13 +85,13 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
       });
       onClose();
     } catch {
-      setError('탐색 조건을 저장하지 못했어요. 잠시 후 다시 시도해주세요.');
+      setError(t('discoveryControls.filter.saveFailed'));
     }
   };
 
   return (
     <InteractiveBottomSheet
-      accessibilityLabel="탐색 조건"
+      accessibilityLabel={t('discoveryControls.filter.title')}
       dismissEnabled={!saving}
       onClose={onClose}
       sheetStyle={styles.sheet}
@@ -104,11 +99,11 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>탐색 조건</Text>
-          <Text style={styles.subtitle}>나에게 맞는 프로필만 발견해요.</Text>
+          <Text style={styles.title}>{t('discoveryControls.filter.title')}</Text>
+          <Text style={styles.subtitle}>{t('discoveryControls.filter.subtitle')}</Text>
         </View>
         <BottomSheetCloseButton
-          accessibilityLabel="탐색 조건 닫기"
+          accessibilityLabel={t('discoveryControls.filter.close')}
           accessibilityRole="button"
           hitSlop={8}
           style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
@@ -116,23 +111,29 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
           <Ionicons color={palette.ink} name="close" size={21} />
         </BottomSheetCloseButton>
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <View>
-          <Text style={styles.sectionTitle}>만나고 싶은 사람</Text>
-          <Text style={styles.hint}>한 개 이상 선택해주세요.</Text>
+          <Text style={styles.sectionTitle}>{t('discoveryControls.filter.desired')}</Text>
+          <Text style={styles.hint}>{t('discoveryControls.filter.chooseOne')}</Text>
           <View style={styles.genderOptions}>
             {GENDERS.map((gender) => {
-              const selected = genders.includes(gender.value);
+              const selected = genders.includes(gender);
               return (
                 <Pressable
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: selected }}
-                  key={gender.value}
-                  onPress={() => toggleGender(gender.value)}
+                  key={gender}
+                  onPress={() => toggleGender(gender)}
                   style={[styles.genderOption, selected && styles.genderOptionSelected]}
                 >
                   <Text style={[styles.genderText, selected && styles.genderTextSelected]}>
-                    {gender.label}
+                    {t(`profileSetup.gender.${gender}`)}
                   </Text>
                 </Pressable>
               );
@@ -175,13 +176,13 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
             <Ionicons color={palette.pinkPressed} name="flag-outline" size={19} />
           </View>
           <View style={styles.preferenceCopy}>
-            <Text style={styles.preferenceTitle}>같은 국적 프로필 만나지 않기</Text>
+            <Text style={styles.preferenceTitle}>{t('discoveryControls.filter.excludeTitle')}</Text>
             <Text style={styles.preferenceDescription}>
-              내 프로필에 설정한 국가와 같은 사용자를 탐색에서 제외해요.
+              {t('discoveryControls.filter.excludeBody')}
             </Text>
           </View>
           <Switch
-            accessibilityLabel="같은 국적 프로필 탐색에서 제외"
+            accessibilityLabel={t('discoveryControls.filter.excludeA11y')}
             accessibilityRole="switch"
             ios_backgroundColor="#DADAE0"
             onValueChange={setExcludeSameCountry}
@@ -195,14 +196,16 @@ function DiscoveryFilterForm({ value, saving, onClose, onSave }: Omit<Props, 'vi
       </ScrollView>
       <View style={styles.footer}>
         <Pressable
-          accessibilityLabel="이 조건으로 탐색"
+          accessibilityLabel={t('discoveryControls.filter.save')}
           accessibilityRole="button"
           accessibilityState={{ busy: saving, disabled: saving }}
           disabled={saving}
           onPress={save}
           style={({ pressed }) => [styles.save, (pressed || saving) && styles.pressed]}
         >
-          <Text style={styles.saveText}>{saving ? '저장 중…' : '이 조건으로 탐색'}</Text>
+          <Text style={styles.saveText}>
+            {saving ? t('discoveryControls.filter.saving') : t('discoveryControls.filter.save')}
+          </Text>
         </Pressable>
       </View>
     </InteractiveBottomSheet>
@@ -232,6 +235,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   content: { gap: 25, paddingBottom: 18, paddingHorizontal: 20, paddingTop: 24 },
+  scroll: { flex: 1, minHeight: 0 },
   sectionTitle: { color: palette.ink, fontSize: 12, fontWeight: '900' },
   hint: { color: palette.inkMuted, fontSize: 11, marginTop: 5 },
   genderOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },

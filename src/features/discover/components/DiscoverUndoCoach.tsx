@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   Animated,
@@ -24,6 +25,7 @@ type DiscoverUndoCoachProps = {
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const viewport = useAppViewport();
   const [enter] = useState(() => new Animated.Value(0));
@@ -133,20 +135,17 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
             <View style={styles.identityRow}>
               <IllustratedIcon size={45} source={illustratedIcons.rewind} />
               <View style={styles.identityCopy}>
-                <Text style={styles.eyebrow}>방금 선택</Text>
-                <Text style={styles.title}>마음이 바뀌면 되돌릴 수 있어요</Text>
+                <Text style={styles.eyebrow}>{t('discoveryControls.undoCoach.eyebrow')}</Text>
+                <Text style={styles.title}>{t('discoveryControls.undoCoach.title')}</Text>
               </View>
             </View>
-            <Text style={styles.body}>
-              왼쪽 위 버튼을 누르면 마지막 선택을 다시 가져와요. 이 안내는 이번 한 번만
-              보여드릴게요.
-            </Text>
+            <Text style={styles.body}>{t('discoveryControls.undoCoach.body')}</Text>
             <Pressable
               accessibilityRole="button"
               onPress={onClose}
               style={({ pressed }) => [styles.action, pressed && styles.pressed]}
             >
-              <Text style={styles.actionText}>알겠어요</Text>
+              <Text style={styles.actionText}>{t('discoveryControls.undoCoach.confirm')}</Text>
             </Pressable>
           </Animated.View>
         </View>

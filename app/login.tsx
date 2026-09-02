@@ -155,6 +155,7 @@ export default function LoginRoute() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            style={styles.scroll}
           >
             <View style={styles.topRow}>
               <Pressable
@@ -347,7 +348,8 @@ const styles = StyleSheet.create({
     maxHeight: Platform.select({ web: 900 }),
     backgroundColor: '#F8F7F5',
   },
-  flex: { flex: 1 },
+  flex: { flex: 1, minHeight: 0 },
+  scroll: { flex: 1, minHeight: 0 },
   content: {
     flexGrow: 1,
     width: '100%',

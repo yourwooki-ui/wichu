@@ -24,7 +24,7 @@ export function Screen({ children, style, padded = true, edges }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  content: { flex: 1 },
+  safeArea: { flex: 1, minHeight: 0 },
+  content: { flex: 1, minHeight: 0 },
   padded: { paddingHorizontal: 20 },
 });

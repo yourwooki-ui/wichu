@@ -38,8 +38,12 @@ export default function DesignQaScreen() {
   if (!__DEV__) return <Redirect href="/" />;
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <Section title="Typography">
           {(Object.keys(typography) as (keyof typeof typography)[]).map((token) => (
             <Text key={token} style={[typography[token], { color: theme.colors.text }]}>
@@ -206,6 +210,7 @@ function Section({ children, title }: { children: React.ReactNode; title: string
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.md, paddingTop: spacing.md },
   section: { marginBottom: spacing.xl },
   sectionTitle: { marginBottom: spacing.xs },

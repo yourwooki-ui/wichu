@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -19,54 +19,63 @@ type AuthWelcomeProps = {
 
 export function AuthWelcome({ onCreateAccount, onSignIn }: AuthWelcomeProps) {
   const { t } = useTranslation();
+  const { height } = useWindowDimensions();
+  const heroHeight = Math.max(260, Math.min(520, height * 0.56));
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
-        <View style={styles.heroVisual}>
-          <Image
-            accessibilityIgnoresInvertColors
-            cachePolicy="memory-disk"
-            contentFit="cover"
-            contentPosition="top center"
-            source={WELCOME_HERO}
-            style={StyleSheet.absoluteFill}
-          />
-          <LinearGradient
-            colors={['rgba(252,250,248,0)', 'rgba(252,250,248,0.08)', '#FCFAF8']}
-            locations={[0.54, 0.76, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-
-        <View style={styles.topRow}>
-          <BrandWordmark color={palette.ink} size={27} />
-          <LanguagePicker />
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.kicker}>{t('auth.brandKicker')}</Text>
-          <Text style={styles.title}>{t('auth.welcomeTitle')}</Text>
-          <Text style={styles.subtitle}>{t('auth.welcomeBody')}</Text>
-
-          <View style={styles.trustRow}>
-            <View style={styles.trustItem}>
-              <Ionicons color={palette.pink} name="people" size={15} />
-              <Text style={styles.trustText}>{t('auth.mutualPick')}</Text>
-            </View>
-            <View style={styles.trustDivider} />
-            <View style={styles.trustItem}>
-              <Ionicons color="#6A8B00" name="shield-checkmark" size={15} />
-              <Text style={styles.trustText}>{t('auth.safetyFirst')}</Text>
-            </View>
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={styles.pageContent}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          <View style={[styles.heroVisual, { height: heroHeight }]}>
+            <Image
+              accessibilityIgnoresInvertColors
+              cachePolicy="memory-disk"
+              contentFit="cover"
+              contentPosition="top center"
+              source={WELCOME_HERO}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={['rgba(252,250,248,0)', 'rgba(252,250,248,0.08)', '#FCFAF8']}
+              locations={[0.54, 0.76, 1]}
+              style={StyleSheet.absoluteFill}
+            />
           </View>
 
-          <View style={styles.actions}>
-            <PrimaryButton label={t('auth.createAccount')} onPress={onCreateAccount} />
-            <PrimaryButton label={t('auth.signIn')} onPress={onSignIn} variant="outline" />
-            <Text style={styles.ageNotice}>{t('auth.ageNotice')}</Text>
+          <View style={styles.topRow}>
+            <BrandWordmark color={palette.ink} size={27} />
+            <LanguagePicker />
           </View>
-        </View>
+
+          <View style={styles.content}>
+            <Text style={styles.kicker}>{t('auth.brandKicker')}</Text>
+            <Text style={styles.title}>{t('auth.welcomeTitle')}</Text>
+            <Text style={styles.subtitle}>{t('auth.welcomeBody')}</Text>
+
+            <View style={styles.trustRow}>
+              <View style={styles.trustItem}>
+                <Ionicons color={palette.pink} name="people" size={15} />
+                <Text style={styles.trustText}>{t('auth.mutualPick')}</Text>
+              </View>
+              <View style={styles.trustDivider} />
+              <View style={styles.trustItem}>
+                <Ionicons color="#6A8B00" name="shield-checkmark" size={15} />
+                <Text style={styles.trustText}>{t('auth.safetyFirst')}</Text>
+              </View>
+            </View>
+
+            <View style={styles.actions}>
+              <PrimaryButton label={t('auth.createAccount')} onPress={onCreateAccount} />
+              <PrimaryButton label={t('auth.signIn')} onPress={onSignIn} variant="outline" />
+              <Text style={styles.ageNotice}>{t('auth.ageNotice')}</Text>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -87,7 +96,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  heroVisual: { flex: 1, minHeight: 300 },
+  scroll: { flex: 1, minHeight: 0 },
+  pageContent: { flexGrow: 1 },
+  heroVisual: { minHeight: 260 },
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',

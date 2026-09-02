@@ -13,7 +13,7 @@ export type StateTone = 'neutral' | 'error' | 'promo';
 
 type StateViewProps = {
   actionLabel?: string;
-  body: string;
+  body?: string;
   /** `card`는 테두리 있는 surface 위에, `plain`은 배경 없이 렌더링한다. */
   container?: 'card' | 'plain';
   icon?: keyof typeof Ionicons.glyphMap;
@@ -78,9 +78,11 @@ export function StateView({
       <Text style={[typography.subheading, styles.title, { color: theme.colors.text }]}>
         {title}
       </Text>
-      <Text style={[typography.bodySm, styles.body, { color: theme.colors.textMuted }]}>
-        {body}
-      </Text>
+      {body ? (
+        <Text style={[typography.bodySm, styles.body, { color: theme.colors.textMuted }]}>
+          {body}
+        </Text>
+      ) : null}
       {(actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
         <View style={styles.actions}>
           {actionLabel && onAction ? (

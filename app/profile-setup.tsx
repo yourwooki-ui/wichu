@@ -34,6 +34,7 @@ import { ProfilePhotoPicker } from '@/features/profile/components/ProfilePhotoPi
 import { ProfileReviewState } from '@/features/profile/components/ProfileReviewState';
 import { ProfileTagPicker } from '@/features/profile/components/ProfileTagPicker';
 import { EMPTY_PROFILE_TAG_SELECTIONS } from '@/features/profile/constants/profile-tags';
+import { persistProfilePhotoChanges } from '@/features/profile/services/profile-photo-persistence';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
@@ -44,6 +45,7 @@ import {
 import type { SpokenLanguage } from '@/features/profile/types/language';
 import type { ProfileTagSelections } from '@/features/profile/types/profile-tag';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const TOTAL_STEPS = 4;
@@ -447,55 +449,51 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     setLoading(true);
     setMessage(null);
     setErrorField(null);
-    let saveStage: 'profile' | 'details' | 'photos' | 'review' = 'profile';
-    let uploadedPaths: string[] = [];
+    let saveStage: 'profile' | 'photos' | 'review' = 'profile';
     try {
-      if (requestedEditMode) {
-        saveStage = 'details';
-        const { error: detailError } = await profileService.upsertMyDetails(
-          session.user.id,
-          profileDetails,
-        );
-        if (detailError) throw detailError;
-      }
-
-      saveStage = 'photos';
-      const stagedPhotos = await profilePhotoService.stageNewPhotos(
-        session.user.id,
-        photos,
-        (completed, total) => {
-          setUploadProgress({ completed, total });
-        },
-      );
-      uploadedPaths = stagedPhotos.uploadedPaths;
-
-      saveStage = 'review';
       const tags = Object.entries(profileTags).flatMap(([category, values]) =>
         values.map((value) => ({ category: category as keyof ProfileTagSelections, value })),
       );
-      const { data: obsoletePaths, error } = await profileService.saveForReview({
-        displayName: displayName.trim(),
-        birthDate,
-        gender: gender!,
-        interestedIn,
-        countryCode: countryCode.toUpperCase(),
-        nativeLanguage,
-        languages: languageList,
-        bio: bio.trim(),
-        minAge,
-        maxAge,
-        locale: i18n.resolvedLanguage ?? i18n.language ?? 'ko',
-        interestIds: selectedInterestIds,
-        spokenLanguages,
-        tags,
-        photoPaths: stagedPhotos.orderedPaths,
+      await persistProfilePhotoChanges({
+        stage: async () => {
+          saveStage = 'photos';
+          return profilePhotoService.stageNewPhotos(session.user.id, photos, (completed, total) => {
+            setUploadProgress({ completed, total });
+          });
+        },
+        commit: async (photoPaths) => {
+          saveStage = 'review';
+          const { data, error } = await profileService.saveForReview({
+            displayName: displayName.trim(),
+            birthDate,
+            gender: gender!,
+            interestedIn,
+            countryCode: countryCode.toUpperCase(),
+            nativeLanguage,
+            languages: languageList,
+            bio: bio.trim(),
+            minAge,
+            maxAge,
+            locale: i18n.resolvedLanguage ?? i18n.language ?? 'ko',
+            interestIds: selectedInterestIds,
+            spokenLanguages,
+            tags,
+            photoPaths,
+            profileDetails: requestedEditMode ? profileDetails : null,
+          });
+          if (error) throw error;
+          return data ?? [];
+        },
+        removeStorageFiles: (storagePaths) => profilePhotoService.removeStorageFiles(storagePaths),
+        onCleanupError: (cleanupError, phase) => {
+          reportOperationalError(
+            `profile_photo_${phase}`,
+            cleanupError,
+            requestedEditMode ? '/profile-edit' : '/profile-setup',
+          );
+        },
       });
-      if (error) throw error;
-      if (obsoletePaths?.length) {
-        await profilePhotoService.removeStorageFiles(obsoletePaths);
-      }
 
-      uploadedPaths = [];
       if (!requestedEditMode) {
         await tutorialState.requireProductTutorial(session.user.id).catch(() => undefined);
         productAnalyticsService.track('profile_completed', undefined, '/profile-setup');
@@ -513,9 +511,6 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       ]);
       router.replace(requestedEditMode ? '/(tabs)/me' : '/tutorial');
     } catch (error) {
-      if (uploadedPaths.length > 0) {
-        await profilePhotoService.removeStorageFiles(uploadedPaths);
-      }
       setErrorField(null);
       setMessage(getProfileSaveError(error, saveStage));
     } finally {
@@ -711,6 +706,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            style={styles.scroll}
           >
             {activeSection === 'basic' ? (
               <View style={[styles.form, styles.formCard]}>
@@ -976,7 +972,8 @@ const styles = StyleSheet.create({
     maxHeight: Platform.select({ web: 900 }),
     backgroundColor: '#F8F7F5',
   },
-  flex: { flex: 1 },
+  flex: { flex: 1, minHeight: 0 },
+  scroll: { flex: 1, minHeight: 0 },
   editState: {
     alignItems: 'center',
     justifyContent: 'center',

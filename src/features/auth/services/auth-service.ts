@@ -5,8 +5,21 @@ import { Platform } from 'react-native';
 import { getSupabaseClient } from '@/lib/supabase';
 import { sensitiveStorage } from '@/lib/secure-storage';
 import { notificationsService } from '@/services/notifications-service';
+import {
+  readPendingGoogleSignUp,
+  shouldApplyPendingGoogleBirthDate,
+  type PendingGoogleSignUp,
+  type GoogleOAuthUser,
+} from '@/features/auth/utils/google-sign-up';
 
 const PENDING_GOOGLE_BIRTH_DATE_KEY = 'wichu.auth.pending-google-birth-date';
+
+let activeOAuthExchange:
+  | {
+      code: string;
+      promise: ReturnType<ReturnType<typeof getSupabaseClient>['auth']['exchangeCodeForSession']>;
+    }
+  | undefined;
 
 export function getAuthCallbackUrl() {
   return makeRedirectUri({ scheme: 'wichu', path: 'auth/callback' });
@@ -16,13 +29,18 @@ export function getPasswordResetUrl() {
   return makeRedirectUri({ scheme: 'wichu', path: 'reset-password' });
 }
 
-async function applyPendingGoogleBirthDate() {
-  const birthDate = await sensitiveStorage.getItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
-  if (!birthDate) return;
+async function applyPendingGoogleBirthDate(user: GoogleOAuthUser) {
+  const storedValue = await sensitiveStorage.getItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+  if (!storedValue) return;
 
-  const { error } = await getSupabaseClient().auth.updateUser({ data: { birth_date: birthDate } });
-  if (error) throw error;
+  const pending = readPendingGoogleSignUp(storedValue);
   await sensitiveStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+  if (!pending || !shouldApplyPendingGoogleBirthDate(pending, user)) return;
+
+  const { error } = await getSupabaseClient().auth.updateUser({
+    data: { birth_date: pending.birthDate },
+  });
+  if (error) throw error;
 }
 
 async function createSessionFromUrl(url: string) {
@@ -34,10 +52,16 @@ async function createSessionFromUrl(url: string) {
 
   const code = params.get('code');
   if (!code) throw new Error('인증 코드가 없거나 만료되었습니다. 다시 로그인해주세요.');
-  const result = await getSupabaseClient().auth.exchangeCodeForSession(code);
+  if (!activeOAuthExchange || activeOAuthExchange.code !== code) {
+    activeOAuthExchange = {
+      code,
+      promise: getSupabaseClient().auth.exchangeCodeForSession(code),
+    };
+  }
+  const result = await activeOAuthExchange.promise;
 
   if (result?.error) throw result.error;
-  if (result?.data.session) await applyPendingGoogleBirthDate();
+  if (result?.data.user) await applyPendingGoogleBirthDate(result.data.user);
   return result;
 }
 
@@ -64,14 +88,21 @@ export const authService = {
     });
   },
   async signInWithGoogle(birthDate?: string) {
-    if (birthDate) await sensitiveStorage.setItem(PENDING_GOOGLE_BIRTH_DATE_KEY, birthDate);
+    if (birthDate) {
+      await sensitiveStorage.setItem(
+        PENDING_GOOGLE_BIRTH_DATE_KEY,
+        JSON.stringify({ birthDate, initiatedAt: Date.now() } satisfies PendingGoogleSignUp),
+      );
+    } else {
+      await sensitiveStorage.removeItem(PENDING_GOOGLE_BIRTH_DATE_KEY);
+    }
 
     const redirectTo = getAuthCallbackUrl();
     const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
-        skipBrowserRedirect: Platform.OS !== 'web',
+        skipBrowserRedirect: true,
         queryParams: { access_type: 'offline', prompt: 'select_account' },
       },
     });
@@ -81,8 +112,13 @@ export const authService = {
       throw error;
     }
 
-    if (Platform.OS === 'web') return 'redirecting' as const;
     if (!data.url) throw new Error('Google authentication URL was not created.');
+
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined') throw new Error('Browser navigation is not available.');
+      window.location.assign(data.url);
+      return 'redirecting' as const;
+    }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type !== 'success') {

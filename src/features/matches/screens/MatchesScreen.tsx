@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -44,59 +45,17 @@ import { reportOperationalError } from '@/services/operational-error-service';
 
 type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 
-const categories: {
-  key: MatchCategory;
-  label: string;
-}[] = [
-  { key: 'picked-me', label: '나를 픽함' },
-  { key: 'matched', label: '매칭됨' },
-  { key: 'visitors', label: '방문자' },
-];
-
-const categoryCopy: Record<MatchCategory, { description: string }> = {
-  'picked-me': {
-    description: '나를 Pick한 사람들이에요.',
-  },
-  matched: {
-    description: '서로 Pick해 연결된 사람들이에요.',
-  },
-  visitors: {
-    description: '최근 내 프로필을 본 사람들이에요.',
-  },
-};
-
-const emptyCategoryCopy: Record<
-  MatchCategory,
-  { title: string; body: string; actionLabel: string }
-> = {
-  'picked-me': {
-    title: '아직 나를 Pick한 사람이 없어요',
-    body: '새로운 Pick을 받으면 여기에 표시됩니다.',
-    actionLabel: '발견하러 가기',
-  },
-  matched: {
-    title: '아직 매치가 없어요',
-    body: '서로 Pick하면 매치 목록에 표시됩니다.',
-    actionLabel: '발견하러 가기',
-  },
-  visitors: {
-    title: '아직 프로필 방문자가 없어요',
-    body: '누군가 내 프로필을 확인하면 여기에 표시됩니다.',
-    actionLabel: '내 프로필 보기',
-  },
-};
-
 const profilesByCategory: Record<MatchCategory, ConnectionProfile[]> = {
   'picked-me': [mockConnections[0], mockConnections[1], mockConnections[3], mockConnections[4]],
   matched: mockConnections,
   visitors: [mockConnections[2], mockConnections[0], mockConnections[4], mockConnections[3]],
 };
 
-const visitorTimes: Record<string, string> = {
-  'mock-sofia': '2분 전',
-  'mock-lina': '18분 전',
-  'mock-clara': '어제',
-  'mock-yuna': '3일 전',
+const visitorTimes: Record<string, { count: number; unit: 'minutes' | 'days' }> = {
+  'mock-sofia': { count: 2, unit: 'minutes' },
+  'mock-lina': { count: 18, unit: 'minutes' },
+  'mock-clara': { count: 1, unit: 'days' },
+  'mock-yuna': { count: 3, unit: 'days' },
 };
 
 function includeReviewSamples(
@@ -116,7 +75,41 @@ export function MatchesScreen() {
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
   const [categoryDirection, setCategoryDirection] = useState<-1 | 1>(1);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+  const categories: { key: MatchCategory; label: string }[] = [
+    { key: 'picked-me', label: t('matches.categories.picked') },
+    { key: 'matched', label: t('matches.categories.matched') },
+    { key: 'visitors', label: t('matches.categories.visitors') },
+  ];
+  const categoryCopy: Record<MatchCategory, { description: string }> = {
+    'picked-me': { description: t('matches.descriptions.picked') },
+    matched: { description: t('matches.descriptions.matched') },
+    visitors: { description: t('matches.descriptions.visitors') },
+  };
+  const emptyCategoryCopy: Record<
+    MatchCategory,
+    { title: string; body: string; actionLabel: string }
+  > = {
+    'picked-me': {
+      title: t('matches.empty.pickedTitle'),
+      body: t('matches.empty.pickedBody'),
+      actionLabel: t('matches.empty.discover'),
+    },
+    matched: {
+      title: t('matches.empty.matchedTitle'),
+      body: t('matches.empty.matchedBody'),
+      actionLabel: t('matches.empty.discover'),
+    },
+    visitors: {
+      title: t('matches.empty.visitorsTitle'),
+      body: t('matches.empty.visitorsBody'),
+      actionLabel: t('matches.empty.profile'),
+    },
+  };
   const incomingLikesQuery = useQuery({
     enabled: Boolean(session?.user.id),
     queryFn: matchesService.listIncomingLikes,
@@ -261,7 +254,7 @@ export function MatchesScreen() {
       <AppTabHeader
         actionIcon={illustratedIcons.matches}
         actionMotion={pickedProfiles.length ? 'pulse' : undefined}
-        eyebrow="연결"
+        eyebrow={t('matches.eyebrow')}
       />
 
       <View accessibilityRole="tablist" style={styles.categories}>
@@ -289,6 +282,7 @@ export function MatchesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
         <Animated.View
           entering={categoryEntering(categoryDirection)}
@@ -308,20 +302,18 @@ export function MatchesScreen() {
                   />
                 </View>
                 <View style={styles.visitorLockTextBlock}>
-                  <Text style={styles.visitorLockTitle}>프로필 방문자 확인</Text>
-                  <Text style={styles.visitorLockText}>
-                    방문자 프로필은 Gold Pass에서 확인할 수 있습니다.
-                  </Text>
+                  <Text style={styles.visitorLockTitle}>{t('matches.visitorLockTitle')}</Text>
+                  <Text style={styles.visitorLockText}>{t('matches.visitorLockBody')}</Text>
                 </View>
               </View>
               {MONETIZATION_ENABLED ? (
                 <Pressable
-                  accessibilityLabel="Gold Pass 보기"
+                  accessibilityLabel={t('matches.goldAction')}
                   accessibilityRole="button"
                   onPress={() => router.push('/(tabs)/shop')}
                   style={styles.visitorLockAction}
                 >
-                  <Text style={styles.visitorLockActionText}>Gold Pass 보기</Text>
+                  <Text style={styles.visitorLockActionText}>{t('matches.goldAction')}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -363,14 +355,16 @@ export function MatchesScreen() {
                           visitorsQuery.data?.find((visitor) => visitor.visitor_id === profile.id)
                             ?.last_visited_at,
                           now,
+                          t,
                         )
                       : category === 'picked-me'
                         ? formatRemainingPickTime(
                             incomingLikesQuery.data?.find((like) => like.profileId === profile.id)
                               ?.expiresAt,
                             now,
+                            t,
                           )
-                        : visitorTimes[profile.id]
+                        : formatSampleVisitTime(profile.id, t)
                   }
                   category={category}
                   introMessage={profile.introMessage}
@@ -437,7 +431,13 @@ function MatchCategoryTab({
     >
       <Animated.View pointerEvents="none" style={[styles.categorySelection, selectionStyle]} />
       <View style={styles.categoryContent}>
-        <Animated.Text style={[styles.categoryLabel, labelStyle]}>{label}</Animated.Text>
+        <Animated.Text
+          maxFontSizeMultiplier={1.15}
+          numberOfLines={1}
+          style={[styles.categoryLabel, labelStyle]}
+        >
+          {label}
+        </Animated.Text>
         <Animated.View style={[styles.categoryCount, countStyle]}>
           <Animated.Text style={[styles.categoryCountText, countTextStyle]}>{count}</Animated.Text>
         </Animated.View>
@@ -467,6 +467,7 @@ function ProfileTile({
   onPress,
   profile,
 }: ProfileTileProps) {
+  const { t } = useTranslation();
   const isMatched = category === 'matched';
 
   const handleProfilePress = () => {
@@ -487,7 +488,9 @@ function ProfileTile({
       style={styles.card}
     >
       <Pressable
-        accessibilityLabel={locked ? 'Gold Pass로 방문자 확인' : `${profile.name} 프로필 열기`}
+        accessibilityLabel={
+          locked ? t('matches.goldVisitorA11y') : t('matches.openProfile', { name: profile.name })
+        }
         accessibilityRole="button"
         onPress={handleProfilePress}
         style={({ pressed }) => [styles.cardSurface, pressed && styles.cardPressed]}
@@ -516,15 +519,15 @@ function ProfileTile({
               {profile.isOnline ? (
                 <View style={styles.onlinePill}>
                   <View style={styles.onlineDot} />
-                  <Text style={styles.onlineText}>온라인</Text>
+                  <Text style={styles.onlineText}>{t('matches.online')}</Text>
                 </View>
               ) : profile.isNew ? (
                 <View style={styles.newPill}>
-                  <Text style={styles.newPillText}>NEW</Text>
+                  <Text style={styles.newPillText}>{t('matches.new')}</Text>
                 </View>
               ) : null}
             </View>
-            {profile.isGoldPass ? <GoldBadge /> : null}
+            {profile.isGoldPass ? <GoldBadge iconOnly /> : null}
           </View>
         ) : null}
 
@@ -533,29 +536,35 @@ function ProfileTile({
             <View style={styles.lockedIcon}>
               <Ionicons color={palette.white} name="lock-closed" size={17} />
             </View>
-            <Text style={styles.lockedLabel}>방문자 확인</Text>
-            <Text style={styles.lockedHint}>Gold Pass 전용</Text>
+            <Text style={styles.lockedLabel}>{t('matches.visitorLocked')}</Text>
+            <Text style={styles.lockedHint}>{t('matches.goldOnly')}</Text>
           </View>
         ) : (
           <View style={[styles.cardContent, isMatched && styles.cardContentWithAction]}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>
+              <Text numberOfLines={1} style={styles.name}>
                 {profile.name}, {profile.age}
               </Text>
               <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
             </View>
             <View style={styles.metaRow}>
               <Ionicons color="rgba(255,255,255,0.78)" name="navigate" size={11} />
-              <Text style={styles.meta}>
-                {profile.distanceKm}km 거리
-                {category === 'visitors' ? ` · ${activityTime} 방문` : ''}
-                {category === 'picked-me' ? ` · Pick ${activityTime ?? '24시간 남음'}` : ''}
+              <Text numberOfLines={2} style={styles.meta}>
+                {t('matches.distance', { distance: profile.distanceKm })}
+                {category === 'visitors'
+                  ? t('matches.visited', { time: activityTime ?? t('matches.time.recent') })
+                  : ''}
+                {category === 'picked-me'
+                  ? t('matches.pickExpires', {
+                      time: activityTime ?? t('matches.time.dayLeft'),
+                    })
+                  : ''}
               </Text>
             </View>
             {category === 'picked-me' && introMessage ? (
               <View style={styles.pickMessagePreview}>
                 <Ionicons color={palette.pink} name="chatbubble-ellipses" size={12} />
-                <Text numberOfLines={2} style={styles.pickMessagePreviewText}>
+                <Text numberOfLines={1} style={styles.pickMessagePreviewText}>
                   {introMessage}
                 </Text>
               </View>
@@ -566,35 +575,43 @@ function ProfileTile({
 
       {isMatched && !locked ? (
         <Pressable
-          accessibilityLabel={`${profile.name}님에게 메시지 보내기`}
+          accessibilityLabel={t('matches.messageA11y', { name: profile.name })}
           accessibilityRole="button"
           onPress={handleChatPress}
           style={({ pressed }) => [styles.cardAction, pressed && pressFeedback.control]}
         >
           <Ionicons color={palette.ink} name="chatbubble" size={14} />
-          <Text style={styles.cardActionText}>메시지</Text>
+          <Text style={styles.cardActionText}>{t('matches.message')}</Text>
         </Pressable>
       ) : null}
     </Animated.View>
   );
 }
 
-function formatVisitTime(value: string | undefined, now: number) {
-  if (!value) return '최근';
+function formatVisitTime(value: string | undefined, now: number, t: TFunction) {
+  if (!value) return t('matches.time.recent');
   const minutes = Math.max(1, Math.floor((now - new Date(value).getTime()) / 60_000));
-  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 60) return t('matches.time.minutesAgo', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
+  if (hours < 24) return t('matches.time.hoursAgo', { count: hours });
+  return t('matches.time.daysAgo', { count: Math.floor(hours / 24) });
 }
 
-function formatRemainingPickTime(value: string | undefined, now: number) {
-  if (!value) return '24시간 남음';
+function formatRemainingPickTime(value: string | undefined, now: number, t: TFunction) {
+  if (!value) return t('matches.time.dayLeft');
   const remainingMs = new Date(value).getTime() - now;
-  if (remainingMs <= 0) return '만료';
+  if (remainingMs <= 0) return t('matches.time.expired');
   const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60_000));
-  if (remainingMinutes < 60) return `${remainingMinutes}분 남음`;
-  return `${Math.ceil(remainingMinutes / 60)}시간 남음`;
+  if (remainingMinutes < 60) return t('matches.time.minutesLeft', { count: remainingMinutes });
+  return t('matches.time.hoursLeft', { count: Math.ceil(remainingMinutes / 60) });
+}
+
+function formatSampleVisitTime(profileId: string, t: TFunction) {
+  const sampleTime = visitorTimes[profileId];
+  if (!sampleTime) return undefined;
+  return t(sampleTime.unit === 'minutes' ? 'matches.time.minutesAgo' : 'matches.time.daysAgo', {
+    count: sampleTime.count,
+  });
 }
 
 function prioritizeGoldProfiles(profiles: ConnectionProfile[]) {
@@ -639,7 +656,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryPressed: pressFeedback.control,
-  categoryLabel: { ...typography.label, color: palette.inkMuted },
+  categoryLabel: { ...typography.label, color: palette.inkMuted, flexShrink: 1 },
   categoryLabelSelected: { color: palette.ink },
   categoryCount: {
     alignItems: 'center',
@@ -653,6 +670,7 @@ const styles = StyleSheet.create({
   categoryCountSelected: { backgroundColor: '#FFE1EB' },
   categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   subtitle: {
     ...typography.bodySm,
@@ -667,11 +685,11 @@ const styles = StyleSheet.create({
     rowGap: 10,
   },
   card: {
-    aspectRatio: 0.76,
+    aspectRatio: 0.71,
     backgroundColor: '#D8D8DE',
     borderRadius: 20,
     overflow: 'hidden',
-    width: '48.5%',
+    width: '48.25%',
     ...elevation.md,
   },
   cardSurface: { flex: 1 },
@@ -741,10 +759,10 @@ const styles = StyleSheet.create({
   cardTop: {
     alignItems: 'center',
     flexDirection: 'row',
-    left: 11,
+    left: 10,
     position: 'absolute',
-    right: 11,
-    top: 11,
+    right: 10,
+    top: 10,
   },
   statusSlot: { alignItems: 'flex-start', flex: 1 },
   onlinePill: {
@@ -765,13 +783,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   newPillText: { color: palette.ink, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
-  cardContent: { bottom: 14, left: 14, position: 'absolute', right: 14 },
+  cardContent: { bottom: 13, left: 12, position: 'absolute', right: 12 },
   cardContentWithAction: { bottom: 58 },
-  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  name: { ...typography.subheading, color: palette.white, fontWeight: '900' },
+  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
+  name: { ...typography.subheading, color: palette.white, flexShrink: 1, fontWeight: '900' },
   flag: { borderColor: 'rgba(255,255,255,0.48)', borderRadius: 3, height: 13, width: 19 },
   metaRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: 4 },
-  meta: { color: 'rgba(255,255,255,0.84)', fontSize: 11, fontWeight: '700' },
+  meta: {
+    color: 'rgba(255,255,255,0.84)',
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
   cardAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',

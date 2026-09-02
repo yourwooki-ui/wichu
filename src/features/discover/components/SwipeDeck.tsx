@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
   Extrapolation,
   interpolate,
   runOnJS,
@@ -21,7 +22,7 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
+import { palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
@@ -32,7 +33,7 @@ const SWIPE_THRESHOLD = 96;
 const SWIPE_VELOCITY_THRESHOLD = 0.65;
 const SWIPE_MIN_DISTANCE = 28;
 const DOUBLE_TAP_DELAY = 260;
-const SWIPE_EXIT_DURATION = 220;
+const SWIPE_EXIT_DURATION = 360;
 
 type SwipeDeckProps = {
   profiles: Profile[];
@@ -69,9 +70,9 @@ export function SwipeDeck({
   const interactionLocked = useSharedValue(false);
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
-  // 헤더와 하단 탭은 또렷하게 남기되, 그 사이의 세로 공간은 카드가 충분히 채운다.
-  // 아래 Pass/Pick 액션 행만큼 덱이 차지할 높이를 줄인다.
-  const deckHeight = Math.min(600, Math.max(300, height - 340));
+  const nextCardOffsetX = Math.min(24, width * 0.06);
+  // 헤더와 하단 탭은 또렷하게 남기되, 별도 액션 버튼 없이 카드가 중심이 된다.
+  const deckHeight = Math.min(600, Math.max(340, height - 260));
 
   useProfilePrefetch(profiles);
 
@@ -107,11 +108,11 @@ export function SwipeDeck({
       interactionLocked.set(true);
       signalSwipeDecision(action);
       const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
-      translateY.set(withTiming(10, { duration: exitDuration }));
+      translateY.set(withTiming(10, { duration: exitDuration, easing: Easing.in(Easing.cubic) }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: exitDuration },
+          { duration: exitDuration, easing: Easing.in(Easing.cubic) },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
@@ -196,11 +197,11 @@ export function SwipeDeck({
       interactionLocked.set(true);
       runOnJS(signalSwipeDecision)(action);
       const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
-      translateY.set(withTiming(10, { duration: exitDuration }));
+      translateY.set(withTiming(10, { duration: exitDuration, easing: Easing.in(Easing.cubic) }));
       translateX.set(
         withTiming(
           action === 'like' ? width * 1.35 : -width * 1.35,
-          { duration: exitDuration },
+          { duration: exitDuration, easing: Easing.in(Easing.cubic) },
           (finished) => {
             if (finished) runOnJS(commitSwipe)(action);
           },
@@ -284,12 +285,13 @@ export function SwipeDeck({
     );
 
     return {
-      opacity: interpolate(progress, [0, 1], [0.82, 1]),
+      opacity: interpolate(progress, [0, 1], [0.94, 1]),
       transform: [
         {
-          translateX: interpolate(progress, [0, 1], [width * 1.04, 0], Extrapolation.CLAMP),
+          translateX: interpolate(progress, [0, 1], [nextCardOffsetX, 0], Extrapolation.CLAMP),
         },
-        { scale: interpolate(progress, [0, 1], [0.975, 1]) },
+        { translateY: interpolate(progress, [0, 1], [12, 0], Extrapolation.CLAMP) },
+        { scale: interpolate(progress, [0, 1], [0.968, 1]) },
       ],
     };
   });
@@ -324,7 +326,7 @@ export function SwipeDeck({
     return (
       <View style={styles.container}>
         <View
-          accessibilityLabel="새로운 사람을 찾는 중"
+          accessibilityLabel={t('discoverDeck.loading')}
           accessibilityRole="progressbar"
           style={[styles.deck, { height: deckHeight }]}
         >
@@ -354,9 +356,7 @@ export function SwipeDeck({
       <View style={styles.finished}>
         <StateView
           actionLabel={error ? t('reliability.retry') : t('experience.discover.refresh')}
-          body={
-            error ?? `${t('experience.discover.emptyBody')}\n${t('experience.discover.relaxHint')}`
-          }
+          body={error ?? undefined}
           container="plain"
           illustration={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
           onAction={onRetry}
@@ -365,12 +365,6 @@ export function SwipeDeck({
           title={error ? t('reliability.discoverTitle') : t('experience.discover.emptyTitle')}
           tone={error ? 'error' : 'neutral'}
         />
-        {!error ? (
-          <View style={styles.availabilityPill}>
-            <View style={styles.availabilityDot} />
-            <Text style={styles.availabilityText}>{t('experience.discover.availability')}</Text>
-          </View>
-        ) : null}
       </View>
     );
   }
@@ -404,7 +398,7 @@ export function SwipeDeck({
           <Animated.View style={[styles.topCard, topCardStyle]}>
             <ProfileCard
               accessibilityActions={[
-                { label: '상세 프로필 열기', name: 'activate' },
+                { label: t('discoverDeck.openProfile'), name: 'activate' },
                 { label: 'Pick', name: 'increment' },
                 { label: 'Pass', name: 'decrement' },
               ]}
@@ -441,83 +435,11 @@ export function SwipeDeck({
           </Animated.View>
         </GestureDetector>
       </View>
-
-      {/*
-        스와이프 외에 Pick/Pass 할 방법이 없다. 카드의 accessibilityActions가
-        스크린리더는 덮지만, 한 손 조작이나 운동 제약이 있는 사용자에게는
-        보이는 버튼이 필요하고 처음 쓰는 사용자에게는 발견 가능성 문제도 있다.
-        제스처와 같은 startSwipe를 호출해 애니메이션·기록 경로를 동일하게 맞춘다.
-      */}
-      <View style={styles.actions}>
-        <DeckAction
-          kind="pass"
-          onPress={() => startSwipe('pass')}
-          profileName={currentProfile.name}
-        />
-        <DeckAction
-          kind="pick"
-          onPress={() => startSwipe('like')}
-          profileName={currentProfile.name}
-        />
-      </View>
     </View>
   );
 }
 
-function DeckAction({
-  kind,
-  onPress,
-  profileName,
-}: {
-  kind: 'pass' | 'pick';
-  onPress: () => void;
-  profileName: string;
-}) {
-  const isPick = kind === 'pick';
-
-  return (
-    <Pressable
-      accessibilityHint={isPick ? '서로 선택하면 대화가 열려요' : '넘기고 다음 프로필을 봅니다'}
-      accessibilityLabel={`${profileName}님 ${isPick ? 'Pick' : 'Pass'}`}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.action,
-        isPick ? styles.actionPick : styles.actionPass,
-        pressed && pressFeedback.control,
-      ]}
-    >
-      <Ionicons
-        color={isPick ? palette.white : palette.ink}
-        name={isPick ? 'heart' : 'close'}
-        size={isPick ? 30 : 28}
-      />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  actions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.lg,
-    justifyContent: 'center',
-    paddingTop: spacing.xs,
-  },
-  action: {
-    alignItems: 'center',
-    borderRadius: 32,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-    ...elevation.md,
-  },
-  actionPass: {
-    backgroundColor: palette.white,
-    borderColor: palette.line,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  actionPick: { backgroundColor: palette.pink },
   container: {
     alignItems: 'center',
     flex: 1,
@@ -543,14 +465,15 @@ const styles = StyleSheet.create({
     minHeight: 0,
     width: '100%',
   },
-  topCard: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  topCard: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, zIndex: 2 },
   nextCard: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
     bottom: 0,
     left: 0,
     pointerEvents: 'none',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 1,
   },
   pickPulse: {
     alignItems: 'center',
@@ -579,18 +502,6 @@ const styles = StyleSheet.create({
   likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  availabilityPill: {
-    alignItems: 'center',
-    backgroundColor: '#F1F8F4',
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    gap: 7,
-    marginTop: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  availabilityDot: { backgroundColor: '#31A66A', borderRadius: 4, height: 8, width: 8 },
-  availabilityText: { color: '#276845', fontSize: 11, fontWeight: '800' },
   loadingCard: {
     borderRadius: 28,
     bottom: 0,

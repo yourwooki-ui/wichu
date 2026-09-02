@@ -15,6 +15,7 @@ import { Screen } from '@/components/Screen';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { ConnectionAvatar } from '@/features/matches/components/ConnectionAvatar';
@@ -38,7 +39,11 @@ export function ChatListScreen() {
   const { session } = useAuthSession();
   const currentUserId = session?.user.id;
   const [query, setQuery] = useState('');
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
   const matchesQuery = useQuery({
     enabled: Boolean(session?.user.id),
     queryFn: () => matchesService.listConnections(session!.user.id),
@@ -78,7 +83,7 @@ export function ChatListScreen() {
     [currentUserId, matchesQuery.data, now, t],
   );
   const sourceConversations =
-    realConversations.length || !__DEV__ ? realConversations : mockConversations;
+    realConversations.length || !reviewSamplesEnabled ? realConversations : mockConversations;
   const normalizedQuery = query.trim().toLowerCase();
   const conversations = useMemo(
     () =>
@@ -91,7 +96,7 @@ export function ChatListScreen() {
     .map((conversation) => conversation.profile)
     .filter((profile) => profile.isOnline);
   const unreadCount = conversations.reduce((total, item) => total + item.unreadCount, 0);
-  const listError = matchesQuery.isError && !__DEV__;
+  const listError = matchesQuery.isError && !reviewSamplesEnabled;
   // 대화가 하나도 없으면 검색·온라인 레일·목록 제목은 의미가 없다.
   const hasConversations = sourceConversations.length > 0;
   const refreshControl = useRefreshControl(
@@ -112,6 +117,7 @@ export function ChatListScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
         <View style={styles.heading}>
           <Text style={styles.title}>{t('chatList.title')}</Text>
@@ -333,6 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   unreadPillText: { color: palette.pink, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  scroll: { flex: 1, minHeight: 0 },
   list: { marginTop: 7, paddingBottom: 25, paddingHorizontal: 12 },
   row: {
     alignItems: 'center',

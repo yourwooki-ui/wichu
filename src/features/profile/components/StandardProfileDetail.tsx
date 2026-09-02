@@ -2,7 +2,15 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useMemo, useState } from 'react';
-import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +22,8 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { getRepresentativeCountryCode } from '@/constants/languages';
 import { palette, radius } from '@/constants/theme';
 import { getProfilePresence } from '@/features/profile/utils/profile-display';
+import { getTranslationLanguage } from '@/features/translation/translation-language';
+import { translationService } from '@/features/translation/translation-service';
 import { getLanguageDisplayName } from '@/lib/display-names';
 import { formatNumber } from '@/lib/intl-format';
 import type { Profile } from '@/types/profile';
@@ -91,6 +101,28 @@ export function StandardProfileDetail({
   const { i18n, t } = useTranslation();
   const [photoWidth, setPhotoWidth] = useState(0);
   const [now] = useState(() => Date.now());
+  const [bioTranslation, setBioTranslation] = useState<{
+    language: string;
+    profileId: string;
+    sourceBio: string;
+    text: string;
+  } | null>(null);
+  const [bioTranslationVisible, setBioTranslationVisible] = useState(false);
+  const [bioTranslationRequest, setBioTranslationRequest] = useState<{
+    key: string;
+    status: 'loading' | 'failed';
+  } | null>(null);
+  const activeAppLanguage = i18n.resolvedLanguage ?? i18n.language;
+  const bioTargetLanguage = getTranslationLanguage(activeAppLanguage);
+  const bioTranslationKey = `${profile.id}:${bioTargetLanguage ?? 'unsupported'}:${profile.bio}`;
+  const bioTranslationStatus =
+    bioTranslationRequest?.key === bioTranslationKey ? bioTranslationRequest.status : 'idle';
+  const hasCurrentBioTranslation = Boolean(
+    bioTranslation &&
+    bioTranslation.language === bioTargetLanguage &&
+    bioTranslation.profileId === profile.id &&
+    bioTranslation.sourceBio === profile.bio,
+  );
   const age = profile.age;
   const heroHeight = Math.min((photoWidth || 430) * HERO_HEIGHT_RATIO, HERO_MAX_HEIGHT);
   const primaryPhoto = profile.photos[0];
@@ -218,15 +250,48 @@ export function StandardProfileDetail({
     if (nextWidth !== photoWidth) setPhotoWidth(nextWidth);
   };
 
+  const handleBioTranslation = async () => {
+    if (!profile.bio || !bioTargetLanguage || bioTranslationStatus === 'loading') return;
+    if (hasCurrentBioTranslation) {
+      setBioTranslationVisible((visible) => !visible);
+      return;
+    }
+
+    setBioTranslationRequest({ key: bioTranslationKey, status: 'loading' });
+    try {
+      const result = profile.id.startsWith('mock-')
+        ? {
+            targetLanguage: bioTargetLanguage,
+            translatedText: t('experience.chat.sampleProfileTranslation'),
+          }
+        : await translationService.translateProfileBio(profile.id, activeAppLanguage);
+      setBioTranslation({
+        language: result.targetLanguage,
+        profileId: profile.id,
+        sourceBio: profile.bio,
+        text: result.translatedText,
+      });
+      setBioTranslationVisible(true);
+      setBioTranslationRequest(null);
+    } catch {
+      setBioTranslationVisible(false);
+      setBioTranslationRequest({ key: bioTranslationKey, status: 'failed' });
+    }
+  };
+
   return (
     <View style={styles.root}>
       <ScrollView
         bounces={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { backgroundColor: theme.colors.background, paddingBottom: footer ? 112 : 28 },
+          {
+            backgroundColor: theme.colors.background,
+            paddingBottom: footer ? 88 + insets.bottom : 28 + insets.bottom,
+          },
         ]}
         showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
         <View onLayout={handleHeroLayout} style={[styles.hero, { height: heroHeight }]}>
           {primaryPhoto ? (
@@ -358,6 +423,63 @@ export function StandardProfileDetail({
           {profile.bio ? (
             <DetailSection title={t('profileDetail.about')}>
               <Text style={[styles.bio, { color: theme.colors.text }]}>{profile.bio}</Text>
+              {bioTranslationVisible && hasCurrentBioTranslation ? (
+                <View
+                  accessibilityLiveRegion="polite"
+                  style={[styles.bioTranslation, { borderColor: theme.colors.border }]}
+                >
+                  <IllustratedIcon size={20} source={illustratedIcons.translation} />
+                  <Text style={[styles.bioTranslationText, { color: theme.colors.text }]}>
+                    {bioTranslation?.text}
+                  </Text>
+                </View>
+              ) : null}
+              {bioTargetLanguage ? (
+                <Pressable
+                  accessibilityLabel={
+                    bioTranslationVisible && hasCurrentBioTranslation
+                      ? t('experience.chat.showOriginal')
+                      : t('experience.chat.translate')
+                  }
+                  accessibilityRole="button"
+                  accessibilityState={{ busy: bioTranslationStatus === 'loading' }}
+                  disabled={bioTranslationStatus === 'loading'}
+                  onPress={() => void handleBioTranslation()}
+                  style={({ pressed }) => [styles.bioTranslationAction, pressed && styles.pressed]}
+                >
+                  {bioTranslationStatus === 'loading' ? (
+                    <ActivityIndicator color={palette.pink} size="small" />
+                  ) : (
+                    <IllustratedIcon size={19} source={illustratedIcons.translation} />
+                  )}
+                  <Text
+                    style={[
+                      styles.bioTranslationActionText,
+                      bioTranslationStatus === 'failed' && styles.bioTranslationFailed,
+                    ]}
+                  >
+                    {bioTranslationStatus === 'loading'
+                      ? t('experience.chat.translating')
+                      : bioTranslationStatus === 'failed'
+                        ? t('experience.chat.translationRetry')
+                        : bioTranslationVisible && hasCurrentBioTranslation
+                          ? t('experience.chat.showOriginal')
+                          : t('experience.chat.translate')}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View style={styles.bioTranslationUnavailable}>
+                  <IllustratedIcon size={18} source={illustratedIcons.translation} />
+                  <Text
+                    style={[
+                      styles.bioTranslationUnavailableText,
+                      { color: theme.colors.textMuted },
+                    ]}
+                  >
+                    {t('experience.chat.translationUnavailable')}
+                  </Text>
+                </View>
+              )}
             </DetailSection>
           ) : null}
 
@@ -528,6 +650,7 @@ function getLanguageLabel(language: string, locale: string) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   scrollContent: { flexGrow: 1 },
   hero: { backgroundColor: '#D8D8DE', overflow: 'hidden', width: '100%' },
   photoPlaceholder: { alignItems: 'center', flex: 1, justifyContent: 'center', gap: 10 },
@@ -624,6 +747,35 @@ const styles = StyleSheet.create({
   section: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 22 },
   sectionTitle: { fontSize: 17, fontWeight: '900', letterSpacing: -0.25, marginBottom: 12 },
   bio: { fontSize: 15, lineHeight: 23 },
+  bioTranslation: {
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF8FB',
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: 13,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+  },
+  bioTranslationText: { flex: 1, fontSize: 14, lineHeight: 21 },
+  bioTranslationAction: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 44,
+    paddingRight: 10,
+  },
+  bioTranslationActionText: { color: palette.pinkPressed, fontSize: 12, fontWeight: '800' },
+  bioTranslationFailed: { color: palette.danger },
+  bioTranslationUnavailable: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 40,
+  },
+  bioTranslationUnavailableText: { fontSize: 11, fontWeight: '700' },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   detailPill: {
     alignItems: 'center',

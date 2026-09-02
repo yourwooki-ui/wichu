@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
@@ -51,65 +51,73 @@ export function DatePlanShareSheet({ matchName, onClose, visible }: Props) {
   return (
     <InteractiveBottomSheet
       accessibilityLabel={t('experience.dateShare.title')}
-      contentStyle={styles.sheetContent}
+      contentStyle={styles.sheetFrame}
       onClose={onClose}
       sheetStyle={styles.sheet}
       visible
     >
-      <View style={styles.hero}>
-        <View style={styles.iconWrap}>
-          <IllustratedIcon size={48} source={illustratedIcons.safety} />
+      <ScrollView
+        contentContainerStyle={styles.sheetContent}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
+        <View style={styles.hero}>
+          <View style={styles.iconWrap}>
+            <IllustratedIcon size={48} source={illustratedIcons.safety} />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={styles.title}>{t('experience.dateShare.title')}</Text>
+            <Text style={styles.body}>{t('experience.dateShare.body')}</Text>
+          </View>
         </View>
-        <View style={styles.heroCopy}>
-          <Text style={styles.title}>{t('experience.dateShare.title')}</Text>
-          <Text style={styles.body}>{t('experience.dateShare.body')}</Text>
+
+        <View style={styles.fields}>
+          <Field
+            label={t('experience.dateShare.when')}
+            onChangeText={setWhen}
+            placeholder={t('experience.dateShare.whenPlaceholder')}
+            value={when}
+          />
+          <Field
+            label={t('experience.dateShare.place')}
+            onChangeText={setPlace}
+            placeholder={t('experience.dateShare.placePlaceholder')}
+            value={place}
+          />
+          <Field
+            label={t('experience.dateShare.note')}
+            multiline
+            onChangeText={setNote}
+            placeholder={t('experience.dateShare.notePlaceholder')}
+            value={note}
+          />
         </View>
-      </View>
 
-      <View style={styles.fields}>
-        <Field
-          label={t('experience.dateShare.when')}
-          onChangeText={setWhen}
-          placeholder={t('experience.dateShare.whenPlaceholder')}
-          value={when}
-        />
-        <Field
-          label={t('experience.dateShare.place')}
-          onChangeText={setPlace}
-          placeholder={t('experience.dateShare.placePlaceholder')}
-          value={place}
-        />
-        <Field
-          label={t('experience.dateShare.note')}
-          multiline
-          onChangeText={setNote}
-          placeholder={t('experience.dateShare.notePlaceholder')}
-          value={note}
-        />
-      </View>
-
-      <View style={styles.notice}>
-        <Text style={styles.noticeText}>{t('experience.dateShare.privacy')}</Text>
-      </View>
-      <View style={styles.actions}>
-        <BottomSheetCloseButton
-          accessibilityLabel={t('experience.common.cancel')}
-          accessibilityRole="button"
-          style={styles.cancelButton}
-        >
-          <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
-        </BottomSheetCloseButton>
-        <Pressable
-          accessibilityLabel={t('experience.dateShare.share')}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canShare }}
-          disabled={!canShare}
-          onPress={() => void share()}
-          style={[styles.shareButton, !canShare && styles.shareButtonDisabled]}
-        >
-          <Text style={styles.shareText}>{t('experience.dateShare.share')}</Text>
-        </Pressable>
-      </View>
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>{t('experience.dateShare.privacy')}</Text>
+        </View>
+        <View style={styles.actions}>
+          <BottomSheetCloseButton
+            accessibilityLabel={t('experience.common.cancel')}
+            accessibilityRole="button"
+            style={styles.cancelButton}
+          >
+            <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
+          </BottomSheetCloseButton>
+          <Pressable
+            accessibilityLabel={t('experience.dateShare.share')}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canShare }}
+            disabled={!canShare}
+            onPress={() => void share()}
+            style={[styles.shareButton, !canShare && styles.shareButtonDisabled]}
+          >
+            <Text style={styles.shareText}>{t('experience.dateShare.share')}</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </InteractiveBottomSheet>
   );
 }
@@ -148,6 +156,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8FA',
     maxWidth: 480,
   },
+  sheetFrame: { minHeight: 0 },
+  scroll: { flexShrink: 1, minHeight: 0 },
   sheetContent: {
     paddingBottom: 12,
     paddingHorizontal: 18,

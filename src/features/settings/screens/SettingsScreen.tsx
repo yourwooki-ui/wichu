@@ -145,7 +145,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel={t('settings.back')}
@@ -181,7 +181,11 @@ export function SettingsScreen() {
           </Pressable>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
           <View style={styles.accountCard}>
             <View style={styles.accountMark}>
               <IllustratedIcon size={38} source={illustratedIcons.profileEdit} />
@@ -351,7 +355,12 @@ export function SettingsScreen() {
             onPress={() => setSignOutOpen(false)}
             style={StyleSheet.absoluteFill}
           />
-          <View accessibilityViewIsModal style={styles.signOutSheet}>
+          <ScrollView
+            accessibilityViewIsModal
+            contentContainerStyle={styles.signOutSheetContent}
+            showsVerticalScrollIndicator={false}
+            style={styles.signOutSheet}
+          >
             <View style={styles.signOutIcon}>
               <Ionicons color={palette.danger} name="log-out-outline" size={25} />
             </View>
@@ -388,7 +397,7 @@ export function SettingsScreen() {
                 )}
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </AppModal>
       <AppModal
@@ -407,7 +416,12 @@ export function SettingsScreen() {
             onPress={() => setAccountAction(null)}
             style={StyleSheet.absoluteFill}
           />
-          <View accessibilityViewIsModal style={styles.signOutSheet}>
+          <ScrollView
+            accessibilityViewIsModal
+            contentContainerStyle={styles.signOutSheetContent}
+            showsVerticalScrollIndicator={false}
+            style={styles.signOutSheet}
+          >
             <View style={styles.signOutIcon}>
               <Ionicons
                 color={palette.danger}
@@ -458,7 +472,7 @@ export function SettingsScreen() {
                 )}
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </AppModal>
     </Screen>
@@ -587,6 +601,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   retryText: { color: palette.white, fontSize: 12, fontWeight: '900' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 34, paddingHorizontal: 18 },
   accountCard: {
     alignItems: 'center',
@@ -662,18 +677,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   signOutSheet: {
-    alignItems: 'center',
     backgroundColor: palette.white,
     borderRadius: 26,
     elevation: 14,
+    maxHeight: '90%',
     maxWidth: 380,
-    padding: 22,
     shadowColor: '#111113',
     shadowOffset: { height: 8, width: 0 },
     shadowOpacity: 0.14,
     shadowRadius: 24,
     width: '100%',
   },
+  signOutSheetContent: { alignItems: 'center', padding: 22 },
   signOutIcon: {
     alignItems: 'center',
     backgroundColor: '#FFF0F2',

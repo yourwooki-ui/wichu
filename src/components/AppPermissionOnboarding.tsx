@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
@@ -110,7 +110,12 @@ export function AppPermissionOnboarding() {
   return (
     <AppModal animationType="fade" onRequestClose={() => void finish()} transparent visible>
       <SafeAreaView style={styles.overlay}>
-        <View accessibilityViewIsModal style={styles.card}>
+        <ScrollView
+          accessibilityViewIsModal
+          contentContainerStyle={styles.cardContent}
+          showsVerticalScrollIndicator={false}
+          style={styles.card}
+        >
           <View style={styles.progressRow}>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: isLocation ? '50%' : '100%' }]} />
@@ -183,7 +188,7 @@ export function AppPermissionOnboarding() {
           >
             <Text style={styles.secondaryText}>{t('permissionOnboarding.later')}</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </AppModal>
   );
@@ -209,14 +214,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFC',
     borderRadius: 30,
     elevation: 16,
+    maxHeight: '100%',
     maxWidth: 400,
-    padding: 22,
     shadowColor: '#111113',
     shadowOffset: { height: 8, width: 0 },
     shadowOpacity: 0.14,
     shadowRadius: 26,
     width: '100%',
   },
+  cardContent: { padding: 22 },
   progressRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   progressTrack: {
     backgroundColor: '#E5E5E9',

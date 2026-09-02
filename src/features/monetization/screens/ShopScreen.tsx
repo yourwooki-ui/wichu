@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -15,6 +16,8 @@ import { sectionEntering } from '@/constants/motion';
 import { elevation, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
+import { purchaseService } from '@/features/monetization/services/purchase-service';
+import { useAuthSession } from '@/hooks/use-auth-session';
 import { productAnalyticsService } from '@/services/product-analytics-service';
 
 const goldBenefits: {
@@ -66,7 +69,17 @@ const planComparison = [
 export function ShopScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
+  const products = useQuery({
+    enabled: Boolean(session?.user.id),
+    queryFn: () => purchaseService.listProducts(session!.user.id),
+    queryKey: ['store-products', session?.user.id],
+    staleTime: 5 * 60_000,
+  });
+  const priceById = new Map(
+    (products.data?.products ?? []).map((product) => [product.id, product.priceLabel]),
+  );
   const tier = entitlement.data?.tier;
   const comparisonValue = (value: string) =>
     ['adOnce', 'maxPhotos', 'unlimited'].includes(value) ? t(`shop.comparison.${value}`) : value;
@@ -98,7 +111,11 @@ export function ShopScreen() {
         onAction={() => router.push('/ad-free')}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <Animated.View entering={sectionEntering(0)} style={styles.currentPlan}>
           <View style={styles.currentPlanIcon}>
             <IllustratedIcon size={38} source={getPassIllustration(tierForVisual)} />
@@ -179,7 +196,9 @@ export function ShopScreen() {
               </View>
               <Text style={styles.planName}>Ad-Free</Text>
               <Text style={styles.planDescription}>{t('shop.adFreeDescription')}</Text>
-              <Text style={styles.planPrice}>{AD_FREE_PRODUCT.fallbackPriceLabelKo}</Text>
+              <Text style={styles.planPrice}>
+                {priceById.get(AD_FREE_PRODUCT.id) ?? t('shopPricing.unavailable')}
+              </Text>
               <View style={styles.planLink}>
                 <Text style={styles.planLinkText}>{t('shop.details')}</Text>
                 <Ionicons color={palette.ink} name="chevron-forward" size={15} />
@@ -204,7 +223,9 @@ export function ShopScreen() {
               </View>
               <Text style={styles.planName}>Gold Pass</Text>
               <Text style={styles.planDescription}>{t('shop.goldPlanDescription')}</Text>
-              <Text style={styles.planPrice}>{GOLD_PRODUCT.fallbackPriceLabelKo}</Text>
+              <Text style={styles.planPrice}>
+                {priceById.get(GOLD_PRODUCT.id) ?? t('shopPricing.unavailable')}
+              </Text>
               <View style={styles.planLink}>
                 <Text style={styles.planLinkText}>{t('shop.allBenefits')}</Text>
                 <Ionicons color={palette.ink} name="chevron-forward" size={15} />
@@ -305,6 +326,7 @@ function CompareMark({ value, gold = false }: { value: string; gold?: boolean })
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 34, paddingHorizontal: 18 },
   currentPlan: {
     alignItems: 'center',

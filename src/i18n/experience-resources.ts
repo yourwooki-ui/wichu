@@ -65,6 +65,14 @@ const en = {
   chat: {
     newMessage: 'New message',
     sendFailed: "Couldn't send the message. Tap the failed message to try again.",
+    translate: 'Translate',
+    translating: 'Translating…',
+    translationRetry: 'Translation failed · Try again',
+    showOriginal: 'Show original',
+    sampleTranslation: 'This is a sample translation in your language.',
+    sampleProfileTranslation:
+      'This is a sample profile introduction translated into your language.',
+    translationUnavailable: 'Translation for this app language is coming soon.',
   },
 };
 
@@ -131,6 +139,13 @@ const ko = {
   chat: {
     newMessage: '새 메시지',
     sendFailed: '메시지를 보내지 못했어요. 전송 실패를 눌러 다시 시도하세요.',
+    translate: '번역',
+    translating: '번역 중…',
+    translationRetry: '번역 실패 · 다시 시도',
+    showOriginal: '원문 보기',
+    sampleTranslation: '내 언어로 번역된 샘플 메시지예요.',
+    sampleProfileTranslation: '현재 앱 언어로 번역된 샘플 자기소개예요.',
+    translationUnavailable: '이 앱 언어의 번역은 준비 중이에요.',
   },
 };
 
@@ -198,6 +213,13 @@ const vi = {
   chat: {
     newMessage: 'Tin nhắn mới',
     sendFailed: 'Không thể gửi tin nhắn. Nhấn vào tin nhắn lỗi để thử lại.',
+    translate: 'Dịch',
+    translating: 'Đang dịch…',
+    translationRetry: 'Dịch thất bại · Thử lại',
+    showOriginal: 'Xem bản gốc',
+    sampleTranslation: 'Đây là bản dịch mẫu sang ngôn ngữ của bạn.',
+    sampleProfileTranslation: 'Đây là phần giới thiệu mẫu được dịch sang ngôn ngữ ứng dụng.',
+    translationUnavailable: 'Bản dịch cho ngôn ngữ ứng dụng này sắp ra mắt.',
   },
 };
 
@@ -263,6 +285,13 @@ const ja = {
   chat: {
     newMessage: '新着メッセージ',
     sendFailed: 'メッセージを送信できませんでした。送信失敗をタップして再試行してください。',
+    translate: '翻訳',
+    translating: '翻訳中…',
+    translationRetry: '翻訳失敗 · 再試行',
+    showOriginal: '原文を表示',
+    sampleTranslation: 'あなたの言語に翻訳したサンプルメッセージです。',
+    sampleProfileTranslation: 'アプリの言語に翻訳したサンプル自己紹介です。',
+    translationUnavailable: 'このアプリ言語への翻訳は準備中です。',
   },
 };
 
@@ -335,6 +364,14 @@ const fr = {
   chat: {
     newMessage: 'Nouveau message',
     sendFailed: "Le message n'a pas pu être envoyé. Touchez le message en échec pour réessayer.",
+    translate: 'Traduire',
+    translating: 'Traduction…',
+    translationRetry: 'Échec de la traduction · Réessayer',
+    showOriginal: "Voir l'original",
+    sampleTranslation: 'Ceci est un exemple de traduction dans votre langue.',
+    sampleProfileTranslation:
+      'Voici un exemple de présentation traduit dans la langue de l’application.',
+    translationUnavailable: 'La traduction vers cette langue sera bientôt disponible.',
   },
 };
 
@@ -404,6 +441,14 @@ const es = {
   chat: {
     newMessage: 'Mensaje nuevo',
     sendFailed: 'No se pudo enviar el mensaje. Toca el mensaje fallido para reintentarlo.',
+    translate: 'Traducir',
+    translating: 'Traduciendo…',
+    translationRetry: 'Error de traducción · Reintentar',
+    showOriginal: 'Ver original',
+    sampleTranslation: 'Este es un mensaje de ejemplo traducido a tu idioma.',
+    sampleProfileTranslation:
+      'Esta es una presentación de ejemplo traducida al idioma de la aplicación.',
+    translationUnavailable: 'La traducción a este idioma estará disponible pronto.',
   },
 };
 
@@ -473,6 +518,13 @@ const ptBR = {
     newMessage: 'Nova mensagem',
     sendFailed:
       'Não foi possível enviar a mensagem. Toque na mensagem com falha para tentar de novo.',
+    translate: 'Traduzir',
+    translating: 'Traduzindo…',
+    translationRetry: 'Falha na tradução · Tentar novamente',
+    showOriginal: 'Ver original',
+    sampleTranslation: 'Esta é uma mensagem de exemplo traduzida para o seu idioma.',
+    sampleProfileTranslation: 'Esta é uma apresentação de exemplo traduzida para o idioma do app.',
+    translationUnavailable: 'A tradução para este idioma estará disponível em breve.',
   },
 };
 
@@ -535,6 +587,13 @@ const zhTW = {
   chat: {
     newMessage: '新訊息',
     sendFailed: '訊息傳送失敗。請點一下傳送失敗的訊息再試一次。',
+    translate: '翻譯',
+    translating: '翻譯中…',
+    translationRetry: '翻譯失敗 · 再試一次',
+    showOriginal: '查看原文',
+    sampleTranslation: '這是翻譯成您的語言的範例訊息。',
+    sampleProfileTranslation: '這是翻譯成目前應用程式語言的範例自我介紹。',
+    translationUnavailable: '此應用程式語言的翻譯功能即將推出。',
   },
 };
 
@@ -604,6 +663,13 @@ const id = {
   chat: {
     newMessage: 'Pesan baru',
     sendFailed: 'Pesan tidak dapat dikirim. Ketuk pesan yang gagal untuk mencoba lagi.',
+    translate: 'Terjemahkan',
+    translating: 'Menerjemahkan…',
+    translationRetry: 'Terjemahan gagal · Coba lagi',
+    showOriginal: 'Lihat versi asli',
+    sampleTranslation: 'Ini adalah contoh pesan yang diterjemahkan ke bahasa Anda.',
+    sampleProfileTranslation: 'Ini adalah contoh perkenalan yang diterjemahkan ke bahasa aplikasi.',
+    translationUnavailable: 'Terjemahan untuk bahasa aplikasi ini akan segera tersedia.',
   },
 };
 
@@ -673,6 +739,13 @@ const fa = {
   chat: {
     newMessage: 'پیام جدید',
     sendFailed: 'پیام ارسال نشد. برای تلاش دوباره روی پیام ناموفق بزنید.',
+    translate: 'ترجمه',
+    translating: 'در حال ترجمه…',
+    translationRetry: 'ترجمه ناموفق · تلاش دوباره',
+    showOriginal: 'نمایش متن اصلی',
+    sampleTranslation: 'این یک پیام نمونه ترجمه‌شده به زبان شماست.',
+    sampleProfileTranslation: 'این یک معرفی نمونه ترجمه‌شده به زبان برنامه است.',
+    translationUnavailable: 'ترجمه به این زبان برنامه به‌زودی اضافه می‌شود.',
   },
 };
 

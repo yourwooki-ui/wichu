@@ -200,6 +200,7 @@ export function LanguagePreferencesField({
           initialNumToRender={20}
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.code}
+          nestedScrollEnabled
           renderItem={({ item }) => (
             <Pressable
               accessibilityLabel={item.name}
@@ -213,6 +214,7 @@ export function LanguagePreferencesField({
             </Pressable>
           )}
           showsVerticalScrollIndicator={false}
+          style={styles.listViewport}
         />
       </InteractiveBottomSheet>
     </View>
@@ -343,6 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   listContent: { paddingBottom: 20, paddingHorizontal: 12, paddingTop: 10 },
+  listViewport: { flex: 1, minHeight: 0 },
   optionRow: {
     alignItems: 'center',
     borderRadius: radius.lg,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
@@ -31,50 +31,59 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
   return (
     <InteractiveBottomSheet
       accessibilityLabel={t('experience.pickMessage.title')}
-      contentStyle={styles.sheetContent}
+      contentStyle={styles.sheetFrame}
       onClose={onClose}
       sheetStyle={styles.sheet}
       visible
     >
-      <View style={styles.heading}>
-        <View style={styles.icon}>
-          <IllustratedIcon size={44} source={illustratedIcons.connections} />
-        </View>
-        <View style={styles.headingCopy}>
-          <Text style={styles.title}>{t('experience.pickMessage.title')}</Text>
-          <Text style={styles.body}>{t('experience.pickMessage.body', { name })}</Text>
-        </View>
-      </View>
-      <TextInput
-        autoFocus
-        maxLength={300}
-        multiline
-        onChangeText={setMessage}
-        placeholder={t('experience.pickMessage.placeholder')}
-        placeholderTextColor={palette.inkMuted}
-        style={styles.input}
-        value={message}
-      />
-      <Text style={styles.count}>{message.length} / 300</Text>
-      <Pressable
-        accessibilityLabel={
-          message.trim() ? t('experience.pickMessage.send') : t('experience.pickMessage.without')
-        }
-        accessibilityRole="button"
-        onPress={submit}
-        style={styles.primary}
+      <ScrollView
+        contentContainerStyle={styles.sheetContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
-        <Text style={styles.primaryText}>
-          {message.trim() ? t('experience.pickMessage.send') : t('experience.pickMessage.without')}
-        </Text>
-      </Pressable>
-      <BottomSheetCloseButton
-        accessibilityLabel={t('experience.common.cancel')}
-        accessibilityRole="button"
-        style={styles.cancel}
-      >
-        <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
-      </BottomSheetCloseButton>
+        <View style={styles.heading}>
+          <View style={styles.icon}>
+            <IllustratedIcon size={44} source={illustratedIcons.connections} />
+          </View>
+          <View style={styles.headingCopy}>
+            <Text style={styles.title}>{t('experience.pickMessage.title')}</Text>
+            <Text style={styles.body}>{t('experience.pickMessage.body', { name })}</Text>
+          </View>
+        </View>
+        <TextInput
+          autoFocus
+          maxLength={300}
+          multiline
+          onChangeText={setMessage}
+          placeholder={t('experience.pickMessage.placeholder')}
+          placeholderTextColor={palette.inkMuted}
+          style={styles.input}
+          value={message}
+        />
+        <Text style={styles.count}>{message.length} / 300</Text>
+        <Pressable
+          accessibilityLabel={
+            message.trim() ? t('experience.pickMessage.send') : t('experience.pickMessage.without')
+          }
+          accessibilityRole="button"
+          onPress={submit}
+          style={styles.primary}
+        >
+          <Text style={styles.primaryText}>
+            {message.trim()
+              ? t('experience.pickMessage.send')
+              : t('experience.pickMessage.without')}
+          </Text>
+        </Pressable>
+        <BottomSheetCloseButton
+          accessibilityLabel={t('experience.common.cancel')}
+          accessibilityRole="button"
+          style={styles.cancel}
+        >
+          <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
+        </BottomSheetCloseButton>
+      </ScrollView>
     </InteractiveBottomSheet>
   );
 }
@@ -84,6 +93,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8FA',
     maxWidth: 480,
   },
+  sheetFrame: { minHeight: 0 },
+  scroll: { flexShrink: 1, minHeight: 0 },
   sheetContent: {
     paddingBottom: 12,
     paddingHorizontal: 18,

@@ -64,6 +64,16 @@ for (const file of FORBIDDEN_RAW_ERROR_SURFACES) {
   }
 }
 
+// Discover는 브랜드 계약상 1카드 제스처가 핵심이다. 화면 아래에 별도
+// Pick/Pass 버튼이 다시 생기면 카드 높이와 다음 카드 스택이 함께 무너진다.
+const swipeDeckSource = readFileSync(
+  'src/features/discover/components/SwipeDeck.tsx',
+  'utf8',
+);
+if (/function\s+DeckAction|styles\.actionPick|styles\.actionPass/.test(swipeDeckSource)) {
+  findings.push('SwipeDeck: visible Pick/Pass controls violate the gesture-first design contract');
+}
+
 if (findings.length) {
   console.error('UI quality check failed:');
   for (const finding of findings) console.error(`- ${finding}`);

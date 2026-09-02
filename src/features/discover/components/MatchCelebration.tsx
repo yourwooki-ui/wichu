@@ -7,6 +7,7 @@ import {
   Animated,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -144,46 +145,55 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
             accessibilityViewIsModal
             style={[styles.card, cardStyle]}
           >
-            <LinearGradient colors={['#FFF1F6', '#FFFFFF']} style={styles.hero}>
-              <View style={styles.profileCluster}>
-                <View style={styles.haloOuter} />
-                <View style={styles.haloInner} />
-                <View style={styles.photoRing}>
-                  <Image
-                    cachePolicy="memory-disk"
-                    contentFit="cover"
-                    source={{ uri: profile.photos[0] }}
-                    style={styles.photo}
-                  />
+            <ScrollView
+              contentContainerStyle={styles.cardContent}
+              showsVerticalScrollIndicator={false}
+              style={styles.cardScroll}
+            >
+              <LinearGradient colors={['#FFF1F6', '#FFFFFF']} style={styles.hero}>
+                <View style={styles.profileCluster}>
+                  <View style={styles.haloOuter} />
+                  <View style={styles.haloInner} />
+                  <View style={styles.photoRing}>
+                    <Image
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      source={{ uri: profile.photos[0] }}
+                      style={styles.photo}
+                    />
+                  </View>
+                  <Animated.View style={[styles.matchMark, markStyle]}>
+                    <Ionicons color={palette.white} name="checkmark" size={22} />
+                  </Animated.View>
                 </View>
-                <Animated.View style={[styles.matchMark, markStyle]}>
-                  <Ionicons color={palette.white} name="checkmark" size={22} />
-                </Animated.View>
-              </View>
-            </LinearGradient>
-            <Animated.View style={[styles.content, contentStyle]}>
-              <Text style={styles.eyebrow}>IT&apos;S A MATCH</Text>
-              <View style={styles.nameRow}>
-                <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
-                <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
-              </View>
-              <Text style={styles.body}>서로의 선택이 닿았어요. 지금 가볍게 인사해보세요.</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleChat}
-                style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
-              >
-                <Ionicons color={palette.white} name="chatbubble" size={17} />
-                <Text style={styles.primaryActionText}>메시지 보내기</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleContinue}
-                style={({ pressed }) => [styles.secondaryAction, pressed && pressFeedback.control]}
-              >
-                <Text style={styles.secondaryActionText}>발견 계속하기</Text>
-              </Pressable>
-            </Animated.View>
+              </LinearGradient>
+              <Animated.View style={[styles.content, contentStyle]}>
+                <Text style={styles.eyebrow}>IT&apos;S A MATCH</Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
+                  <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
+                </View>
+                <Text style={styles.body}>서로의 선택이 닿았어요. 지금 가볍게 인사해보세요.</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleChat}
+                  style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
+                >
+                  <Ionicons color={palette.white} name="chatbubble" size={17} />
+                  <Text style={styles.primaryActionText}>메시지 보내기</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleContinue}
+                  style={({ pressed }) => [
+                    styles.secondaryAction,
+                    pressed && pressFeedback.control,
+                  ]}
+                >
+                  <Text style={styles.secondaryActionText}>발견 계속하기</Text>
+                </Pressable>
+              </Animated.View>
+            </ScrollView>
           </Animated.View>
         ) : null}
       </View>
@@ -203,11 +213,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     borderRadius: 30,
+    maxHeight: '92%',
     maxWidth: 380,
     overflow: 'hidden',
-    paddingBottom: 18,
     width: '100%',
   },
+  cardScroll: { minHeight: 0, width: '100%' },
+  cardContent: { paddingBottom: 18 },
   hero: { alignItems: 'center', alignSelf: 'stretch', paddingBottom: 18, paddingTop: 24 },
   profileCluster: { alignItems: 'center', height: 128, justifyContent: 'center', width: 150 },
   haloOuter: {

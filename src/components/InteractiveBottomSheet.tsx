@@ -40,6 +40,7 @@ type InteractiveBottomSheetProps = {
 };
 
 const BottomSheetDismissContext = createContext<() => void>(() => undefined);
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export function BottomSheetCloseButton(props: Omit<PressableProps, 'onPress'>) {
   const dismiss = useContext(BottomSheetDismissContext);
@@ -79,7 +80,7 @@ function VisibleInteractiveBottomSheet({
       mass: 0.9,
       stiffness: 230,
       toValue: 0,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start();
 
     return () => {
@@ -93,7 +94,7 @@ function VisibleInteractiveBottomSheet({
     Animated.timing(translateY, {
       duration: 210,
       toValue: closeOffset,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start(({ finished }) => {
       if (finished) completeClose();
     });
@@ -112,7 +113,7 @@ function VisibleInteractiveBottomSheet({
         mass: 0.9,
         stiffness: 230,
         toValue: snap === 'collapsed' ? collapsedOffset : 0,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
     },
     [collapsedOffset, dismiss, translateY],
@@ -220,7 +221,7 @@ function VisibleInteractiveBottomSheet({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end' },
+  overlay: { flex: 1, justifyContent: 'flex-end', minHeight: 0 },
   backdrop: {
     backgroundColor: '#111114',
     bottom: 0,
@@ -237,6 +238,7 @@ const styles = StyleSheet.create({
     elevation: 12,
     maxHeight: '92%',
     maxWidth: 480,
+    minHeight: 0,
     overflow: 'hidden',
     shadowColor: '#111114',
     shadowOffset: { height: -5, width: 0 },
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     width: '100%',
   },
-  safeSheet: { flexGrow: 1 },
+  safeSheet: { flexGrow: 1, flexShrink: 1, minHeight: 0, width: '100%' },
   handleTouch: { alignItems: 'center', height: 44, justifyContent: 'center' },
   handle: { borderRadius: 3, height: 5, width: 42 },
 });

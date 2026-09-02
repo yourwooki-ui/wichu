@@ -66,7 +66,7 @@ export function OperationsScreen() {
   );
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로"
@@ -120,7 +120,11 @@ export function OperationsScreen() {
           description="새 요청이 들어오면 이곳에 오래된 순서부터 표시됩니다."
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
           {section === 'profiles'
             ? profileQuery.data?.map((item) => (
                 <ReviewCard
@@ -336,6 +340,7 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: palette.white },
   tabText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   tabTextActive: { color: palette.ink },
+  scroll: { flex: 1, minHeight: 0 },
   content: { gap: 12, padding: 18, paddingBottom: 40 },
   loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 6 },
   card: {

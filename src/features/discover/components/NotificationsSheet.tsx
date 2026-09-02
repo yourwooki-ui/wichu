@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -29,6 +30,7 @@ export function NotificationsSheet({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { height } = useWindowDimensions();
   const { session } = useAuthSession();
   const sheetHeight = Math.min(Math.max(height * 0.62, 360), 620);
@@ -38,20 +40,25 @@ export function NotificationsSheet({
     queryKey: ['matches', 'connections', session?.user.id],
     staleTime: 20_000,
   });
-  const items = buildNotificationItems(connectionsQuery.data);
+  const items = buildNotificationItems(connectionsQuery.data, {
+    matchBody: t('discoveryControls.notifications.matchBody'),
+    matchTitle: (name) => t('discoveryControls.notifications.matchTitle', { name }),
+    messageFallback: t('discoveryControls.notifications.messageFallback'),
+    messageTitle: (name) => t('discoveryControls.notifications.messageTitle', { name }),
+  });
 
   return (
     <InteractiveBottomSheet
-      accessibilityLabel="알림 패널"
+      accessibilityLabel={t('discoveryControls.notifications.panel')}
       collapsedOffset={Math.min(height * 0.26, 220)}
       onClose={onClose}
       sheetStyle={[styles.sheet, { height: sheetHeight }]}
       visible={visible}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>알림</Text>
+        <Text style={styles.title}>{t('discoveryControls.notifications.title')}</Text>
         <BottomSheetCloseButton
-          accessibilityLabel="알림 닫기"
+          accessibilityLabel={t('discoveryControls.notifications.close')}
           accessibilityRole="button"
           hitSlop={8}
           style={({ pressed }) => [styles.close, pressed && pressFeedback.icon]}
@@ -65,12 +72,12 @@ export function NotificationsSheet({
         </View>
       ) : connectionsQuery.isError ? (
         <StateView
-          actionLabel="다시 시도"
-          body="연결 상태를 확인하고 다시 불러와 주세요."
+          actionLabel={t('reliability.retry')}
+          body={t('reliability.connectionsBody')}
           container="plain"
           illustration={illustratedIcons.connectionError}
           onAction={() => void connectionsQuery.refetch()}
-          title="알림을 불러오지 못했어요"
+          title={t('discoveryControls.notifications.failed')}
           tone="error"
         />
       ) : items.length ? (
@@ -116,17 +123,17 @@ export function NotificationsSheet({
                   {item.body}
                 </Text>
               </View>
-              <Text style={styles.rowTime}>{formatActivityTime(item.time)}</Text>
+              <Text style={styles.rowTime}>{formatActivityTime(item.time, t)}</Text>
             </AnimatedPressable>
           ))}
         </ScrollView>
       ) : (
         <View style={styles.empty}>
           <StateView
-            body="새로운 Pick, Match와 메시지가 생기면 여기에 알려드릴게요."
+            body={t('discoveryControls.notifications.emptyBody')}
             container="plain"
             illustration={illustratedIcons.notification}
-            title="새로운 알림이 없어요"
+            title={t('discoveryControls.notifications.emptyTitle')}
           />
         </View>
       )}
@@ -134,12 +141,14 @@ export function NotificationsSheet({
   );
 }
 
-function formatActivityTime(value: string) {
+function formatActivityTime(value: string, t: ReturnType<typeof useTranslation>['t']) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
-  if (minutes < 1) return '방금';
-  if (minutes < 60) return `${minutes}분`;
-  if (minutes < 1_440) return `${Math.floor(minutes / 60)}시간`;
-  return `${Math.floor(minutes / 1_440)}일`;
+  if (minutes < 1) return t('discoveryControls.notifications.now');
+  if (minutes < 60) return t('discoveryControls.notifications.minutes', { count: minutes });
+  if (minutes < 1_440) {
+    return t('discoveryControls.notifications.hours', { count: Math.floor(minutes / 60) });
+  }
+  return t('discoveryControls.notifications.days', { count: Math.floor(minutes / 1_440) });
 }
 
 const styles = StyleSheet.create({
@@ -147,7 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8FA',
     maxWidth: 460,
   },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',

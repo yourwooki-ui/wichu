@@ -16,6 +16,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -54,6 +55,7 @@ import { ChatRoomSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { listLayout, messageEntering, stateEntering, stateExiting } from '@/constants/motion';
 import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
@@ -70,6 +72,7 @@ import {
   normalizeLanguage,
   translationService,
 } from '@/features/chat/services/translation-service';
+import { getTranslationLanguage } from '@/features/translation/translation-language';
 import { getMockConversation, mockConversations } from '@/features/matches/data/mock-connections';
 import {
   matchesService,
@@ -89,12 +92,6 @@ import { productAnalyticsService } from '@/services/product-analytics-service';
 
 type ChatRoomScreenProps = { matchId: string };
 
-const CONVERSATION_STARTERS = [
-  '안녕하세요! 프로필이 인상적이었어요 🙂',
-  '요즘 가장 즐겨 하는 건 뭐예요?',
-  '서로 좋아하는 음악부터 이야기해볼까요?',
-] as const;
-
 type LocalMessage = {
   id: string;
   messageId?: string;
@@ -102,7 +99,10 @@ type LocalMessage = {
   mine: boolean;
   originalLanguage?: string;
   translated?: string;
+  translatedLanguage?: string;
+  translationVisible?: boolean;
   translationStatus?: 'translating' | 'failed';
+  translationStatusLanguage?: string;
   status?: 'sending' | 'failed';
   attachments?: ChatImageAttachment[];
   imageDrafts?: ChatImageDraft[];
@@ -115,6 +115,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { i18n, t } = useTranslation();
+  const activeAppLanguage = i18n.resolvedLanguage ?? i18n.language;
+  const translationTargetLanguage = getTranslationLanguage(activeAppLanguage);
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const reduceMotion = useReducedMotion();
@@ -123,8 +125,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const inputRef = useRef<TextInput>(null);
   const isNearBottomRef = useRef(true);
   const previousMessageCount = useRef(0);
+  const isMock = reviewSamplesEnabled && matchId.startsWith('mock-');
   const mockConversation = getMockConversation(matchId) ?? mockConversations[0];
-  const isMock = matchId.startsWith('mock-');
   const [draft, setDraft] = useState('');
   const [selectedImages, setSelectedImages] = useState<ChatImageDraft[]>([]);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
@@ -181,16 +183,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     const remoteMessages = [...(messagesQuery.data?.pages ?? [])]
       .reverse()
       .flatMap((page: ChatMessagePage) => page.messages)
-      .map((message) => toLocalMessage(message, userId, i18n.language));
+      .map((message) => toLocalMessage(message, userId, activeAppLanguage));
     return messages.reduce(mergeMessage, remoteMessages);
-  }, [i18n.language, isMock, messages, messagesQuery.data, userId]);
+  }, [activeAppLanguage, isMock, messages, messagesQuery.data, userId]);
 
   useEffect(() => {
     if (isMock || !userId) return;
     const channel = chatService.subscribe(matchId, (message) => {
       setMessages((current) =>
         mergeMessage(current, {
-          ...toLocalMessage(message, userId, i18n.language),
+          ...toLocalMessage(message, userId, activeAppLanguage),
           animateOnMount: message.sender_id !== userId,
         }),
       );
@@ -204,7 +206,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     return () => {
       void chatService.unsubscribe(channel).catch(() => undefined);
     };
-  }, [i18n.language, isMock, matchId, queryClient, userId]);
+  }, [activeAppLanguage, isMock, matchId, queryClient, userId]);
 
   useEffect(() => {
     if (isMock || !userId || !messagesQuery.data?.pages.length) return;
@@ -240,6 +242,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     }, 60);
     return () => clearTimeout(timer);
   }, [displayedMessages]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const subscription = Keyboard.addListener(showEvent, () => {
+      if (!isNearBottomRef.current) return;
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    });
+    return () => subscription.remove();
+  }, []);
 
   const profile = useMemo(() => {
     if (isMock) return mockConversation.profile;
@@ -324,7 +335,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             message.content,
             message.originalLanguage ?? '',
           );
-      setMessages((current) => mergeMessage(current, toLocalMessage(saved, userId, i18n.language)));
+      setMessages((current) =>
+        mergeMessage(current, toLocalMessage(saved, userId, activeAppLanguage)),
+      );
       productAnalyticsService.track(
         'message_sent',
         {
@@ -374,27 +387,23 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const pickImages = async () => {
     if (entitlement.isLoading) return;
     if (entitlement.isError) {
-      Alert.alert('이용권을 확인하지 못했어요', '연결 상태를 확인한 뒤 다시 시도해주세요.');
+      Alert.alert(t('chatRoom.passCheckFailed'), t('chatRoom.reconnect'));
       return;
     }
     if (!hasGoldPass) {
       const actions = MONETIZATION_ENABLED
         ? [
-            { text: '나중에', style: 'cancel' as const },
-            { text: 'Gold Pass 보기', onPress: () => router.push('/(tabs)/shop') },
+            { text: t('chatRoom.later'), style: 'cancel' as const },
+            { text: t('chatRoom.viewGold'), onPress: () => router.push('/(tabs)/shop') },
           ]
-        : [{ text: '확인' }];
-      Alert.alert(
-        'Gold Pass 전용 기능이에요',
-        'Gold 회원은 사진을 한 번에 최대 5장까지 안전하게 보낼 수 있어요.',
-        actions,
-      );
+        : [{ text: t('chatRoom.confirm') }];
+      Alert.alert(t('chatRoom.goldTitle'), t('chatRoom.goldPhotoBody'), actions);
       return;
     }
 
     const remaining = CHAT_IMAGE_LIMIT - selectedImages.length;
     if (remaining <= 0) {
-      Alert.alert('사진은 5장까지', '선택한 사진을 지운 뒤 다른 사진을 추가해주세요.');
+      Alert.alert(t('chatRoom.maxPhotosTitle'), t('chatRoom.maxPhotosBody'));
       return;
     }
 
@@ -417,7 +426,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       await chatMediaService.validateDrafts(additions);
       setSelectedImages((current) => [...current, ...additions].slice(0, CHAT_IMAGE_LIMIT));
     } catch {
-      Alert.alert('사진을 추가하지 못했어요', t('reliability.messagesBody'));
+      Alert.alert(t('chatRoom.photoAddFailed'), t('reliability.messagesBody'));
     }
   };
 
@@ -430,7 +439,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       content,
       imageDrafts: selectedImages.length ? selectedImages : undefined,
       mine: true,
-      originalLanguage: normalizeLanguage(i18n.language),
+      originalLanguage: normalizeLanguage(activeAppLanguage),
       status: isMock ? undefined : 'sending',
       animateOnMount: true,
     };
@@ -467,34 +476,53 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     setViewerIndex(Math.min(index, images.length - 1));
   };
 
+  const updateMessage = (message: LocalMessage, patch: Partial<LocalMessage>) => {
+    setMessages((current) => {
+      const index = current.findIndex((item) => item.id === message.id);
+      if (index < 0) return [...current, { ...message, ...patch }];
+      const next = [...current];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  };
+
   const translate = async (message: LocalMessage) => {
-    const targetLanguage = normalizeLanguage(i18n.language);
-    if (isMock) {
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === message.id
-            ? { ...item, translated: '내 언어로 번역된 샘플 메시지예요.' }
-            : item,
-        ),
-      );
+    const targetLanguage = translationTargetLanguage;
+    if (!targetLanguage) return;
+    if (hasTranslationFor(message, targetLanguage)) {
+      updateMessage(message, {
+        translated: message.translated,
+        translatedLanguage: targetLanguage,
+        translationVisible: !message.translationVisible,
+      });
       return;
     }
-    if (!message.messageId || message.translationStatus === 'translating') return;
+    if (isMock) {
+      updateMessage(message, {
+        translated: t('experience.chat.sampleTranslation'),
+        translatedLanguage: targetLanguage,
+        translationVisible: true,
+      });
+      return;
+    }
+    if (!message.messageId || isTranslationPending(message, targetLanguage)) return;
 
-    setMessages((current) =>
-      current.map((item) =>
-        item.id === message.id ? { ...item, translationStatus: 'translating' } : item,
-      ),
-    );
+    updateMessage(message, {
+      translationStatus: 'translating',
+      translationStatusLanguage: targetLanguage,
+    });
     try {
-      const result = await translationService.translateMessage(message.messageId, targetLanguage);
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === message.id
-            ? { ...item, translated: result.translatedText, translationStatus: undefined }
-            : item,
-        ),
+      const result = await translationService.translateMessage(
+        message.messageId,
+        activeAppLanguage,
       );
+      updateMessage(message, {
+        translated: result.translatedText,
+        translatedLanguage: targetLanguage,
+        translationStatus: undefined,
+        translationStatusLanguage: undefined,
+        translationVisible: true,
+      });
       queryClient.setQueryData<InfiniteData<ChatMessagePage, string | null>>(
         ['chat', matchId],
         (current) =>
@@ -521,18 +549,17 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             : current,
       );
     } catch {
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === message.id ? { ...item, translationStatus: 'failed' } : item,
-        ),
-      );
+      updateMessage(message, {
+        translationStatus: 'failed',
+        translationStatusLanguage: targetLanguage,
+      });
     }
   };
 
   const submitReport = async (reason: ReportReason) => {
     if (isMock) {
       setReportOpen(false);
-      Alert.alert('테스트 프로필', '샘플 프로필에는 실제 신고가 접수되지 않아요.');
+      Alert.alert(t('chatRoom.sampleProfileTitle'), t('chatRoom.sampleProfileBody'));
       return;
     }
     setSafetyBusy(true);
@@ -540,8 +567,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     setSafetyBusy(false);
     setReportOpen(false);
     Alert.alert(
-      error ? '신고하지 못했어요' : '신고가 접수됐어요',
-      error ? '잠시 후 다시 시도해주세요.' : '운영진이 내용을 확인할게요.',
+      error ? t('chatRoom.reportFailedTitle') : t('chatRoom.reportSuccessTitle'),
+      error ? t('chatRoom.reportFailedBody') : t('chatRoom.reportSuccessBody'),
     );
     if (!error) productAnalyticsService.track('profile_reported', undefined, `/chat/${matchId}`);
   };
@@ -549,20 +576,20 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const confirmBlock = () => {
     if (isMock) {
       setSafetyOpen(false);
-      Alert.alert('테스트 프로필', '샘플 프로필에는 실제 차단이 적용되지 않아요.');
+      Alert.alert(t('chatRoom.sampleProfileTitle'), t('chatRoom.sampleBlockBody'));
       return;
     }
-    Alert.alert(`${profile.name}님을 차단할까요?`, '서로의 프로필과 메시지를 볼 수 없게 됩니다.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('chatRoom.blockTitle', { name: profile.name }), t('chatRoom.blockBody'), [
+      { text: t('chatRoom.cancel'), style: 'cancel' },
       {
-        text: '차단',
+        text: t('chatRoom.block'),
         style: 'destructive',
         onPress: async () => {
           setSafetyBusy(true);
           const { error } = await safetyService.block(profile.id);
           setSafetyBusy(false);
           if (error) {
-            Alert.alert('차단하지 못했어요', '잠시 후 다시 시도해주세요.');
+            Alert.alert(t('chatRoom.blockFailed'), t('chatRoom.reportFailedBody'));
             return;
           }
           setSafetyOpen(false);
@@ -576,36 +603,32 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const confirmEndMatch = () => {
     if (isMock) {
       setSafetyOpen(false);
-      Alert.alert('테스트 매치', '샘플 대화는 개발 중 반복해서 확인할 수 있도록 유지돼요.');
+      Alert.alert(t('chatRoom.sampleMatchTitle'), t('chatRoom.sampleMatchBody'));
       return;
     }
-    Alert.alert(
-      '대화방에서 나갈까요?',
-      `나가면 ${profile.name}님과의 매치가 종료되고, 대화 내용은 양쪽에서 더 이상 볼 수 없습니다. 차단과 신고는 별도로 할 수 있어요.`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '대화방 나가기',
-          style: 'destructive',
-          onPress: async () => {
-            setSafetyBusy(true);
-            try {
-              await matchesService.endMatch(matchId);
-              queryClient.removeQueries({ queryKey: ['chat', matchId] });
-              queryClient.removeQueries({ queryKey: ['match', matchId] });
-              await queryClient.invalidateQueries({ queryKey: ['matches'] });
-              await queryClient.invalidateQueries({ queryKey: ['chat-list'] });
-              setSafetyOpen(false);
-              router.replace('/(tabs)/chat');
-            } catch {
-              Alert.alert('대화방에서 나가지 못했어요', '이미 종료됐거나 연결이 불안정해요.');
-            } finally {
-              setSafetyBusy(false);
-            }
-          },
+    Alert.alert(t('chatRoom.leaveTitle'), t('chatRoom.leaveBody', { name: profile.name }), [
+      { text: t('chatRoom.cancel'), style: 'cancel' },
+      {
+        text: t('chatRoom.leave'),
+        style: 'destructive',
+        onPress: async () => {
+          setSafetyBusy(true);
+          try {
+            await matchesService.endMatch(matchId);
+            queryClient.removeQueries({ queryKey: ['chat', matchId] });
+            queryClient.removeQueries({ queryKey: ['match', matchId] });
+            await queryClient.invalidateQueries({ queryKey: ['matches'] });
+            await queryClient.invalidateQueries({ queryKey: ['chat-list'] });
+            setSafetyOpen(false);
+            router.replace('/(tabs)/chat');
+          } catch {
+            Alert.alert(t('chatRoom.leaveFailed'), t('chatRoom.leaveFailedBody'));
+          } finally {
+            setSafetyBusy(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const loading = !isMock && (connectionQuery.isLoading || messagesQuery.isLoading);
@@ -614,13 +637,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
         style={styles.keyboard}
       >
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="뒤로"
+            accessibilityLabel={t('chatRoom.back')}
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => router.back()}
@@ -629,7 +652,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             <Ionicons color={palette.ink} name="chevron-back" size={25} />
           </Pressable>
           <Pressable
-            accessibilityLabel={`${profile.name} 프로필 열기`}
+            accessibilityLabel={t('chatRoom.openProfile', { name: profile.name })}
             accessibilityRole="button"
             onPress={() =>
               router.push(
@@ -652,12 +675,12 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
               </View>
               <Text style={styles.personMeta}>
-                {profile.isOnline ? '현재 온라인' : '최근 활동'}
+                {profile.isOnline ? t('chatRoom.online') : t('chatRoom.recent')}
               </Text>
             </View>
           </Pressable>
           <Pressable
-            accessibilityLabel="대화 안전 메뉴"
+            accessibilityLabel={t('chatRoom.safetyMenu')}
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => setSafetyOpen(true)}
@@ -669,10 +692,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
 
         <ScrollView
           contentContainerStyle={styles.messages}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
           onScroll={handleMessageScroll}
           ref={scrollRef}
           scrollEventThrottle={80}
           showsVerticalScrollIndicator={false}
+          style={styles.messageScroll}
         >
           <View style={styles.matchMoment}>
             <View style={styles.matchPhotos}>
@@ -687,20 +713,18 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 <Ionicons color={palette.white} name="checkmark" size={14} />
               </View>
             </View>
-            <Text style={styles.matchTitle}>서로를 픽했어요.</Text>
-            <Text style={styles.matchSubtitle}>이제 서로 메시지를 보낼 수 있어요.</Text>
+            <Text style={styles.matchTitle}>{t('chatRoom.matchTitle')}</Text>
+            <Text style={styles.matchSubtitle}>{t('chatRoom.matchSubtitle')}</Text>
           </View>
 
           <View style={styles.safetyNotice}>
             <IllustratedIcon size={22} source={illustratedIcons.safety} />
-            <Text style={styles.safetyNoticeText}>
-              연락처와 개인정보는 충분히 알아간 뒤 천천히 공유하세요.
-            </Text>
+            <Text style={styles.safetyNoticeText}>{t('chatRoom.safetyTip')}</Text>
           </View>
 
           {!isMock && messagesQuery.hasNextPage ? (
             <Pressable
-              accessibilityLabel="이전 메시지 불러오기"
+              accessibilityLabel={t('chatRoom.olderA11y')}
               accessibilityRole="button"
               accessibilityState={{
                 busy: messagesQuery.isFetchingNextPage,
@@ -716,7 +740,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 <Ionicons color={palette.inkMuted} name="chevron-up" size={15} />
               )}
               <Text style={styles.loadOlderText}>
-                {messagesQuery.isFetchingNextPage ? '불러오는 중' : '이전 메시지'}
+                {messagesQuery.isFetchingNextPage
+                  ? t('chatRoom.olderLoading')
+                  : t('chatRoom.older')}
               </Text>
             </Pressable>
           ) : null}
@@ -724,13 +750,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           {loading ? (
             <View style={styles.stateBlock}>
               <ActivityIndicator color={palette.pink} />
-              <Text style={styles.stateText}>대화를 불러오는 중이에요</Text>
+              <Text style={styles.stateText}>{t('chatRoom.loading')}</Text>
             </View>
           ) : null}
           {failed ? (
             <View style={styles.stateBlock}>
               <IllustratedIcon size={56} source={illustratedIcons.connectionError} />
-              <Text style={styles.stateTitle}>대화를 불러오지 못했어요</Text>
+              <Text style={styles.stateTitle}>{t('chatRoom.loadFailed')}</Text>
               <Pressable
                 accessibilityLabel={t('reliability.retry')}
                 accessibilityRole="button"
@@ -740,7 +766,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 }}
                 style={styles.retryButton}
               >
-                <Text style={styles.retryText}>다시 시도</Text>
+                <Text style={styles.retryText}>{t('chatRoom.retry')}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -749,12 +775,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               {!displayedMessages.length ? (
                 <View style={styles.starterBlock}>
                   <Text style={styles.starterEyebrow}>FIRST MESSAGE</Text>
-                  <Text style={styles.starterTitle}>첫 문장이 고민되나요?</Text>
-                  <Text style={styles.starterBody}>문장을 골라 내 말투로 다듬어 보내보세요.</Text>
+                  <Text style={styles.starterTitle}>{t('chatRoom.starterTitle')}</Text>
+                  <Text style={styles.starterBody}>{t('chatRoom.starterBody')}</Text>
                   <View style={styles.starterList}>
-                    {CONVERSATION_STARTERS.map((starter) => (
+                    {[
+                      t('chatRoom.starters.profile'),
+                      t('chatRoom.starters.hobby'),
+                      t('chatRoom.starters.music'),
+                    ].map((starter) => (
                       <Pressable
-                        accessibilityLabel={`${starter} 입력`}
+                        accessibilityLabel={t('chatRoom.starterA11y', { starter })}
                         accessibilityRole="button"
                         key={starter}
                         onPress={() => selectStarter(starter)}
@@ -772,7 +802,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               ) : null}
               {displayedMessages.length ? (
                 <View style={styles.dayPill}>
-                  <Text style={styles.dayText}>오늘</Text>
+                  <Text style={styles.dayText}>{t('chatRoom.today')}</Text>
                 </View>
               ) : null}
               {displayedMessages.map((message) => (
@@ -809,27 +839,34 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                       </Text>
                     </View>
                   ) : null}
-                  {message.translated ? (
+                  {isTranslationShown(message, activeAppLanguage) ? (
                     <Animated.View entering={stateEntering()} style={styles.translation}>
                       <IllustratedIcon size={18} source={illustratedIcons.translation} />
                       <Text style={styles.translationText}>{message.translated}</Text>
                     </Animated.View>
-                  ) : !message.mine &&
-                    message.messageId &&
-                    normalizeLanguage(message.originalLanguage ?? '') !==
-                      normalizeLanguage(i18n.language) ? (
+                  ) : null}
+                  {!message.mine &&
+                  Boolean(message.content) &&
+                  Boolean(translationTargetLanguage) &&
+                  (isMock || message.messageId) &&
+                  normalizeLanguage(message.originalLanguage ?? '') !==
+                    normalizeLanguage(activeAppLanguage) ? (
                     <Pressable
-                      accessibilityLabel="메시지 번역 보기"
+                      accessibilityLabel={
+                        isTranslationShown(message, activeAppLanguage)
+                          ? t('experience.chat.showOriginal')
+                          : t('experience.chat.translate')
+                      }
                       accessibilityRole="button"
                       accessibilityState={{
-                        busy: message.translationStatus === 'translating',
-                        disabled: message.translationStatus === 'translating',
+                        busy: isTranslationPending(message, activeAppLanguage),
+                        disabled: isTranslationPending(message, activeAppLanguage),
                       }}
-                      disabled={message.translationStatus === 'translating'}
+                      disabled={isTranslationPending(message, activeAppLanguage)}
                       onPress={() => void translate(message)}
                       style={styles.translationAction}
                     >
-                      {message.translationStatus === 'translating' ? (
+                      {isTranslationPending(message, activeAppLanguage) ? (
                         <ActivityIndicator color={palette.pink} size="small" />
                       ) : (
                         <IllustratedIcon size={18} source={illustratedIcons.translation} />
@@ -840,11 +877,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                           message.translationStatus === 'failed' && styles.translationFailed,
                         ]}
                       >
-                        {message.translationStatus === 'translating'
-                          ? '번역 중…'
-                          : message.translationStatus === 'failed'
-                            ? '번역 실패 · 다시 시도'
-                            : '번역 보기'}
+                        {isTranslationPending(message, activeAppLanguage)
+                          ? t('experience.chat.translating')
+                          : isTranslationFailed(message, activeAppLanguage)
+                            ? t('experience.chat.translationRetry')
+                            : isTranslationShown(message, activeAppLanguage)
+                              ? t('experience.chat.showOriginal')
+                              : t('experience.chat.translate')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -852,7 +891,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                     <Animated.View entering={stateEntering()} exiting={stateExiting()}>
                       <Pressable
                         accessibilityLabel={
-                          message.status === 'failed' ? '메시지 다시 보내기' : undefined
+                          message.status === 'failed' ? t('chatRoom.retryMessage') : undefined
                         }
                         accessibilityRole="button"
                         disabled={message.status !== 'failed'}
@@ -871,9 +910,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                           >
                             {message.status === 'sending'
                               ? message.uploadProgress
-                                ? `사진 올리는 중 ${message.uploadProgress.completed}/${message.uploadProgress.total}`
-                                : '전송 중…'
-                              : '전송 실패 · 다시 보내기'}
+                                ? t('chatRoom.uploading', message.uploadProgress)
+                                : t('chatRoom.sending')
+                              : t('chatRoom.sendFailed')}
                           </Text>
                           {message.uploadProgress ? (
                             <UploadProgress
@@ -918,7 +957,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               style={styles.attachmentTray}
             >
               <View style={styles.attachmentTrayHeading}>
-                <Text style={styles.attachmentTrayTitle}>보낼 사진</Text>
+                <Text style={styles.attachmentTrayTitle}>{t('chatRoom.trayTitle')}</Text>
                 <Text style={styles.attachmentCount}>
                   {selectedImages.length}/{CHAT_IMAGE_LIMIT}
                 </Text>
@@ -945,7 +984,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                       style={styles.attachmentPreview}
                     />
                     <Pressable
-                      accessibilityLabel={`${index + 1}번째 사진 제거`}
+                      accessibilityLabel={t('chatRoom.removePhoto', { index: index + 1 })}
                       accessibilityRole="button"
                       hitSlop={8}
                       onPress={() =>
@@ -964,7 +1003,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           ) : null}
           <View style={styles.composerArea}>
             <Pressable
-              accessibilityLabel={hasGoldPass ? '사진 추가' : 'Gold Pass 사진 전송 기능 알아보기'}
+              accessibilityLabel={
+                hasGoldPass ? t('chatRoom.addPhoto') : t('chatRoom.goldPhotoA11y')
+              }
               accessibilityRole="button"
               accessibilityState={{
                 busy: entitlement.isLoading,
@@ -976,7 +1017,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               style={({ pressed }) => [styles.mediaButton, pressed && styles.pressed]}
             >
               <IllustratedIcon size={30} source={illustratedIcons.profilePhotos} />
-              <Text style={styles.goldDiamond}>◆</Text>
+              <View style={styles.goldPassMark}>
+                <IllustratedIcon size={16} source={illustratedIcons.goldPremium} />
+              </View>
             </Pressable>
             <View style={styles.composer}>
               <TextInput
@@ -984,7 +1027,11 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 maxLength={4000}
                 multiline
                 onChangeText={setDraft}
-                placeholder={`${profile.name}님에게 메시지 보내기`}
+                onFocus={() => {
+                  if (!isNearBottomRef.current) return;
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+                }}
+                placeholder={t('chatRoom.placeholder', { name: profile.name })}
                 placeholderTextColor="#93939B"
                 ref={inputRef}
                 style={styles.input}
@@ -992,7 +1039,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               />
             </View>
             <Pressable
-              accessibilityLabel="메시지 보내기"
+              accessibilityLabel={t('chatRoom.send')}
               accessibilityRole="button"
               accessibilityState={{
                 disabled: (!draft.trim() && !selectedImages.length) || failed,
@@ -1013,14 +1060,14 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       </KeyboardAvoidingView>
 
       <InteractiveBottomSheet
-        accessibilityLabel="대화 안전 메뉴"
+        accessibilityLabel={t('chatRoom.safetyMenu')}
         contentStyle={styles.safetySheetContent}
         dismissEnabled={!safetyBusy}
         onClose={() => setSafetyOpen(false)}
         sheetStyle={styles.safetySheet}
         visible={safetyOpen}
       >
-        <Text style={styles.sheetTitle}>{profile.name}님과의 대화</Text>
+        <Text style={styles.sheetTitle}>{t('chatRoom.sheetTitle', { name: profile.name })}</Text>
         <SafetyAction
           disabled={safetyBusy}
           icon="share-social-outline"
@@ -1033,7 +1080,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         <SafetyAction
           disabled={safetyBusy}
           icon="person-outline"
-          label="프로필 보기"
+          label={t('chatRoom.viewProfile')}
           onPress={() => {
             setSafetyOpen(false);
             router.push(
@@ -1044,7 +1091,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         <SafetyAction
           disabled={safetyBusy}
           icon="flag-outline"
-          label="신고하기"
+          label={t('chatRoom.report')}
           onPress={() => {
             setSafetyOpen(false);
             setReportOpen(true);
@@ -1054,24 +1101,26 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
           danger
           disabled={safetyBusy}
           icon="exit-outline"
-          label="대화방 나가기"
+          label={t('chatRoom.leave')}
           onPress={confirmEndMatch}
         />
         <SafetyAction
           danger
           disabled={safetyBusy}
           icon="ban-outline"
-          label="차단하기"
+          label={t('chatRoom.block')}
           onPress={confirmBlock}
         />
         <BottomSheetCloseButton
-          accessibilityLabel="대화 안전 메뉴 닫기"
+          accessibilityLabel={t('chatRoom.close')}
           accessibilityRole="button"
           accessibilityState={{ disabled: safetyBusy }}
           disabled={safetyBusy}
           style={styles.cancelButton}
         >
-          <Text style={styles.cancelText}>{safetyBusy ? '처리 중…' : '닫기'}</Text>
+          <Text style={styles.cancelText}>
+            {safetyBusy ? t('chatRoom.processing') : t('chatRoom.close')}
+          </Text>
         </BottomSheetCloseButton>
       </InteractiveBottomSheet>
 
@@ -1115,17 +1164,22 @@ function toMatchRoomConnection(connection: MatchConnection): MatchRoomConnection
 
 function createMockMessages(conversation: (typeof mockConversations)[number]): LocalMessage[] {
   return [
-    { id: '1', content: 'Hey! Your profile made me want to travel again.', mine: false },
+    {
+      id: '1',
+      content: 'Hey! Your profile made me want to travel again.',
+      mine: false,
+      originalLanguage: 'en',
+    },
     { id: '2', content: 'Then I owe you a proper recommendation list 🙂', mine: true },
     {
       id: '3',
       content: conversation.message.replace(/^You: /, ''),
       mine: false,
-      translated: '내 언어로 번역됨',
+      originalLanguage: 'en',
     },
     {
       id: '4',
-      content: '여기 정말 좋았어요. 다음에는 같이 가요!',
+      content: 'I loved this place. Let’s go together next time!',
       mine: false,
       attachments: [
         {
@@ -1147,7 +1201,8 @@ function toLocalMessage(message: ChatMessage, userId: string, locale: string): L
     !Array.isArray(message.translated_content)
       ? message.translated_content
       : {};
-  const translated = translations[locale];
+  const normalizedLocale = normalizeLanguage(locale);
+  const translated = translations[normalizedLocale] ?? translations[locale];
   return {
     id: message.client_id ?? message.id,
     messageId: message.id,
@@ -1156,6 +1211,9 @@ function toLocalMessage(message: ChatMessage, userId: string, locale: string): L
     originalLanguage: message.original_language ?? undefined,
     attachments: message.attachments,
     translated: typeof translated === 'string' ? translated : undefined,
+    translatedLanguage: typeof translated === 'string' ? normalizedLocale : undefined,
+    // 서버에 캐시된 번역이 있어도 사용자가 버튼을 누르기 전에는 원문만 보여준다.
+    translationVisible: false,
   };
 }
 
@@ -1179,6 +1237,31 @@ function isTranslationMap(
   value: ChatMessage['translated_content'],
 ): value is Record<string, string> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function hasTranslationFor(message: LocalMessage, targetLanguage: string) {
+  return Boolean(
+    message.translated &&
+    normalizeLanguage(message.translatedLanguage ?? '') === normalizeLanguage(targetLanguage),
+  );
+}
+
+function isTranslationShown(message: LocalMessage, targetLanguage: string) {
+  return Boolean(message.translationVisible && hasTranslationFor(message, targetLanguage));
+}
+
+function isTranslationPending(message: LocalMessage, targetLanguage: string) {
+  return (
+    message.translationStatus === 'translating' &&
+    normalizeLanguage(message.translationStatusLanguage ?? '') === normalizeLanguage(targetLanguage)
+  );
+}
+
+function isTranslationFailed(message: LocalMessage, targetLanguage: string) {
+  return (
+    message.translationStatus === 'failed' &&
+    normalizeLanguage(message.translationStatusLanguage ?? '') === normalizeLanguage(targetLanguage)
+  );
 }
 
 function mergeMessage(current: LocalMessage[], incoming: LocalMessage) {
@@ -1224,7 +1307,10 @@ function MessageImageGrid({
     <View style={[styles.imageGrid, mine ? styles.imageGridMine : styles.imageGridTheirs]}>
       {images.map((image, index) => (
         <Pressable
-          accessibilityLabel={`${index + 1}번째 사진 크게 보기`}
+          accessibilityLabel={t('chatRoom.imageA11y', {
+            count: images.length,
+            index: index + 1,
+          })}
           accessibilityRole="button"
           disabled={!image.uri}
           key={image.key}
@@ -1243,7 +1329,7 @@ function MessageImageGrid({
           ) : (
             <View style={styles.messageImageFallback}>
               <Ionicons color={palette.inkMuted} name="image-outline" size={25} />
-              <Text style={styles.messageImageFallbackText}>사진을 불러오지 못했어요</Text>
+              <Text style={styles.messageImageFallbackText}>{t('chatRoom.imageFailed')}</Text>
             </View>
           )}
           {hidden && image.uri ? (
@@ -1270,6 +1356,7 @@ function ImageViewer({
   onClose: () => void;
   visible: boolean;
 }) {
+  const { t } = useTranslation();
   const { height, width } = useWindowDimensions();
   const viewerInsets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -1282,7 +1369,7 @@ function ImageViewer({
             {activeIndex + 1} / {images.length}
           </Text>
           <Pressable
-            accessibilityLabel="사진 닫기"
+            accessibilityLabel={t('chatRoom.closeImage')}
             accessibilityRole="button"
             hitSlop={8}
             onPress={onClose}
@@ -1311,7 +1398,10 @@ function ImageViewer({
         </ScrollView>
         {images.length > 1 ? (
           <View
-            accessibilityLabel={`${images.length}장 중 ${activeIndex + 1}번째 사진`}
+            accessibilityLabel={t('chatRoom.imageA11y', {
+              count: images.length,
+              index: activeIndex + 1,
+            })}
             style={[styles.viewerDots, { bottom: Math.max(viewerInsets.bottom + 18, 24) }]}
           >
             {images.map((uri, index) => (
@@ -1464,6 +1554,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   keyboard: { flex: 1 },
+  messageScroll: { flex: 1, minHeight: 0 },
   header: {
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.96)',
@@ -1714,15 +1805,16 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 42,
   },
-  goldDiamond: {
-    color: '#C99500',
-    fontSize: 10,
+  goldPassMark: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 9,
+    height: 18,
+    justifyContent: 'center',
     position: 'absolute',
-    right: 1,
-    textShadowColor: 'rgba(255,255,255,0.9)',
-    textShadowOffset: { height: 0, width: 0 },
-    textShadowRadius: 2,
-    top: 0,
+    right: -1,
+    top: -2,
+    width: 18,
   },
   attachmentTray: { paddingBottom: 9 },
   attachmentTrayHeading: {

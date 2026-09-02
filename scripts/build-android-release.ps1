@@ -41,9 +41,22 @@ function Import-LocalExpoEnvironment {
 # Expo evaluates app.config.js before its normal dotenv output appears. Load only
 # public app variables up front so local production prebuilds use the same values
 # as EAS. Private entries such as deployment tokens are intentionally ignored.
+$previousReviewSamplesEnvironment = $env:EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES
 $importedExpoEnvironment = Import-LocalExpoEnvironment (Join-Path $workspace '.env.local')
 
+# Review samples are strictly a local-development fixture. Force the production
+# bundle off even when a developer's .env.local intentionally enables them.
+$env:EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES = 'false'
+
 try {
+
+Push-Location $workspace
+try {
+  & npm.cmd run verify
+  if ($LASTEXITCODE -ne 0) { throw "Release verification failed with exit code $LASTEXITCODE." }
+} finally {
+  Pop-Location
+}
 
 if (-not (Test-Path -LiteralPath $credentialsPath -PathType Leaf)) {
   throw 'credentials.json is required for the Play upload signing key.'
@@ -156,5 +169,10 @@ Write-Output "SHA256: $($hash.Hash)"
 } finally {
   foreach ($name in $importedExpoEnvironment) {
     Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
+  }
+  if ($null -eq $previousReviewSamplesEnvironment) {
+    Remove-Item -Path 'Env:EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES' -ErrorAction SilentlyContinue
+  } else {
+    $env:EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES = $previousReviewSamplesEnvironment
   }
 }

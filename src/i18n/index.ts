@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { additionalResources } from './additional-resources';
 import { experienceResources } from './experience-resources';
 import { inAppNotificationResources } from './in-app-notification-resources';
+import { journeyResources } from './journey-resources';
 import { operationalResources } from './operational-resources';
 import { p1Resources } from './p1-resources';
 import { profileSurfaceResources } from './profile-surface-resources';
@@ -612,6 +613,7 @@ const resources = {
       ...p1Resources.en.translation,
       ...profileSurfaceResources.en.translation,
       ...profileEditorResources.en.translation,
+      ...journeyResources.en.translation,
     },
   },
   ko: {
@@ -625,6 +627,7 @@ const resources = {
       ...p1Resources.ko.translation,
       ...profileSurfaceResources.ko.translation,
       ...profileEditorResources.ko.translation,
+      ...journeyResources.ko.translation,
     },
   },
   vi: {
@@ -637,6 +640,7 @@ const resources = {
       ...p1Resources.vi.translation,
       ...profileSurfaceResources.vi.translation,
       ...profileEditorResources.vi.translation,
+      ...journeyResources.vi.translation,
     },
   },
   ja: {
@@ -649,6 +653,7 @@ const resources = {
       ...p1Resources.ja.translation,
       ...profileSurfaceResources.ja.translation,
       ...profileEditorResources.ja.translation,
+      ...journeyResources.ja.translation,
     },
   },
   fr: {
@@ -661,6 +666,7 @@ const resources = {
       ...p1Resources.fr.translation,
       ...profileSurfaceResources.fr.translation,
       ...profileEditorResources.fr.translation,
+      ...journeyResources.fr.translation,
     },
   },
   es: {
@@ -673,6 +679,7 @@ const resources = {
       ...p1Resources.es.translation,
       ...profileSurfaceResources.es.translation,
       ...profileEditorResources.es.translation,
+      ...journeyResources.es.translation,
     },
   },
   'pt-BR': {
@@ -685,6 +692,7 @@ const resources = {
       ...p1Resources['pt-BR'].translation,
       ...profileSurfaceResources['pt-BR'].translation,
       ...profileEditorResources['pt-BR'].translation,
+      ...journeyResources['pt-BR'].translation,
     },
   },
   'zh-TW': {
@@ -697,6 +705,7 @@ const resources = {
       ...p1Resources['zh-TW'].translation,
       ...profileSurfaceResources['zh-TW'].translation,
       ...profileEditorResources['zh-TW'].translation,
+      ...journeyResources['zh-TW'].translation,
     },
   },
   id: {
@@ -709,6 +718,7 @@ const resources = {
       ...p1Resources.id.translation,
       ...profileSurfaceResources.id.translation,
       ...profileEditorResources.id.translation,
+      ...journeyResources.id.translation,
     },
   },
   fa: {
@@ -721,6 +731,7 @@ const resources = {
       ...p1Resources.fa.translation,
       ...profileSurfaceResources.fa.translation,
       ...profileEditorResources.fa.translation,
+      ...journeyResources.fa.translation,
     },
   },
 } as const;

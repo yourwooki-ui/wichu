@@ -124,6 +124,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
           initialNumToRender={18}
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.code}
+          nestedScrollEnabled
           renderItem={({ item }) => (
             <Pressable
               accessibilityLabel={item.name}
@@ -138,6 +139,8 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
               <Check selected={value.includes(item.code)} />
             </Pressable>
           )}
+          showsVerticalScrollIndicator={false}
+          style={styles.listViewport}
         />
         <BottomSheetCloseButton
           accessibilityLabel="선택 완료"
@@ -228,6 +231,7 @@ const styles = StyleSheet.create({
     width: 30,
   },
   list: { paddingBottom: 92, paddingHorizontal: 12 },
+  listViewport: { flex: 1, minHeight: 0 },
   countryRow: { alignItems: 'center', flexDirection: 'row', minHeight: 54, paddingHorizontal: 8 },
   countryName: { color: palette.ink, flex: 1, fontSize: 13, fontWeight: '800', marginLeft: 11 },
   code: { color: palette.inkMuted, fontSize: 10, fontWeight: '800', marginRight: 10 },

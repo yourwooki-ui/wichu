@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,24 +13,18 @@ import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 
 const STEPS = [
   {
-    eyebrow: '빠른 기능',
-    title: '상단에서 바로 조절해요',
-    body: '왼쪽은 마지막 선택 되돌리기, 오른쪽은 탐색 조건과 알림이에요.',
     icon: illustratedIcons.discoverySettings,
+    key: 'header',
     target: 'header',
   },
   {
-    eyebrow: '프로필 카드',
-    title: '보고, 누르고, 넘겨보세요',
-    body: '카드를 누르면 상세 프로필, 왼쪽은 PASS, 오른쪽이나 빠른 두 번 누르기는 PICK이에요.',
     icon: illustratedIcons.profileEdit,
+    key: 'card',
     target: 'card',
   },
   {
-    eyebrow: '하단 메뉴',
-    title: '필요한 화면으로 바로 이동해요',
-    body: '매치, 채팅, 발견, 상점, 내 프로필은 항상 같은 위치에 있어요.',
     icon: illustratedIcons.connections,
+    key: 'tabs',
     target: 'tabs',
   },
 ] as const;
@@ -43,6 +38,7 @@ type DiscoverGestureCoachProps = {
 type TargetRect = { height: number; width: number; x: number; y: number };
 
 export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGestureCoachProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const viewport = useAppViewport();
   const [stepIndex, setStepIndex] = useState(0);
@@ -96,18 +92,20 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
               <View style={styles.calloutIdentity}>
                 <IllustratedIcon size={38} source={step.icon} />
                 <View>
-                  <Text style={styles.eyebrow}>{step.eyebrow}</Text>
+                  <Text style={styles.eyebrow}>
+                    {t(`discoveryControls.coach.steps.${step.key}.eyebrow`)}
+                  </Text>
                   <Text style={styles.counter}>
                     {stepIndex + 1} / {STEPS.length}
                   </Text>
                 </View>
               </View>
               <Pressable accessibilityRole="button" hitSlop={10} onPress={finish}>
-                <Text style={styles.skipText}>건너뛰기</Text>
+                <Text style={styles.skipText}>{t('discoveryControls.coach.skip')}</Text>
               </Pressable>
             </View>
-            <Text style={styles.title}>{step.title}</Text>
-            <Text style={styles.body}>{step.body}</Text>
+            <Text style={styles.title}>{t(`discoveryControls.coach.steps.${step.key}.title`)}</Text>
+            <Text style={styles.body}>{t(`discoveryControls.coach.steps.${step.key}.body`)}</Text>
             <View style={styles.footer}>
               <View style={styles.dots}>
                 {STEPS.map((item, index) => (
@@ -122,7 +120,11 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
                 onPress={next}
                 style={({ pressed }) => [styles.next, pressed && styles.pressed]}
               >
-                <Text style={styles.nextText}>{isLastStep ? '시작하기' : '다음'}</Text>
+                <Text style={styles.nextText}>
+                  {isLastStep
+                    ? t('discoveryControls.coach.start')
+                    : t('discoveryControls.coach.next')}
+                </Text>
                 <Ionicons color={palette.white} name="arrow-forward" size={16} />
               </Pressable>
             </View>

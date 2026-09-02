@@ -54,4 +54,28 @@ describe('translation key usage', () => {
       }
     }
   });
+
+  it('keeps core user journeys free of hardcoded Korean UI copy', () => {
+    const coreJourneys = [
+      'DiscoverScreen.tsx',
+      'SwipeDeck.tsx',
+      'DiscoveryFilterSheet.tsx',
+      'DistanceLimitField.tsx',
+      'NotificationsSheet.tsx',
+      'DiscoverGestureCoach.tsx',
+      'DiscoverUndoCoach.tsx',
+      'MatchesScreen.tsx',
+      'ChatRoomScreen.tsx',
+      'ProductTutorialScreen.tsx',
+      'ProfilePhotoPicker.tsx',
+      'ReportReasonSheet.tsx',
+      'BlockedUsersScreen.tsx',
+    ];
+
+    for (const [file, source] of Object.entries(sourceModules)) {
+      if (!coreJourneys.some((name) => file.endsWith(name))) continue;
+      const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      expect(withoutComments, `${file} contains hardcoded Korean UI copy`).not.toMatch(/[가-힣]/);
+    }
+  });
 });

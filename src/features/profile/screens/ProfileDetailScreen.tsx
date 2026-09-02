@@ -25,6 +25,7 @@ import { StateView } from '@/components/StateView';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { PickMessageSheet } from '@/features/discover/components/PickMessageSheet';
@@ -86,7 +87,8 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const recycleProfiles = useDiscoverStore((state) => state.recycleProfiles);
   const cachedProfile = isPreview
     ? undefined
-    : (deckProfile ?? mockProfiles.find((item) => item.id === id));
+    : (deckProfile ??
+      (reviewSamplesEnabled ? mockProfiles.find((item) => item.id === id) : undefined));
   const myPreviewQuery = useQuery({
     queryKey: ['my-profile-preview', id, activeLocale],
     enabled: Boolean(isPreview && id && session?.user.id),
@@ -275,7 +277,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         { action, has_intro: Boolean(introMessage) },
         `/profile/${profile.id}`,
       );
-      if (__DEV__) recycleProfiles([profile]);
+      if (reviewSamplesEnabled) recycleProfiles([profile]);
       if (result.matchId) {
         productAnalyticsService.track('match_created', undefined, `/profile/${profile.id}`);
         decisionFeedback.set(withTiming(0, { duration: 120 }));
@@ -394,7 +396,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   ) : null;
 
   return (
-    <Screen edges={['left', 'right', 'bottom']} padded={false} style={styles.screen}>
+    <Screen edges={['left', 'right']} padded={false} style={styles.screen}>
       <Animated.View
         pointerEvents={decisionBusy ? 'none' : 'auto'}
         style={[styles.detailSurface, decisionSurfaceStyle]}

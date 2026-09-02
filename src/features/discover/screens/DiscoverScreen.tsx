@@ -2,6 +2,7 @@ import { Image, type ImageSource } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -32,6 +33,7 @@ const headerIcons = {
 
 export function DiscoverScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { coach } = useLocalSearchParams<{ coach?: string }>();
   const theme = useAppTheme();
   const { session } = useAuthSession();
@@ -94,28 +96,24 @@ export function DiscoverScreen() {
     }
     if (!REWARDED_ADS_ENABLED) {
       // 광고 연동 전에 "광고 보기"를 제안하면 100% 실패한다. 제안 자체를 하지 않는다.
-      Alert.alert('되돌리기를 모두 사용했어요', '다음 프로필에서 신중하게 선택해보세요.');
+      Alert.alert(t('discoverUndo.exhaustedTitle'), t('discoverUndo.exhaustedBody'));
       return;
     }
 
-    Alert.alert(
-      '되돌리기 1회 받기',
-      '광고를 끝까지 시청하면 마지막 선택을 한 번 되돌릴 수 있어요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '광고 보기',
-          onPress: async () => {
-            const result = await deck.watchRewardedAdAndUndo();
-            if (result === 'dismissed') Alert.alert('광고 시청이 완료되지 않았어요.');
-            if (result === 'unavailable') Alert.alert('지금은 광고를 불러올 수 없어요.');
-            if (result === 'pending-credit') {
-              Alert.alert('보상 확인 중', '광고 보상이 확인되면 되돌리기 1회가 지급돼요.');
-            }
-          },
+    Alert.alert(t('discoverUndo.rewardTitle'), t('discoverUndo.rewardBody'), [
+      { text: t('discoverUndo.cancel'), style: 'cancel' },
+      {
+        text: t('discoverUndo.watchAd'),
+        onPress: async () => {
+          const result = await deck.watchRewardedAdAndUndo();
+          if (result === 'dismissed') Alert.alert(t('discoverUndo.incomplete'));
+          if (result === 'unavailable') Alert.alert(t('discoverUndo.unavailable'));
+          if (result === 'pending-credit') {
+            Alert.alert(t('discoverUndo.pendingTitle'), t('discoverUndo.pendingBody'));
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const openMatchedChat = () => {
@@ -132,7 +130,7 @@ export function DiscoverScreen() {
           <HeaderAction
             disabled={!deck.canUndo}
             icon={headerIcons.undo}
-            label="마지막 선택 되돌리기"
+            label={t('discoverUndo.action')}
             onPress={handleUndo}
           />
         </View>
@@ -142,13 +140,13 @@ export function DiscoverScreen() {
         <View style={[styles.headerSide, styles.headerActions]}>
           <HeaderAction
             icon={headerIcons.filter}
-            label="탐색 조건 설정"
+            label={t('discoverUndo.filters')}
             onPress={() => setFiltersOpen(true)}
           />
           <HeaderAction
             badge={hasUnreadNotifications}
             icon={headerIcons.notification}
-            label="알림 열기"
+            label={t('discoverUndo.notifications')}
             onPress={() => setNotificationsOpen(true)}
           />
         </View>

@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -42,10 +43,7 @@ const STEPS = [
     accent: '#FF2D6F',
     eyebrow: 'DISCOVER',
     illustration: illustratedIcons.discoverySettings,
-    title: '한 명씩 보고\n내 선택을 남겨요',
-    body: '프로필을 충분히 확인한 다음 자연스럽게 넘겨보세요.',
-    notes: ['왼쪽 PASS · 오른쪽 PICK', '한 번 누르면 상세 프로필'],
-    tip: '다음 프로필은 미리 준비되어 선택 후 바로 이어져요.',
+    key: 'discover',
     tipIcon: illustratedIcons.discoveryVisible,
     visual: 'discover',
   },
@@ -53,10 +51,7 @@ const STEPS = [
     accent: '#111113',
     eyebrow: 'MATCH',
     illustration: illustratedIcons.connections,
-    title: '서로 PICK하면\n대화가 열려요',
-    body: '상대도 나를 선택했을 때만 매치되고 1:1 채팅을 시작할 수 있어요.',
-    notes: ['매치된 사용자만 메시지 가능', '언제든 차단·신고 가능'],
-    tip: '매치 전에는 상대에게 메시지를 보낼 수 없어요.',
+    key: 'match',
     tipIcon: illustratedIcons.safety,
     visual: 'match',
   },
@@ -64,16 +59,14 @@ const STEPS = [
     accent: '#176E4D',
     eyebrow: 'CHAT & TRANSLATE',
     illustration: illustratedIcons.translation,
-    title: '언어가 달라도\n바로 대화해요',
-    body: '원문은 그대로 두고 필요한 메시지만 자연스럽게 번역해요.',
-    notes: ['원문과 번역을 함께 확인', '메시지는 즉시 화면에 표시'],
-    tip: '번역은 원문을 바꾸지 않고 별도로 표시돼요.',
+    key: 'chat',
     tipIcon: illustratedIcons.translation,
     visual: 'chat',
   },
 ] as const;
 
 export function ProductTutorialScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { session } = useAuthSession();
   const { height } = useAppViewport();
@@ -149,19 +142,22 @@ export function ProductTutorialScreen() {
             <BrandWordmark color={palette.ink} size={22} />
           </View>
           <Pressable
-            accessibilityLabel="튜토리얼 건너뛰기"
+            accessibilityLabel={t('tutorial.skipA11y')}
             accessibilityRole="button"
             disabled={finishing}
             hitSlop={touchSlop.link}
             onPress={() => void finish('skip')}
             style={({ pressed }) => [styles.skip, pressed && pressFeedback.icon]}
           >
-            <Text style={styles.skipText}>건너뛰기</Text>
+            <Text style={styles.skipText}>{t('tutorial.skip')}</Text>
           </Pressable>
         </View>
 
         <View
-          accessibilityLabel={`${stepIndex + 1}/${STEPS.length} 단계`}
+          accessibilityLabel={t('tutorial.progress', {
+            current: stepIndex + 1,
+            total: STEPS.length,
+          })}
           accessibilityRole="progressbar"
           accessibilityValue={{ max: STEPS.length, min: 1, now: stepIndex + 1 }}
           style={styles.segments}
@@ -192,23 +188,28 @@ export function ProductTutorialScreen() {
               <IllustratedIcon size={28} source={step.illustration} />
               <Text style={[styles.eyebrow, { color: step.accent }]}>{step.eyebrow}</Text>
             </View>
-            <Text style={[styles.title, compact && styles.titleCompact]}>{step.title}</Text>
-            <Text style={styles.body}>{step.body}</Text>
+            <Text style={[styles.title, compact && styles.titleCompact]}>
+              {t(`tutorial.steps.${step.key}.title`)}
+            </Text>
+            <Text style={styles.body}>{t(`tutorial.steps.${step.key}.body`)}</Text>
             <View style={styles.noteGrid}>
-              {step.notes.map((note) => (
-                <View key={note} style={styles.noteChip}>
-                  <Ionicons color={step.accent} name="checkmark-circle" size={16} />
-                  <Text numberOfLines={2} style={styles.noteText}>
-                    {note}
-                  </Text>
-                </View>
-              ))}
+              {[1, 2].map((noteIndex) => {
+                const note = t(`tutorial.steps.${step.key}.note${noteIndex}`);
+                return (
+                  <View key={note} style={styles.noteChip}>
+                    <Ionicons color={step.accent} name="checkmark-circle" size={16} />
+                    <Text numberOfLines={2} style={styles.noteText}>
+                      {note}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
             <View style={styles.tipCard}>
               <IllustratedIcon size={34} source={step.tipIcon} />
               <View style={styles.tipCopy}>
-                <Text style={styles.tipLabel}>알아두세요</Text>
-                <Text style={styles.tipText}>{step.tip}</Text>
+                <Text style={styles.tipLabel}>{t('tutorial.tip')}</Text>
+                <Text style={styles.tipText}>{t(`tutorial.steps.${step.key}.tip`)}</Text>
               </View>
             </View>
           </View>
@@ -218,7 +219,7 @@ export function ProductTutorialScreen() {
           <View style={styles.footerActions}>
             {stepIndex > 0 ? (
               <Pressable
-                accessibilityLabel="이전 단계"
+                accessibilityLabel={t('tutorial.previous')}
                 accessibilityRole="button"
                 disabled={finishing}
                 onPress={back}
@@ -239,7 +240,11 @@ export function ProductTutorialScreen() {
               ]}
             >
               <Text style={styles.primaryText}>
-                {finishing ? '준비 중…' : isLastStep ? '발견 시작하기' : '다음'}
+                {finishing
+                  ? t('tutorial.preparing')
+                  : isLastStep
+                    ? t('tutorial.start')
+                    : t('tutorial.next')}
               </Text>
               {!finishing ? (
                 <Ionicons color={palette.white} name="arrow-forward" size={18} />
@@ -257,7 +262,7 @@ function TutorialVisual({
   kind,
 }: {
   compact: boolean;
-  kind: (typeof STEPS)[number]['visual'];
+  kind: 'discover' | 'match' | 'chat';
 }) {
   const { height: viewportHeight } = useAppViewport();
   const height = compact ? 250 : Math.min(410, viewportHeight * 0.44);
@@ -268,6 +273,8 @@ function TutorialVisual({
 }
 
 function DiscoverVisual({ height }: { height: number }) {
+  const { t } = useTranslation();
+
   return (
     <View style={[styles.visual, styles.discoverVisual, { height }]}>
       <Image
@@ -307,9 +314,9 @@ function DiscoverVisual({ height }: { height: number }) {
           <Text style={styles.discoverName}>Lina, 24</Text>
           <CountryFlag compact countryCode="DE" style={styles.discoverFlag} />
         </View>
-        <Text style={styles.discoverMeta}>디자인 전공 · 사진 심사 완료</Text>
+        <Text style={styles.discoverMeta}>{t('tutorial.preview.profileMeta')}</Text>
         <View style={styles.tagRow}>
-          {['디자인', '여행', '인디 음악'].map((tag) => (
+          {(t('tutorial.preview.tags', { returnObjects: true }) as string[]).map((tag) => (
             <View key={tag} style={styles.profileTag}>
               <Text style={styles.profileTagText}>{tag}</Text>
             </View>
@@ -321,6 +328,8 @@ function DiscoverVisual({ height }: { height: number }) {
 }
 
 function MatchVisual({ height }: { height: number }) {
+  const { t } = useTranslation();
+
   return (
     <LinearGradient colors={['#FFF0C4', '#FFE6EF', '#FFF9FB']} style={[styles.visual, { height }]}>
       <Text style={styles.matchOverline}>TWO PEOPLE · ONE PICK</Text>
@@ -349,7 +358,7 @@ function MatchVisual({ height }: { height: number }) {
       </View>
       <View style={styles.matchResult}>
         <View style={styles.matchStatusDot} />
-        <Text style={styles.matchResultText}>서로 PICK했어요</Text>
+        <Text style={styles.matchResultText}>{t('tutorial.preview.matched')}</Text>
       </View>
       <Text style={styles.matchNames}>Lina × Mia</Text>
     </LinearGradient>
@@ -357,6 +366,8 @@ function MatchVisual({ height }: { height: number }) {
 }
 
 function ChatVisual({ height }: { height: number }) {
+  const { t } = useTranslation();
+
   return (
     <LinearGradient colors={['#EDF7F3', '#F4F2FF', '#FFFFFF']} style={[styles.visual, { height }]}>
       <View style={styles.chatHeader}>
@@ -369,7 +380,7 @@ function ChatVisual({ height }: { height: number }) {
         />
         <View style={styles.chatHeaderCopy}>
           <Text style={styles.chatName}>Mia</Text>
-          <Text style={styles.chatPresence}>온라인</Text>
+          <Text style={styles.chatPresence}>{t('tutorial.preview.online')}</Text>
         </View>
         <IllustratedIcon size={36} source={illustratedIcons.translation} />
       </View>
@@ -378,16 +389,16 @@ function ChatVisual({ height }: { height: number }) {
           <Text style={styles.theirMessage}>What kind of music do you like?</Text>
           <View style={styles.translationRow}>
             <IllustratedIcon size={22} source={illustratedIcons.translation} />
-            <Text style={styles.translationText}>어떤 음악을 좋아해?</Text>
+            <Text style={styles.translationText}>{t('tutorial.preview.translation')}</Text>
           </View>
         </View>
         <View style={styles.mineBubble}>
-          <Text style={styles.mineMessage}>요즘은 R&B를 많이 들어요 :)</Text>
-          <Text style={styles.sentText}>전송됨</Text>
+          <Text style={styles.mineMessage}>{t('tutorial.preview.reply')}</Text>
+          <Text style={styles.sentText}>{t('tutorial.preview.sent')}</Text>
         </View>
       </View>
       <View style={styles.chatComposer}>
-        <Text style={styles.composerPlaceholder}>메시지 보내기</Text>
+        <Text style={styles.composerPlaceholder}>{t('tutorial.preview.composer')}</Text>
         <View style={styles.sendButton}>
           <Ionicons color={palette.white} name="arrow-up" size={16} />
         </View>
@@ -424,8 +435,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   segmentFill: { borderRadius: radius.pill, height: '100%', width: '100%' },
-  contentScroll: { flex: 1 },
-  content: { paddingBottom: spacing.xs },
+  contentScroll: { flex: 1, minHeight: 0 },
+  content: { flexGrow: 1, paddingBottom: spacing.xs },
   visual: {
     borderColor: 'rgba(17,17,19,0.06)',
     borderRadius: 30,

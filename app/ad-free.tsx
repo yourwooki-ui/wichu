@@ -266,7 +266,11 @@ function PassDetailScreen() {
         <Text style={styles.headerTitle}>{adFreeOnly ? 'Ad-Free' : 'Gold Pass'}</Text>
         <View style={styles.back} />
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <View style={styles.mark}>
           <IllustratedIcon
             size={78}
@@ -300,7 +304,7 @@ function PassDetailScreen() {
         <View style={styles.priceCard}>
           <Text style={styles.priceLabel}>{t('shop.pass.monthly')}</Text>
           <Text style={styles.price}>
-            {storeProduct?.priceLabel ?? selectedProduct.fallbackPriceLabelKo}
+            {storeProduct?.priceLabel ?? t('shopPricing.unavailable')}
           </Text>
           <Text style={styles.priceHint}>
             {adFreeOnly ? t('shop.pass.renewAdFree') : t('shop.pass.renewGold')}
@@ -383,6 +387,7 @@ function PassDetailScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: '#F8F8FA', flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',

@@ -227,6 +227,7 @@ export function MeScreen() {
         contentContainerStyle={styles.content}
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
         <Animated.View entering={sectionEntering(0)} style={styles.profileHeroHeader}>
           <View style={styles.profileHeroHeading}>
@@ -610,6 +611,7 @@ function MeSkeleton() {
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 34, paddingHorizontal: 16 },
   skeletonPreview: { borderRadius: 26, height: 294, marginBottom: 18, marginTop: 14 },
   profileHeroHeader: {

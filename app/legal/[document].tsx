@@ -13,7 +13,7 @@ export default function LegalDocumentRoute() {
   const content = LEGAL_DOCUMENTS[document] ?? LEGAL_DOCUMENTS.terms;
 
   return (
-    <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로"
@@ -26,7 +26,11 @@ export default function LegalDocumentRoute() {
         <Text style={styles.headerTitle}>{content.title}</Text>
         <View style={styles.headerButton} />
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <View style={styles.intro}>
           <Text style={styles.kicker}>WICHU POLICY</Text>
           <Text style={styles.summary}>{content.summary}</Text>
@@ -78,6 +82,7 @@ const styles = StyleSheet.create({
   },
   headerButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerTitle: { color: palette.ink, fontSize: 16, fontWeight: '900' },
+  scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 40, paddingHorizontal: 20 },
   intro: { backgroundColor: palette.ink, borderRadius: 24, marginBottom: 24, padding: 22 },
   kicker: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },

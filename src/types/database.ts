@@ -736,6 +736,28 @@ export type Database = {
         Args: { p_message_id: string; p_target_language: string };
         Returns: undefined;
       };
+      claim_my_profile_bio_translation: {
+        Args: { p_profile_id: string; p_target_language: string };
+        Returns: {
+          content: string;
+          source_language: string;
+          target_language: string;
+          cached_translation: string | null;
+        }[];
+      };
+      complete_profile_bio_translation: {
+        Args: {
+          p_profile_id: string;
+          p_target_language: string;
+          p_source_bio: string;
+          p_translated_text: string;
+        };
+        Returns: string;
+      };
+      fail_profile_bio_translation: {
+        Args: { p_profile_id: string; p_target_language: string };
+        Returns: undefined;
+      };
       get_discovery_candidates: {
         Args: {
           p_min_age?: number;
@@ -849,6 +871,27 @@ export type Database = {
           p_spoken_languages: Json;
           p_tags: Json;
           p_photo_paths: string[];
+        };
+        Returns: string[];
+      };
+      save_my_profile_bundle_for_review: {
+        Args: {
+          p_display_name: string;
+          p_birth_date: string;
+          p_gender: string;
+          p_interested_in: string[];
+          p_country_code: string;
+          p_native_language: string;
+          p_languages: string[];
+          p_bio: string;
+          p_min_age: number;
+          p_max_age: number;
+          p_locale: string;
+          p_interest_ids: string[];
+          p_spoken_languages: Json;
+          p_tags: Json;
+          p_photo_paths: string[];
+          p_profile_details: Json | null;
         };
         Returns: string[];
       };

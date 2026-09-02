@@ -5,4 +5,4 @@
  * never be used for authorization or data security decisions.
  */
 export const reviewSamplesEnabled =
-  __DEV__ || process.env.EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES === 'true';
+  __DEV__ && process.env.EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES === 'true';

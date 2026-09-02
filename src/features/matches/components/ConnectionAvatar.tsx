@@ -2,6 +2,8 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CountryFlag } from '@/components/CountryFlag';
+import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette } from '@/constants/theme';
 import { ConnectionProfile } from '@/features/matches/data/mock-connections';
 
@@ -47,7 +49,7 @@ export function ConnectionAvatar({
         ) : null}
         {profile.isGoldPass ? (
           <View style={styles.goldMark}>
-            <Text style={styles.goldMarkText}>◆</Text>
+            <IllustratedIcon size={22} source={illustratedIcons.goldPremium} />
           </View>
         ) : null}
       </View>
@@ -84,18 +86,21 @@ const styles = StyleSheet.create({
   goldRing: { borderColor: '#DCAF2D' },
   goldMark: {
     alignItems: 'center',
-    backgroundColor: palette.goldSurface,
-    borderColor: palette.goldLine,
-    borderRadius: 9,
-    borderWidth: 1,
-    height: 22,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderColor: '#E9C35B',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    height: 26,
     justifyContent: 'center',
-    left: 0,
+    left: -2,
     position: 'absolute',
-    top: 0,
-    width: 18,
+    shadowColor: '#7A5400',
+    shadowOffset: { height: 2, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    top: -2,
+    width: 26,
   },
-  goldMarkText: { color: palette.goldText, fontSize: 10 },
   image: { borderRadius: 32, height: 64, width: 64 },
   imageLarge: { borderRadius: 47, height: 94, width: 94 },
   onlineDot: {

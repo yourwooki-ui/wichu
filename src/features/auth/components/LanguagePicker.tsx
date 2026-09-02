@@ -92,7 +92,9 @@ export function LanguagePickerModal({
       <FlatList
         contentContainerStyle={styles.options}
         data={supportedLanguages}
+        keyboardShouldPersistTaps="handled"
         keyExtractor={({ code }) => code}
+        nestedScrollEnabled
         renderItem={({ item: language }) => {
           const selected = currentLanguage === language.code;
           const direction = getAppTextDirection(language.code);
@@ -137,6 +139,7 @@ export function LanguagePickerModal({
           );
         }}
         showsVerticalScrollIndicator={false}
+        style={styles.listViewport}
       />
     </InteractiveBottomSheet>
   );
@@ -158,12 +161,14 @@ const styles = StyleSheet.create({
     height: '82%',
   },
   sheetContent: {
+    minHeight: 0,
     paddingTop: spacing.sm,
     paddingHorizontal: 22,
     paddingBottom: spacing.lg,
   },
   title: { marginTop: spacing.lg, fontSize: 22, lineHeight: 28, fontWeight: '900' },
   hint: { marginTop: spacing.xs, fontSize: 13, lineHeight: 19 },
+  listViewport: { flex: 1, minHeight: 0 },
   options: { gap: spacing.sm, paddingBottom: spacing.sm, paddingTop: spacing.lg },
   option: {
     minHeight: 58,

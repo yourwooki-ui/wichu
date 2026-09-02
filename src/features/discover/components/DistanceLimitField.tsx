@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type GestureResponderEvent, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { palette, radius } from '@/constants/theme';
@@ -47,6 +48,7 @@ type DistanceLimitFieldProps = {
 };
 
 export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps) {
+  const { i18n, t } = useTranslation();
   const trackRef = useRef<View>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const [trackPageX, setTrackPageX] = useState<number | null>(null);
@@ -96,23 +98,31 @@ export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps)
     <View style={styles.section}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.label}>거리</Text>
-          <Text style={styles.hint}>내 위치를 기준으로 가까운 사람부터 만나요.</Text>
+          <Text style={styles.label}>{t('discoveryControls.distance.label')}</Text>
+          <Text style={styles.hint}>{t('discoveryControls.distance.hint')}</Text>
         </View>
         <View style={styles.valuePill}>
-          <Text style={styles.value}>{isUnlimited ? '무제한' : formatDistance(value)}</Text>
-          {!isUnlimited ? <Text style={styles.qualifier}> 이하</Text> : null}
+          <Text style={styles.value}>
+            {isUnlimited
+              ? t('discoveryControls.distance.unlimited')
+              : formatDistance(i18n.resolvedLanguage, value)}
+          </Text>
+          {!isUnlimited ? (
+            <Text style={styles.qualifier}> {t('discoveryControls.distance.within')}</Text>
+          ) : null}
         </View>
       </View>
       <View
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-        accessibilityLabel="최대 탐색 거리"
+        accessibilityLabel={t('discoveryControls.distance.a11y')}
         accessibilityRole="adjustable"
         accessibilityValue={{
           min: MIN_DISCOVERY_DISTANCE_KM,
           max: MAX_DISCOVERY_DISTANCE_KM,
           now: isUnlimited ? MAX_DISCOVERY_DISTANCE_KM : value,
-          text: isUnlimited ? '무제한' : `${formatDistance(value)} 이하`,
+          text: isUnlimited
+            ? t('discoveryControls.distance.unlimited')
+            : `${formatDistance(i18n.resolvedLanguage, value)} ${t('discoveryControls.distance.within')}`,
         }}
         onAccessibilityAction={(event) =>
           adjustByOneStep(event.nativeEvent.actionName === 'increment' ? 1 : -1)
@@ -143,9 +153,9 @@ export function DistanceLimitField({ value, onChange }: DistanceLimitFieldProps)
       </View>
       <View style={styles.bounds}>
         <Text style={styles.bound}>1km</Text>
-        <Text style={styles.bound}>무제한</Text>
+        <Text style={styles.bound}>{t('discoveryControls.distance.unlimited')}</Text>
       </View>
-      <Text style={styles.scaleHint}>1,000km부터 16,000km까지는 1,000km 단위로 조절돼요.</Text>
+      <Text style={styles.scaleHint}>{t('discoveryControls.distance.scaleHint')}</Text>
     </View>
   );
 }
@@ -164,8 +174,8 @@ function getNearestStepIndex(value: number) {
   return nearestIndex;
 }
 
-function formatDistance(value: number) {
-  return `${formatNumber('ko-KR', value)}km`;
+function formatDistance(locale: string | undefined, value: number) {
+  return `${formatNumber(locale ?? 'ko-KR', value)}km`;
 }
 
 function clamp(value: number, minimum: number, maximum: number) {

@@ -38,7 +38,11 @@ export default function AccountDeletionRoute() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <View style={styles.header}>
           <BrandWordmark color={palette.ink} size={24} />
           <Text style={styles.eyebrow}>ACCOUNT & DATA DELETION</Text>
@@ -155,6 +159,7 @@ function Section({
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: palette.paper, flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   content: {
     alignSelf: 'center',
     maxWidth: layout.maxContentWidth,
