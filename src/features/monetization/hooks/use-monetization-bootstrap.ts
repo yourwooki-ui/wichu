@@ -7,6 +7,7 @@ import {
   REWARDED_ADS_ENABLED,
 } from '@/constants/features';
 import { queryClient } from '@/lib/query-client';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 const FOREGROUND_REFRESH_COOLDOWN_MS = 30_000;
 
@@ -26,23 +27,29 @@ export function useMonetizationBootstrap(userId: string | undefined) {
         const { purchaseService } =
           await import('@/features/monetization/services/purchase-service');
         await purchaseService.getCustomerState(userId);
-      } catch {
+      } catch (error) {
+        reportOperationalError('purchase_foreground_refresh', error, '/monetization');
         // Store availability must never block app foregrounding.
       } finally {
-        await queryClient.invalidateQueries({ queryKey: ['pass-entitlement', userId] });
+        await queryClient
+          .invalidateQueries({ queryKey: ['pass-entitlement', userId] })
+          .catch(() => undefined);
       }
     };
 
     if (MONETIZATION_ENABLED) {
       void import('@/features/monetization/services/purchase-service')
         .then(({ purchaseService }) => purchaseService.initialize(userId))
-        .catch(() => false);
+        .catch((error) => {
+          reportOperationalError('purchase_bootstrap', error, '/monetization');
+          return false;
+        });
     }
 
     if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED) {
       void import('@/features/monetization/services/ads-service')
         .then(({ adsService }) => adsService.initialize())
-        .catch(() => undefined);
+        .catch((error) => reportOperationalError('ad_bootstrap', error, '/monetization'));
     }
 
     const subscription = AppState.addEventListener('change', (state) => {

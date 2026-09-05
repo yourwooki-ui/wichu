@@ -19,6 +19,7 @@ import {
   getGooglePlayStoreIdentifier,
   matchesMonetizationStoreProduct,
 } from '@/features/monetization/utils/purchase-state';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 type PurchasesModule = typeof import('react-native-purchases');
 
@@ -31,7 +32,10 @@ let initialization: Promise<boolean> | null = null;
 
 /** 결제 SDK도 사용자 인증 이후 실제 호출 시점에만 평가한다. */
 function loadPurchasesSdk() {
-  sdkLoading ??= import('react-native-purchases').catch(() => null);
+  sdkLoading ??= import('react-native-purchases').catch((error) => {
+    reportOperationalError('purchase_sdk_import', error, '/shop');
+    return null;
+  });
   return sdkLoading;
 }
 
@@ -58,7 +62,8 @@ async function configureForUser(userId: string) {
       configuredUserId = userId;
     }
     return true;
-  } catch {
+  } catch (error) {
+    reportOperationalError('purchase_sdk_configure', error, '/shop');
     return false;
   }
 }
@@ -97,6 +102,7 @@ async function loadStoreProducts(userId: string): Promise<{
     };
   } catch (error) {
     const reason = classifyPurchaseError(error);
+    if (reason !== 'cancelled') reportOperationalError('purchase_products', error, '/shop');
     return {
       products: [],
       unavailableReason: reason === 'cancelled' ? 'unknown' : reason,
@@ -160,6 +166,7 @@ export const purchaseProvider: PurchaseProvider = {
       };
     } catch (error) {
       const reason = classifyPurchaseError(error);
+      if (reason !== 'cancelled') reportOperationalError('purchase_action', error, '/shop');
       return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
     }
   },
@@ -178,6 +185,7 @@ export const purchaseProvider: PurchaseProvider = {
       };
     } catch (error) {
       const reason = classifyPurchaseError(error);
+      if (reason !== 'cancelled') reportOperationalError('purchase_restore', error, '/shop');
       return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
     }
   },
@@ -196,6 +204,7 @@ export const purchaseProvider: PurchaseProvider = {
       };
     } catch (error) {
       const reason = classifyPurchaseError(error);
+      if (reason !== 'cancelled') reportOperationalError('purchase_state', error, '/shop');
       return reason === 'cancelled' ? { status: 'cancelled' } : { status: 'unavailable', reason };
     }
   },

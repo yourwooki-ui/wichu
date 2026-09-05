@@ -443,13 +443,18 @@ entrypoint = "./functions/delete-account-v2/index.ts"
 
 [functions.translate-message]
 enabled = true
-verify_jwt = true
+# Authentication is enforced inside the function by @supabase/server's
+# withSupabase({ auth = 'user' }). The legacy gateway verifier rejects valid
+# user tokens after the project moved to asymmetric signing keys.
+verify_jwt = false
 import_map = "./functions/translate-message/deno.json"
 entrypoint = "./functions/translate-message/index.ts"
 
 [functions.translate-profile-bio]
 enabled = true
-verify_jwt = true
+# Keep this aligned with translate-message; the handler still requires a user
+# JWT and exposes only RLS-authorized profile text.
+verify_jwt = false
 import_map = "./functions/translate-profile-bio/deno.json"
 entrypoint = "./functions/translate-profile-bio/index.ts"
 

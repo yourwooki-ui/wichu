@@ -83,7 +83,7 @@ import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entit
 import { safetyService } from '@/features/settings/services/safety-service';
 import {
   ReportReasonSheet,
-  type ReportReason,
+  type ReportSubmission,
 } from '@/features/settings/components/ReportReasonSheet';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { hapticsService } from '@/services/haptics-service';
@@ -548,7 +548,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
               }
             : current,
       );
-    } catch {
+    } catch (error) {
+      reportOperationalError('chat_translation', error, `/chat/${matchId}`);
       updateMessage(message, {
         translationStatus: 'failed',
         translationStatusLanguage: targetLanguage,
@@ -556,14 +557,18 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     }
   };
 
-  const submitReport = async (reason: ReportReason) => {
+  const submitReport = async (submission: ReportSubmission) => {
     if (isMock) {
       setReportOpen(false);
       Alert.alert(t('chatRoom.sampleProfileTitle'), t('chatRoom.sampleProfileBody'));
       return;
     }
     setSafetyBusy(true);
-    const { error } = await safetyService.report(profile.id, reason);
+    const { error } = await safetyService.report(profile.id, {
+      context: 'chat',
+      sourceMatchId: matchId,
+      ...submission,
+    });
     setSafetyBusy(false);
     setReportOpen(false);
     Alert.alert(
@@ -1127,7 +1132,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       <ReportReasonSheet
         busy={safetyBusy}
         onClose={() => setReportOpen(false)}
-        onSelect={(reason) => void submitReport(reason)}
+        onSubmit={(submission) => void submitReport(submission)}
         visible={reportOpen}
       />
 

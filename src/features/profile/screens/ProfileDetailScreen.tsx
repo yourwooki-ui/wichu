@@ -42,7 +42,7 @@ import {
 } from '@/features/profile/utils/profile-detail-context';
 import {
   ReportReasonSheet,
-  type ReportReason,
+  type ReportSubmission,
 } from '@/features/settings/components/ReportReasonSheet';
 import { safetyService } from '@/features/settings/services/safety-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -215,7 +215,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     );
   }
 
-  const handleReport = async (reason: ReportReason) => {
+  const handleReport = async (submission: ReportSubmission) => {
     if (profile.id.startsWith('mock-')) {
       setReportOpen(false);
       Alert.alert(t('profileDetail.testProfileTitle'), t('profileDetail.testProfileBody'));
@@ -223,7 +223,10 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     }
 
     setSafetyBusy(true);
-    const { error } = await safetyService.report(profile.id, reason);
+    const { error } = await safetyService.report(profile.id, {
+      context: 'profile',
+      ...submission,
+    });
     setSafetyBusy(false);
     setReportOpen(false);
     Alert.alert(
@@ -500,7 +503,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
           <ReportReasonSheet
             busy={safetyBusy}
             onClose={() => setReportOpen(false)}
-            onSelect={(reason) => void handleReport(reason)}
+            onSubmit={(submission) => void handleReport(submission)}
             visible={reportOpen}
           />
           <PickMessageSheet

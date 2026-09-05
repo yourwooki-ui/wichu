@@ -1,5 +1,14 @@
 import { getSupabaseClient } from '@/lib/supabase';
 
+export type ReportContext = 'chat' | 'profile';
+
+export type ReportInput = {
+  context: ReportContext;
+  details?: string;
+  reasons: string[];
+  sourceMatchId?: string;
+};
+
 export const safetyService = {
   async listBlockedUsers() {
     const supabase = getSupabaseClient();
@@ -46,10 +55,27 @@ export const safetyService = {
     const result = await getSupabaseClient().from('blocks').insert({ blocked_id: userId });
     return result.error?.code === '23505' ? { ...result, error: null } : result;
   },
-  async report(userId: string, reason: string, details?: string) {
-    const result = await getSupabaseClient()
-      .from('reports')
-      .insert({ reported_id: userId, reason, details });
-    return result.error?.code === '23505' ? { ...result, error: null } : result;
+  async report(userId: string, input: ReportInput) {
+    const supabase = getSupabaseClient();
+    const result = await supabase.rpc('submit_report', {
+      p_context: input.context,
+      p_details: input.details ?? null,
+      p_reasons: input.reasons,
+      p_reported_id: userId,
+      p_source_match_id: input.sourceMatchId ?? null,
+    });
+    if (!result.error) return result;
+
+    // Keep reporting available during a rolling database deployment. The old
+    // schema accepts one primary reason and still enforces reporter ownership.
+    if (['42883', 'PGRST202'].includes(result.error.code ?? '')) {
+      const fallback = await supabase.from('reports').insert({
+        details: input.details,
+        reason: input.reasons[0],
+        reported_id: userId,
+      });
+      return fallback.error?.code === '23505' ? { ...fallback, error: null } : fallback;
+    }
+    return result;
   },
 };

@@ -26,6 +26,7 @@ import { getTranslationLanguage } from '@/features/translation/translation-langu
 import { translationService } from '@/features/translation/translation-service';
 import { getLanguageDisplayName } from '@/lib/display-names';
 import { formatNumber } from '@/lib/intl-format';
+import { reportOperationalError } from '@/services/operational-error-service';
 import type { Profile } from '@/types/profile';
 
 const HERO_HEIGHT_RATIO = 1.18;
@@ -273,7 +274,8 @@ export function StandardProfileDetail({
       });
       setBioTranslationVisible(true);
       setBioTranslationRequest(null);
-    } catch {
+    } catch (error) {
+      reportOperationalError('profile_bio_translation', error, `/profile/${profile.id}`);
       setBioTranslationVisible(false);
       setBioTranslationRequest({ key: bioTranslationKey, status: 'failed' });
     }

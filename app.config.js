@@ -14,7 +14,7 @@ const baseConfig = {
     },
   },
   android: {
-    versionCode: 27,
+    versionCode: 28,
     softwareKeyboardLayoutMode: 'resize',
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',

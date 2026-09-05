@@ -1,5 +1,14 @@
 type ErrorLike = { code?: unknown; message?: unknown; name?: unknown; stack?: unknown };
 
+export function createOperationalErrorGate(limit = 24) {
+  const reported = new Set<string>();
+  return (key: string) => {
+    if (reported.has(key) || reported.size >= limit) return false;
+    reported.add(key);
+    return true;
+  };
+}
+
 export function createErrorFingerprint(value: unknown) {
   const input = String(value ?? '')
     .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ':uuid')

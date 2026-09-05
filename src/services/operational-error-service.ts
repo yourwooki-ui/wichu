@@ -1,6 +1,10 @@
 import { productAnalyticsService } from './product-analytics-service';
 
-import { createErrorFingerprint, getOperationalErrorCode } from './operational-error-policy';
+import {
+  createErrorFingerprint,
+  createOperationalErrorGate,
+  getOperationalErrorCode,
+} from './operational-error-policy';
 
 type ErrorLike = { code?: unknown; message?: unknown; name?: unknown; stack?: unknown };
 
@@ -13,6 +17,7 @@ type RuntimeContext = {
 };
 
 let runtimeContextPromise: Promise<RuntimeContext> | null = null;
+const shouldReport = createOperationalErrorGate();
 
 async function collectRuntimeContext(): Promise<RuntimeContext> {
   if (runtimeContextPromise) return runtimeContextPromise;
@@ -52,6 +57,8 @@ export function reportOperationalError(surface: string, error: unknown, route?: 
   const candidate = (error ?? {}) as ErrorLike;
   const message = typeof candidate.message === 'string' ? candidate.message : '';
   const stack = typeof candidate.stack === 'string' ? candidate.stack : '';
+  const fingerprint = createErrorFingerprint(`${message}\n${stack}`);
+  if (!shouldReport(`${surface}:${fingerprint}`)) return;
   void collectRuntimeContext().then((runtime) => {
     productAnalyticsService.track(
       'app_error',
@@ -60,7 +67,7 @@ export function reportOperationalError(surface: string, error: unknown, route?: 
         error_code: getOperationalErrorCode(error),
         error_name:
           typeof candidate.name === 'string' ? candidate.name.slice(0, 40) : 'OperationalError',
-        error_fingerprint: createErrorFingerprint(`${message}\n${stack}`),
+        error_fingerprint: fingerprint,
         surface: surface.slice(0, 40),
       },
       route,

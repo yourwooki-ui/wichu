@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { monetizationConfig } from '@/features/monetization/config';
+import { reportOperationalError } from '@/services/operational-error-service';
 import type {
   AdsPrivacyOptionsStatus,
   AdsProvider,
@@ -39,7 +40,10 @@ let browseInterstitial: {
  * 라우트 import 시점에 SDK를 읽지 않아 광고 연동 실패가 앱 실행을 막을 수 없다.
  */
 function loadMobileAdsSdk() {
-  sdkLoading ??= import('react-native-google-mobile-ads').catch(() => null);
+  sdkLoading ??= import('react-native-google-mobile-ads').catch((error) => {
+    reportOperationalError('ad_sdk_import', error, '/monetization');
+    return null;
+  });
   return sdkLoading;
 }
 
@@ -82,7 +86,10 @@ function ensureDiscoverInterstitialPreloaded(sdk: MobileAdsModule) {
   slot.ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
     if (discoverInterstitial === slot) slot.loaded = true;
   });
-  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => clearDiscoverInterstitial(slot));
+  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, (error) => {
+    reportOperationalError('ad_discover_load', error, '/discover');
+    clearDiscoverInterstitial(slot);
+  });
   slot.ad.load();
 }
 
@@ -109,7 +116,10 @@ function ensureBrowseInterstitialPreloaded(sdk: MobileAdsModule) {
   slot.ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
     if (browseInterstitial === slot) slot.loaded = true;
   });
-  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => clearBrowseInterstitial(slot));
+  slot.ad.addAdEventListener(sdk.AdEventType.ERROR, (error) => {
+    reportOperationalError('ad_browse_load', error, '/monetization');
+    clearBrowseInterstitial(slot);
+  });
   slot.ad.load();
 }
 
@@ -140,7 +150,8 @@ async function initializeMobileAds() {
       ensureBrowseInterstitialPreloaded(sdk);
     }
     return true;
-  } catch {
+  } catch (error) {
+    reportOperationalError('ad_sdk_initialize', error, '/monetization');
     return false;
   }
 }
@@ -188,8 +199,14 @@ async function showPreloadedInterstitial(sdk: MobileAdsModule) {
     const timeout = setTimeout(() => finish(false), SHOW_TIMEOUT_MS);
     slot.ad.removeAllListeners();
     slot.ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(true));
-    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish(false));
-    void slot.ad.show().catch(() => finish(false));
+    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, (error) => {
+      reportOperationalError('ad_discover_show', error, '/discover');
+      finish(false);
+    });
+    void slot.ad.show().catch((error) => {
+      reportOperationalError('ad_discover_show', error, '/discover');
+      finish(false);
+    });
   });
 }
 
@@ -213,8 +230,14 @@ async function showPreloadedBrowseInterstitial(sdk: MobileAdsModule) {
     const timeout = setTimeout(() => finish(false), SHOW_TIMEOUT_MS);
     slot.ad.removeAllListeners();
     slot.ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(true));
-    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish(false));
-    void slot.ad.show().catch(() => finish(false));
+    slot.ad.addAdEventListener(sdk.AdEventType.ERROR, (error) => {
+      reportOperationalError('ad_browse_show', error, '/monetization');
+      finish(false);
+    });
+    void slot.ad.show().catch((error) => {
+      reportOperationalError('ad_browse_show', error, '/monetization');
+      finish(false);
+    });
   });
 }
 
@@ -247,7 +270,10 @@ async function showRewarded(
       earned = true;
     });
     ad.addAdEventListener(sdk.AdEventType.CLOSED, () => finish(earned ? 'rewarded' : 'dismissed'));
-    ad.addAdEventListener(sdk.AdEventType.ERROR, () => finish('unavailable'));
+    ad.addAdEventListener(sdk.AdEventType.ERROR, (error) => {
+      reportOperationalError('ad_rewarded_show', error, '/discover');
+      finish('unavailable');
+    });
     ad.load();
   });
 }
@@ -317,7 +343,8 @@ export const adsProvider: AdsProvider = {
         sdk.AdsConsentPrivacyOptionsRequirementStatus.NOT_REQUIRED
         ? 'not_required'
         : 'unavailable';
-    } catch {
+    } catch (error) {
+      reportOperationalError('ad_privacy_status', error, '/settings');
       return 'unavailable';
     }
   },
@@ -327,7 +354,8 @@ export const adsProvider: AdsProvider = {
     try {
       await sdk.AdsConsent.showPrivacyOptionsForm();
       return true;
-    } catch {
+    } catch (error) {
+      reportOperationalError('ad_privacy_form', error, '/settings');
       return false;
     }
   },

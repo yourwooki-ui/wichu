@@ -10,6 +10,10 @@ import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { pressFeedback, radius, spacing } from '@/constants/theme';
 import { normalizeProfilePhotoAsset } from '@/features/profile/services/profile-photo-normalizer';
+import {
+  getProfilePhotoIdentity,
+  normalizeProfilePhotoSelections,
+} from '@/features/profile/services/profile-photo-selection';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
 
 const MAX_PHOTOS = 6;
@@ -57,16 +61,17 @@ export function ProfilePhotoPicker({
       const remaining = MAX_PHOTOS - currentPhotos.length;
       if (remaining <= 0) return;
 
-      const normalizedAssets = await Promise.all(
-        assets.slice(0, remaining).map((asset) => normalizeProfilePhotoAsset(asset)),
+      const normalized = await normalizeProfilePhotoSelections(
+        assets.slice(0, remaining),
+        normalizeProfilePhotoAsset,
       );
 
-      const knownIdentities = new Set(currentPhotos.map(getPhotoIdentity));
-      const validAssets: ImagePicker.ImagePickerAsset[] = [];
-      let skipped = 0;
+      const knownIdentities = new Set(currentPhotos.map(getProfilePhotoIdentity));
+      const validAssets: typeof normalized.assets = [];
+      let skipped = normalized.failed;
 
-      for (const asset of normalizedAssets) {
-        const identity = getPhotoIdentity(asset);
+      for (const asset of normalized.assets) {
+        const identity = getProfilePhotoIdentity(asset);
         const isUnsupported = asset.mimeType && !SUPPORTED_MIME_TYPES.has(asset.mimeType);
         const isTooLarge = (asset.fileSize ?? 0) > MAX_PHOTO_BYTES;
         const isTooSmall = asset.width < MIN_PHOTO_EDGE || asset.height < MIN_PHOTO_EDGE;
@@ -81,9 +86,9 @@ export function ProfilePhotoPicker({
         validAssets.push(asset);
       }
 
-      const drafts = validAssets.slice(0, remaining).map((asset, index) => ({
+      const drafts = validAssets.slice(0, remaining).map((asset) => ({
         ...asset,
-        draftId: `${asset.assetId ?? asset.uri}-${Date.now()}-${index}`,
+        draftId: `new:${getProfilePhotoIdentity(asset)}`,
       }));
 
       if (drafts.length > 0) {
@@ -149,12 +154,13 @@ export function ProfilePhotoPicker({
 
       const pickedAsset = result.assets[0];
       if (!pickedAsset) return;
+      const sourceIdentity = getProfilePhotoIdentity(pickedAsset);
       const asset = await normalizeProfilePhotoAsset(pickedAsset);
       const otherPhotos = latestPhotos.current.filter((_, photoIndex) => photoIndex !== index);
       const isUnsupported = asset.mimeType && !SUPPORTED_MIME_TYPES.has(asset.mimeType);
       const isTooLarge = (asset.fileSize ?? 0) > MAX_PHOTO_BYTES;
       const isTooSmall = asset.width < MIN_PHOTO_EDGE || asset.height < MIN_PHOTO_EDGE;
-      const isDuplicate = new Set(otherPhotos.map(getPhotoIdentity)).has(getPhotoIdentity(asset));
+      const isDuplicate = new Set(otherPhotos.map(getProfilePhotoIdentity)).has(sourceIdentity);
 
       if (isUnsupported || isTooLarge || isTooSmall || isDuplicate) {
         onError(t('profileSetup.photos.skipped', { count: 1 }));
@@ -164,7 +170,8 @@ export function ProfilePhotoPicker({
       const nextPhotos = [...latestPhotos.current];
       nextPhotos[index] = {
         ...asset,
-        draftId: `${asset.assetId ?? asset.uri}-replacement`,
+        draftId: `replacement:${sourceIdentity}`,
+        sourceIdentity,
       };
       latestPhotos.current = nextPhotos;
       onChange(nextPhotos);
@@ -418,14 +425,6 @@ export function ProfilePhotoPicker({
       ) : null}
     </View>
   );
-}
-
-function getPhotoIdentity(photo: ImagePicker.ImagePickerAsset) {
-  if (photo.assetId) return `asset:${photo.assetId}`;
-  if (photo.fileName || photo.fileSize != null) {
-    return `file:${photo.fileName ?? ''}:${photo.fileSize ?? ''}:${photo.width}x${photo.height}`;
-  }
-  return `uri:${photo.uri}`;
 }
 
 type SourceButtonProps = {

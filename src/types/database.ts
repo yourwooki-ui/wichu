@@ -357,27 +357,51 @@ export type Database = {
           reporter_id: string;
           reported_id: string;
           reason: string;
+          reasons: string[];
           details: string | null;
+          report_context: 'profile' | 'chat';
+          source_match_id: string | null;
           status: string;
+          resolved_by: string | null;
+          resolved_at: string | null;
+          resolution_note: string | null;
+          moderation_action: 'none' | 'profile_hidden';
           created_at: string;
+          updated_at: string;
         },
         {
           id?: string;
           reporter_id?: string;
           reported_id: string;
           reason: string;
+          reasons?: string[];
           details?: string | null;
+          report_context?: 'profile' | 'chat';
+          source_match_id?: string | null;
           status?: string;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          resolution_note?: string | null;
+          moderation_action?: 'none' | 'profile_hidden';
           created_at?: string;
+          updated_at?: string;
         },
         {
           id?: string;
           reporter_id?: string;
           reported_id?: string;
           reason?: string;
+          reasons?: string[];
           details?: string | null;
+          report_context?: 'profile' | 'chat';
+          source_match_id?: string | null;
           status?: string;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          resolution_note?: string | null;
+          moderation_action?: 'none' | 'profile_hidden';
           created_at?: string;
+          updated_at?: string;
         }
       >;
       user_settings: Table<
@@ -942,11 +966,23 @@ export type Database = {
           reported_id: string;
           reported_display_name: string;
           reported_photo_path: string | null;
-          reason: string;
+          reasons: string[];
           details: string | null;
+          report_context: 'profile' | 'chat';
+          source_match_id: string | null;
           status: string;
           created_at: string;
         }[];
+      };
+      submit_report: {
+        Args: {
+          p_reported_id: string;
+          p_reasons: string[];
+          p_details?: string | null;
+          p_context?: 'profile' | 'chat';
+          p_source_match_id?: string | null;
+        };
+        Returns: string;
       };
       resolve_report: {
         Args: {
@@ -954,6 +990,40 @@ export type Database = {
           p_resolution: Database['public']['Enums']['report_resolution'];
         };
         Returns: string;
+      };
+      resolve_report_v2: {
+        Args: {
+          p_report_id: string;
+          p_resolution: Database['public']['Enums']['report_resolution'];
+          p_note?: string | null;
+          p_action?: 'none' | 'profile_hidden';
+        };
+        Returns: string;
+      };
+      get_admin_team: {
+        Args: Record<never, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          role: 'master' | 'operator';
+          active: boolean;
+          created_at: string;
+        }[];
+      };
+      set_operator_access: {
+        Args: { p_email: string; p_active?: boolean };
+        Returns: string;
+      };
+      get_moderation_activity: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: number;
+          actor_email: string | null;
+          action: string;
+          subject_display_name: string | null;
+          metadata: Json;
+          created_at: string;
+        }[];
       };
       end_my_match: {
         Args: { p_match_id: string };

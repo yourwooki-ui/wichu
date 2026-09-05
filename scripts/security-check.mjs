@@ -65,6 +65,24 @@ function listFilesToInspect() {
 
 const sourceFiles = listFilesToInspect();
 
+const USER_AUTH_EDGE_FUNCTIONS = ['translate-message', 'translate-profile-bio'];
+
+if (existsSync('supabase/config.toml')) {
+  const supabaseConfig = readFileSync('supabase/config.toml', 'utf8');
+  for (const functionName of USER_AUTH_EDGE_FUNCTIONS) {
+    const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const section = supabaseConfig.match(
+      new RegExp(`\\[functions\\.${escapedName}\\]([\\s\\S]*?)(?=\\n\\[|$)`),
+    )?.[1];
+    if (!section || !/^\s*verify_jwt\s*=\s*false\s*(?:#.*)?$/m.test(section)) {
+      findings.push({
+        file: 'supabase/config.toml',
+        rule: `legacy-edge-jwt-verifier:${functionName}`,
+      });
+    }
+  }
+}
+
 for (const file of sourceFiles) {
   if (!TEXT_EXTENSIONS.has(extname(file).toLowerCase())) continue;
   const content = readFileSync(file, 'utf8');
