@@ -17,9 +17,11 @@ import { useTranslation } from 'react-i18next';
 import { CountryFlag } from '@/components/CountryFlag';
 import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { PresenceDot } from '@/components/PresenceDot';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { getRepresentativeCountryCode } from '@/constants/languages';
+import { imageTransition } from '@/constants/motion';
 import { palette, radius } from '@/constants/theme';
 import { getProfilePresence } from '@/features/profile/utils/profile-display';
 import { getTranslationLanguage } from '@/features/translation/translation-language';
@@ -27,7 +29,7 @@ import { translationService } from '@/features/translation/translation-service';
 import { getLanguageDisplayName } from '@/lib/display-names';
 import { formatNumber } from '@/lib/intl-format';
 import { reportOperationalError } from '@/services/operational-error-service';
-import type { Profile } from '@/types/profile';
+import type { Profile, ProfilePrompt } from '@/types/profile';
 
 const HERO_HEIGHT_RATIO = 1.18;
 const HERO_MAX_HEIGHT = 520;
@@ -83,6 +85,7 @@ type StandardProfileDetailProps = {
   headerLeft: ProfileDetailHeaderAction;
   headerRight?: ProfileDetailHeaderAction;
   onSafety?: () => void;
+  onPromptPick?: (prompt: ProfilePrompt) => void;
   photoBlurRadius?: number;
   photoStatusLabel?: string;
   profile: Profile;
@@ -93,6 +96,7 @@ export function StandardProfileDetail({
   headerLeft,
   headerRight,
   onSafety,
+  onPromptPick,
   photoBlurRadius = 0,
   photoStatusLabel,
   profile,
@@ -148,6 +152,7 @@ export function StandardProfileDetail({
   const presenceLabel = presence
     ? t(`discover.presence.${presence.kind}`, { count: presence.count })
     : null;
+  const online = presence?.kind === 'online';
   const distanceLabel = profile.distanceKm
     ? t('profileDetail.distanceAway', {
         distance: formatNumber(i18n.language, profile.distanceKm),
@@ -305,7 +310,7 @@ export function StandardProfileDetail({
               priority="high"
               source={{ uri: primaryPhoto }}
               style={StyleSheet.absoluteFill}
-              transition={160}
+              transition={imageTransition.profile}
             />
           ) : (
             <LinearGradient colors={['#D9DAE1', '#B7B9C4']} style={StyleSheet.absoluteFill}>
@@ -318,8 +323,7 @@ export function StandardProfileDetail({
           <LinearGradient
             colors={['rgba(8,8,12,0.38)', 'rgba(8,8,12,0)', 'rgba(8,8,12,0.76)']}
             locations={[0, 0.45, 1]}
-            pointerEvents="none"
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
           />
           <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
             <HeaderButton action={headerLeft} />
@@ -330,7 +334,7 @@ export function StandardProfileDetail({
             )}
           </View>
           {additionalPhotos.length ? (
-            <View pointerEvents="none" style={styles.photoCountBadge}>
+            <View style={[styles.photoCountBadge, { pointerEvents: 'none' }]}>
               <Text style={styles.photoCountText}>1 / {profile.photos.length}</Text>
             </View>
           ) : null}
@@ -340,7 +344,7 @@ export function StandardProfileDetail({
               <Text style={styles.photoStatusText}>{primaryPhotoStatusLabel}</Text>
             </View>
           ) : null}
-          <View pointerEvents="none" style={styles.heroInfo}>
+          <View style={[styles.heroInfo, { pointerEvents: 'none' }]}>
             <View style={styles.nameRow}>
               <Text numberOfLines={1} style={styles.name}>
                 {profile.name}, {age}
@@ -363,22 +367,19 @@ export function StandardProfileDetail({
               </View>
             ) : null}
             <View style={styles.heroMetaRow}>
+              {presenceLabel ? (
+                <View style={[styles.presence, online && styles.onlinePresence]}>
+                  <PresenceDot active={online} />
+                  <Text style={[styles.heroMetaText, online && styles.onlinePresenceText]}>
+                    {presenceLabel}
+                  </Text>
+                </View>
+              ) : null}
+              {distanceLabel && presenceLabel ? <View style={styles.metaDivider} /> : null}
               {distanceLabel ? (
                 <View style={styles.heroMetaItem}>
                   <IllustratedIcon size={18} source={illustratedIcons.location} />
                   <Text style={styles.heroMetaText}>{distanceLabel}</Text>
-                </View>
-              ) : null}
-              {distanceLabel && presenceLabel ? <View style={styles.metaDivider} /> : null}
-              {presenceLabel ? (
-                <View style={styles.presence}>
-                  <View
-                    style={[
-                      styles.presenceDot,
-                      presence?.kind === 'online' && styles.presenceDotOnline,
-                    ]}
-                  />
-                  <Text style={styles.heroMetaText}>{presenceLabel}</Text>
                 </View>
               ) : null}
             </View>
@@ -485,6 +486,33 @@ export function StandardProfileDetail({
             </DetailSection>
           ) : null}
 
+          {profile.prompts?.length ? (
+            <DetailSection title={t('relationship.profilePrompts.publicTitle')}>
+              <View style={styles.promptList}>
+                {profile.prompts.map((prompt) => (
+                  <Pressable
+                    key={prompt.promptKey}
+                    accessibilityRole={onPromptPick ? 'button' : undefined}
+                    onPress={onPromptPick ? () => onPromptPick(prompt) : undefined}
+                    style={[styles.promptCard, { backgroundColor: theme.colors.background }]}
+                  >
+                    <Text style={[styles.promptQuestion, { color: theme.colors.primary }]}>
+                      {t(`relationship.profilePrompts.options.${prompt.promptKey}`)}
+                    </Text>
+                    <View style={styles.promptAnswerRow}>
+                      <Text style={[styles.promptAnswer, { color: theme.colors.text }]}>
+                        {prompt.answer}
+                      </Text>
+                      {onPromptPick ? (
+                        <Ionicons color={theme.colors.primary} name="heart-outline" size={20} />
+                      ) : null}
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            </DetailSection>
+          ) : null}
+
           {basicDetails.length ? (
             <DetailSection title={t('me.detail.basic')}>
               <DetailPills items={basicDetails} />
@@ -554,7 +582,7 @@ export function StandardProfileDetail({
                       priority="normal"
                       source={{ uri: photo }}
                       style={StyleSheet.absoluteFill}
-                      transition={160}
+                      transition={imageTransition.profile}
                     />
                     {getPhotoStatusLabel(index + 1) ? (
                       <View style={styles.galleryPhotoStatus}>
@@ -564,7 +592,7 @@ export function StandardProfileDetail({
                         </Text>
                       </View>
                     ) : null}
-                    <View pointerEvents="none" style={styles.galleryPhotoCount}>
+                    <View style={[styles.galleryPhotoCount, { pointerEvents: 'none' }]}>
                       <Text style={styles.galleryPhotoCountText}>
                         {index + 2} / {profile.photos.length}
                       </Text>
@@ -723,9 +751,16 @@ const styles = StyleSheet.create({
   heroMetaRow: { alignItems: 'center', flexDirection: 'row', marginTop: 7 },
   heroMetaItem: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   presence: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  presenceDot: { backgroundColor: 'rgba(255,255,255,0.68)', borderRadius: 4, height: 7, width: 7 },
-  presenceDotOnline: { backgroundColor: palette.lime },
+  onlinePresence: {
+    backgroundColor: 'rgba(196,255,91,0.17)',
+    borderColor: 'rgba(214,255,142,0.4)',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
   heroMetaText: { color: 'rgba(255,255,255,0.92)', fontSize: 12, fontWeight: '700' },
+  onlinePresenceText: { color: '#E4FFAD', fontWeight: '800' },
   metaDivider: {
     backgroundColor: 'rgba(255,255,255,0.42)',
     borderRadius: 2,
@@ -749,6 +784,11 @@ const styles = StyleSheet.create({
   section: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 22 },
   sectionTitle: { fontSize: 17, fontWeight: '900', letterSpacing: -0.25, marginBottom: 12 },
   bio: { fontSize: 15, lineHeight: 23 },
+  promptList: { gap: 10 },
+  promptCard: { gap: 6, padding: 15, borderRadius: radius.md },
+  promptQuestion: { fontSize: 11, fontWeight: '900', letterSpacing: 0.2 },
+  promptAnswer: { flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 22 },
+  promptAnswerRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   bioTranslation: {
     alignItems: 'flex-start',
     backgroundColor: '#FFF8FB',

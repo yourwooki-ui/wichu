@@ -239,6 +239,32 @@ export type Database = {
           created_at?: string;
         }
       >;
+      profile_prompts: Table<
+        {
+          profile_id: string;
+          prompt_key: string;
+          answer: string;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          profile_id: string;
+          prompt_key: string;
+          answer: string;
+          position: number;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          profile_id?: string;
+          prompt_key?: string;
+          answer?: string;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        }
+      >;
       swipes: Table<
         {
           id: string;
@@ -400,6 +426,56 @@ export type Database = {
           resolved_at?: string | null;
           resolution_note?: string | null;
           moderation_action?: 'none' | 'profile_hidden';
+          created_at?: string;
+          updated_at?: string;
+        }
+      >;
+      date_feedback: Table<
+        {
+          id: string;
+          match_id: string;
+          reviewer_id: string;
+          met: boolean;
+          meet_again: boolean | null;
+          safety_concern: boolean;
+          safety_review_status: 'pending' | 'reviewed' | 'closed';
+          safety_resolution_note: string | null;
+          safety_action: 'none' | 'profile_hidden';
+          safety_resolved_by: string | null;
+          safety_resolved_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id?: string;
+          match_id: string;
+          reviewer_id: string;
+          met: boolean;
+          meet_again?: boolean | null;
+          safety_concern?: boolean;
+          safety_review_status?: 'pending' | 'reviewed' | 'closed';
+          safety_resolution_note?: string | null;
+          safety_action?: 'none' | 'profile_hidden';
+          safety_resolved_by?: string | null;
+          safety_resolved_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          id?: string;
+          match_id?: string;
+          reviewer_id?: string;
+          met?: boolean;
+          meet_again?: boolean | null;
+          safety_concern?: boolean;
+          safety_review_status?: 'pending' | 'reviewed' | 'closed';
+          safety_resolution_note?: string | null;
+          safety_action?: 'none' | 'profile_hidden';
+          safety_resolved_by?: string | null;
+          safety_resolved_at?: string | null;
+          notes?: string | null;
           created_at?: string;
           updated_at?: string;
         }
@@ -652,6 +728,20 @@ export type Database = {
     };
     Views: Record<never, never>;
     Functions: {
+      replace_my_profile_prompts: {
+        Args: { p_prompts: Json };
+        Returns: Database['public']['Tables']['profile_prompts']['Row'][];
+      };
+      submit_my_date_feedback: {
+        Args: {
+          p_match_id: string;
+          p_met: boolean;
+          p_meet_again?: boolean | null;
+          p_safety_concern?: boolean;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['date_feedback']['Row'];
+      };
       record_my_swipe: {
         Args: {
           p_target_id: string;
@@ -973,6 +1063,40 @@ export type Database = {
           status: string;
           created_at: string;
         }[];
+      };
+      get_operations_overview: {
+        Args: Record<never, never>;
+        Returns: {
+          pending_profiles: number;
+          pending_reports: number;
+          urgent_reports: number;
+          pending_safety: number;
+          overdue_items: number;
+          resolved_today: number;
+        }[];
+      };
+      get_pending_safety_feedback: {
+        Args: { p_limit?: number; p_before?: string | null };
+        Returns: {
+          id: string;
+          subject_id: string;
+          subject_display_name: string;
+          subject_photo_path: string | null;
+          met: boolean;
+          meet_again: boolean | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      resolve_safety_feedback: {
+        Args: {
+          p_feedback_id: string;
+          p_resolution: 'reviewed' | 'closed';
+          p_note?: string | null;
+          p_action?: 'none' | 'profile_hidden';
+        };
+        Returns: string;
       };
       submit_report: {
         Args: {

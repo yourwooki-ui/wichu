@@ -81,8 +81,7 @@ export function QueryLifecycleManager() {
     <View
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
-      pointerEvents="none"
-      style={[styles.banner, { top: insets.top + 6 }]}
+      style={[styles.banner, { pointerEvents: 'none', top: insets.top + 6 }]}
     >
       <View style={styles.dot} />
       <Text numberOfLines={2} style={styles.text}>

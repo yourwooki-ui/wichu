@@ -35,7 +35,34 @@ export type IncomingLike = {
   photo: string;
 };
 
+export type DateFeedbackInput = {
+  met: boolean;
+  meetAgain: boolean | null;
+  safetyConcern: boolean;
+  notes: string;
+};
+
 export const matchesService = {
+  async getDateFeedback(matchId: string) {
+    const { data, error } = await getSupabaseClient()
+      .from('date_feedback')
+      .select('*')
+      .eq('match_id', matchId)
+      .maybeSingle();
+    if (error && !['42P01', 'PGRST205'].includes(error.code ?? '')) throw error;
+    return data ?? null;
+  },
+  async submitDateFeedback(matchId: string, input: DateFeedbackInput) {
+    const { data, error } = await getSupabaseClient().rpc('submit_my_date_feedback', {
+      p_match_id: matchId,
+      p_met: input.met,
+      p_meet_again: input.met ? input.meetAgain : null,
+      p_safety_concern: input.safetyConcern,
+      p_notes: input.notes.trim() || null,
+    });
+    if (error) throw error;
+    return data;
+  },
   async listIncomingLikes(): Promise<IncomingLike[]> {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('get_my_incoming_likes', { p_limit: 50 });

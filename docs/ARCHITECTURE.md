@@ -47,8 +47,9 @@ app routes
 - `useRefreshControl` — 목록 화면 당겨서 새로고침 (브랜드 핑크 스피너, 여러 query 동시 새로고침)
 
 공유 프리미티브는 대부분 로그인 뒤 화면에서 쓰이므로 웹 프리뷰로 바로 확인하기 어렵다.
-개발 전용 `/design-qa` 라우트가 타이포 램프·elevation·버튼 variant·StateView·Skeleton을
-인증 밖에서 한 번에 렌더하므로, 디자인 변경 시 이 화면으로 실제 렌더 결과를 점검한다.
+개발 전용 `/design-qa` 라우트가 타이포 램프·elevation·버튼 variant·StateView·Skeleton과
+Discover·Connections·Chat·Shop 핵심 화면을 인증 밖에서 한 번에 렌더하므로, 디자인 변경 시
+이 화면으로 실제 렌더 결과를 점검한다.
 프로덕션 빌드에서는 `__DEV__`가 false라 홈으로 redirect된다.
 
 로딩은 spinner 대신 실제 콘텐츠와 같은 골격의 skeleton을 우선한다. 한 화면에서 강한 핑크 CTA는 하나만 두고, 두 번째 행동은 `outline` 또는 `ghost`를 쓴다.
@@ -71,10 +72,12 @@ app routes
 
 ## 인증 경로
 
-- 이메일 인증과 Google OAuth는 `auth-service`를 통해 Supabase Auth에 연결한다.
+- 이메일 인증, Google OAuth, 휴대폰 문자 OTP는 `auth-service`를 통해 Supabase Auth에 연결한다.
+- 휴대폰 번호는 E.164 형식으로 정규화하고 Supabase가 Twilio Verify를 통해 6자리 코드를 발송·검증한다. 앱 DB에는 전화번호나 인증코드를 복제하지 않는다.
+- 새 문자 요청은 클라이언트와 Auth 설정에서 60초 간격으로 제한하고, 운영 환경에서는 Twilio Fraud Guard와 Supabase Auth 속도 제한을 함께 사용한다.
 - 웹은 `/auth/callback`, iOS/Android는 `wichu://auth/callback`으로 돌아온 뒤 PKCE code를 session으로 교환한다.
 - Google 회원가입도 앱에서 생년월일과 약관 동의를 먼저 확인한다. Google이 생년월일을 제공하지 않으므로 실제 프로필 저장 시 DB trigger가 18세 이상을 다시 강제한다.
-- Google Cloud OAuth secret은 앱 환경변수나 저장소에 두지 않고 Supabase Auth provider 설정에만 저장한다.
+- Google Cloud OAuth secret과 Twilio Verify 자격 증명은 앱 환경변수나 저장소에 두지 않고 Supabase Auth provider 설정에만 저장한다.
 
 ## Discover 성능 경로
 
@@ -89,7 +92,12 @@ app routes
 
 `Swipe → API → 이미지 다운로드 → 다음 화면` 직렬 경로는 금지한다. 현재 mock SwipeDeck의 1카드 애니메이션·prefetch 구조를 유지하고 서버 batch/refill을 연결한다.
 
-접속 상태는 전역 Auth 계층의 단일 heartbeat에서만 갱신한다. 카드별 heartbeat는 만들지 않으며, UI 상대 시간 갱신도 덱 단위 1분 timer 하나를 공유한다.
+접속 상태는 전역 Auth 계층의 단일 heartbeat에서만 갱신한다. 카드별 heartbeat는 만들지 않는다.
+Discover·Connections·Chat의 상대 시간과 OTP 카운트다운은 `useActiveClock`을 사용해 화면 단위로
+하나만 유지하고, 앱이 백그라운드에 있으면 즉시 해제한 뒤 복귀 시 현재 시각으로 보정한다.
+
+후보와 연결 목록의 노출 순서는 실시간 접속 → 정확한 최근 접속 → 화면별 보조 신호 순이다.
+Gold·신규·미확인 여부가 활동 상태보다 먼저 정렬되어서는 안 된다.
 
 ## Navigation 성능 경로
 

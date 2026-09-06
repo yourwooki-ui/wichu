@@ -10,7 +10,7 @@ import { CountryFlag } from '@/components/CountryFlag';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
-import { listEntering, listExiting, listLayout } from '@/constants/motion';
+import { imageTransition, listEntering, listExiting, listLayout } from '@/constants/motion';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius, typography } from '@/constants/theme';
 import { safetyService } from '@/features/settings/services/safety-service';
@@ -104,7 +104,7 @@ export function BlockedUsersScreen() {
                     recyclingKey={item.profile_id}
                     source={{ uri: item.photoUrl }}
                     style={styles.avatar}
-                    transition={140}
+                    transition={imageTransition.thumbnail}
                   />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback]}>

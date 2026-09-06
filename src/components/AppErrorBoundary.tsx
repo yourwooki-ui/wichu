@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BrandWordmark } from '@/components/BrandWordmark';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { reportOperationalError } from '@/services/operational-error-service';
 import i18n from '@/i18n';
@@ -33,7 +34,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
     return (
       <View accessibilityRole="alert" style={styles.fallback}>
-        <Text style={styles.brand}>WICHU</Text>
+        <BrandWordmark align="center" color={palette.ink} size={26} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{body}</Text>
         <Pressable
@@ -75,7 +76,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  brand: { color: palette.pink, fontSize: 15, fontWeight: '900', letterSpacing: 1.2 },
   fallback: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: -0.7,
-    marginTop: 12,
+    marginTop: 20,
     textAlign: 'center',
   },
 });

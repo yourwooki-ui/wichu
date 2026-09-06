@@ -28,6 +28,7 @@ export function useDiscoverDeck() {
   const [undoStack, setUndoStack] = useState<UndoableSwipe[]>([]);
   const [restoredSwipe, setRestoredSwipe] = useState<RestoredSwipe | null>(null);
   const trackedEmpty = useRef(false);
+  const trackedImpressions = useRef(new Set<string>());
   const userId = session?.user.id;
   const passEntitlement = usePassEntitlement();
   const undoEntitlementQuery = useQuery({
@@ -70,6 +71,7 @@ export function useDiscoverDeck() {
   useEffect(() => {
     clearDeck();
     trackedEmpty.current = false;
+    trackedImpressions.current.clear();
   }, [clearDeck, userId]);
 
   useEffect(() => {
@@ -82,6 +84,20 @@ export function useDiscoverDeck() {
     if (reviewSamplesEnabled) recycleProfiles(candidatesQuery.data);
     else mergeProfiles(candidatesQuery.data);
   }, [candidatesQuery.data, mergeProfiles, recycleProfiles]);
+
+  useEffect(() => {
+    const visibleProfile = profiles[0];
+    if (!visibleProfile || trackedImpressions.current.has(visibleProfile.id)) return;
+    trackedImpressions.current.add(visibleProfile.id);
+    productAnalyticsService.track(
+      'candidate_impression',
+      {
+        primary_reason: visibleProfile.recommendationReasons?.[0] ?? 'none',
+        reason_count: visibleProfile.recommendationReasons?.length ?? 0,
+      },
+      '/discover',
+    );
+  }, [profiles]);
 
   useEffect(() => {
     if (!candidatesQuery.isSuccess || profiles.length > 0 || trackedEmpty.current) return;

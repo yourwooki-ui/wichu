@@ -3,19 +3,16 @@ import { Tabs } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { MONETIZATION_ENABLED } from '@/constants/features';
+import { motionScale, motionSpring } from '@/constants/motion';
 import { tabIconSources, type TabName } from '@/constants/tab-icons';
 import { layout } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
 export default function TabLayout() {
@@ -107,24 +104,22 @@ function AnimatedTabIcon({
   focused: boolean;
   name: TabName;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const active = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
-    active.set(
-      reduceMotion
-        ? focused
-          ? 1
-          : 0
-        : withSpring(focused ? 1 : 0, { damping: 18, mass: 0.7, stiffness: 260 }),
-    );
+    active.set(reduceMotion ? (focused ? 1 : 0) : withSpring(focused ? 1 : 0, motionSpring.tab));
   }, [active, focused, reduceMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: 0.7 + active.get() * 0.3,
     transform: [
       { translateY: -2 * active.get() },
-      { scale: 1 + active.get() * (name === 'discover' ? 0.07 : 0.045) },
+      {
+        scale:
+          1 +
+          active.get() * ((name === 'discover' ? motionScale.featuredTab : motionScale.tab) - 1),
+      },
     ],
   }));
 

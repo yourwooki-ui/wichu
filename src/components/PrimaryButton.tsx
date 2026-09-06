@@ -1,14 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { useAppTheme } from '@/components/ThemeProvider';
+import { motionScale, motionSpring } from '@/constants/motion';
 import { palette, radius, spacing, typography } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -45,11 +42,11 @@ export function PrimaryButton({
   const theme = useAppTheme();
   const isDisabled = disabled || loading;
   const { background, border, foreground } = variantColors(variant, tone, theme);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const pressed = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: 1 - pressed.get() * 0.08,
-    transform: [{ scale: 1 - pressed.get() * 0.025 }],
+    transform: [{ scale: 1 - pressed.get() * (1 - motionScale.press) }],
   }));
 
   return (
@@ -61,12 +58,10 @@ export function PrimaryButton({
       onPress={onPress}
       onPressIn={() => {
         if (!isDisabled) {
-          pressed.set(reduceMotion ? 1 : withSpring(1, { damping: 18, stiffness: 320 }));
+          pressed.set(reduceMotion ? 1 : withSpring(1, motionSpring.pressIn));
         }
       }}
-      onPressOut={() =>
-        pressed.set(reduceMotion ? 0 : withSpring(0, { damping: 17, stiffness: 280 }))
-      }
+      onPressOut={() => pressed.set(reduceMotion ? 0 : withSpring(0, motionSpring.pressOut))}
       style={[
         styles.button,
         size === 'sm' && styles.buttonSm,

@@ -13,7 +13,7 @@ import {
 import { buildNotificationItems } from '@/features/discover/utils/notification-feed';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
-import { listEntering, listExiting, listLayout } from '@/constants/motion';
+import { imageTransition, listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, pressFeedback } from '@/constants/theme';
@@ -110,7 +110,7 @@ export function NotificationsSheet({
                   recyclingKey={item.id}
                   source={{ uri: item.photo }}
                   style={styles.avatar}
-                  transition={140}
+                  transition={imageTransition.thumbnail}
                 />
               ) : (
                 <View style={styles.avatarFallback}>

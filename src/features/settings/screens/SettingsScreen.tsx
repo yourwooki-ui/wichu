@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
@@ -21,7 +22,8 @@ import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { INTERSTITIAL_ADS_ENABLED, REWARDED_ADS_ENABLED } from '@/constants/features';
-import { palette, radius, typography } from '@/constants/theme';
+import { sectionEntering } from '@/constants/motion';
+import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
 import { LanguagePickerModal } from '@/features/auth/components/LanguagePicker';
 import { settingsService } from '@/features/settings/services/settings-service';
@@ -186,27 +188,27 @@ export function SettingsScreen() {
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
-          <View style={styles.accountCard}>
+          <Animated.View entering={sectionEntering(0)} style={styles.accountCard}>
             <View style={styles.accountMark}>
               <IllustratedIcon size={38} source={illustratedIcons.profileEdit} />
             </View>
             <View style={styles.accountCopy}>
               <Text style={styles.accountLabel}>{t('settings.account')}</Text>
               <Text numberOfLines={1} style={styles.accountEmail}>
-                {session?.user.email ?? t('settings.signedInAccount')}
+                {session?.user.email ?? session?.user.phone ?? t('settings.signedInAccount')}
               </Text>
             </View>
             <Pressable
               accessibilityLabel={t('settings.editProfile')}
               accessibilityRole="button"
               onPress={() => router.push('/profile-edit')}
-              style={styles.editPill}
+              style={({ pressed }) => [styles.editPill, pressed && pressFeedback.control]}
             >
               <Text style={styles.editPillText}>{t('settings.editProfile')}</Text>
             </Pressable>
-          </View>
+          </Animated.View>
 
-          <SettingSection title={t('settings.sections.discovery')}>
+          <SettingSection index={1} title={t('settings.sections.discovery')}>
             <SettingToggle
               description={t('settings.discoveryVisibleHint')}
               icon="sparkles-outline"
@@ -217,7 +219,7 @@ export function SettingsScreen() {
             />
           </SettingSection>
 
-          <SettingSection title={t('settings.sections.notifications')}>
+          <SettingSection index={2} title={t('settings.sections.notifications')}>
             <SettingToggle
               description={t('settings.newMatchesHint')}
               icon="people-outline"
@@ -236,7 +238,14 @@ export function SettingsScreen() {
             />
           </SettingSection>
 
-          <SettingSection title={t('settings.sections.privacy')}>
+          <SettingSection index={3} title={t('settings.sections.privacy')}>
+            <SettingLink
+              icon="shield-checkmark-outline"
+              illustration={illustratedIcons.safety}
+              label={t('relationship.safetyCenter.settingsLabel')}
+              onPress={() => router.push('/safety-center')}
+              value={t('relationship.safetyCenter.settingsValue')}
+            />
             <SettingLink
               icon="ban-outline"
               illustration={illustratedIcons.safety}
@@ -267,7 +276,7 @@ export function SettingsScreen() {
           </SettingSection>
 
           {adminRole ? (
-            <SettingSection title={t('settings.sections.operations')}>
+            <SettingSection index={4} title={t('settings.sections.operations')}>
               <SettingLink
                 icon="shield-checkmark"
                 illustration={illustratedIcons.safety}
@@ -278,7 +287,7 @@ export function SettingsScreen() {
             </SettingSection>
           ) : null}
 
-          <SettingSection title={t('settings.sections.account')}>
+          <SettingSection index={adminRole ? 5 : 4} title={t('settings.sections.account')}>
             <SettingLink
               icon="compass-outline"
               illustration={illustratedIcons.discoverySettings}
@@ -324,7 +333,7 @@ export function SettingsScreen() {
               setSignOutError(null);
               setSignOutOpen(true);
             }}
-            style={styles.signOutButton}
+            style={({ pressed }) => [styles.signOutButton, pressed && pressFeedback.control]}
           >
             {signingOut ? (
               <ActivityIndicator color={palette.danger} />
@@ -479,12 +488,20 @@ export function SettingsScreen() {
   );
 }
 
-function SettingSection({ children, title }: { children: React.ReactNode; title: string }) {
+function SettingSection({
+  children,
+  index,
+  title,
+}: {
+  children: React.ReactNode;
+  index: number;
+  title: string;
+}) {
   return (
-    <View style={styles.sectionWrap}>
+    <Animated.View entering={sectionEntering(index)} style={styles.sectionWrap}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.section}>{children}</View>
-    </View>
+    </Animated.View>
   );
 }
 

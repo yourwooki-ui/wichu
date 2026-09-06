@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
 
+import { useAppActive } from '@/hooks/use-app-active';
+
 /**
  * OS의 "동작 줄이기" 설정.
  *
@@ -38,4 +40,11 @@ export function useReduceMotion() {
   }, []);
 
   return reduceMotion;
+}
+
+/** 장식/반복 모션용. 접근성 설정 또는 앱 비활성 상태면 즉시 false가 된다. */
+export function useMotionEnabled(active = true) {
+  const reduceMotion = useReduceMotion();
+  const appActive = useAppActive();
+  return active && appActive && !reduceMotion;
 }

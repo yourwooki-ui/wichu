@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, type ModalProps } from 'react-native';
 
 import { PREVIEW_MODAL_HOST_ID } from '@/components/NativePreviewFrame';
+import { motionDuration, resolveMotionDuration } from '@/constants/motion';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 type WebAppModalProps = Omit<ModalProps, 'onRequestClose'> & {
   onRequestClose?: () => void;
@@ -15,6 +17,7 @@ export function AppModal({
   visible,
 }: WebAppModalProps) {
   const [opacity] = useState(() => new Animated.Value(visible && animationType === 'fade' ? 0 : 1));
+  const reduceMotion = useReduceMotion();
   const host =
     typeof document === 'undefined' ? null : document.getElementById(PREVIEW_MODAL_HOST_ID);
 
@@ -25,13 +28,13 @@ export function AppModal({
     }
     opacity.setValue(0);
     const animation = Animated.timing(opacity, {
-      duration: 160,
+      duration: resolveMotionDuration(reduceMotion, motionDuration.fast),
       toValue: 1,
       useNativeDriver: false,
     });
     animation.start();
     return () => animation.stop();
-  }, [animationType, opacity, visible]);
+  }, [animationType, opacity, reduceMotion, visible]);
 
   useEffect(() => {
     if (!visible || !onRequestClose) return;

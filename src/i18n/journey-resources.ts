@@ -14,7 +14,13 @@ const en = {
     filters: 'Discovery preferences',
     notifications: 'Open notifications',
   },
-  discoverDeck: { loading: 'Finding new people', openProfile: 'Open full profile' },
+  discoverDeck: {
+    loading: 'Finding new people',
+    openProfile: 'Open full profile',
+    profile: 'Profile',
+    pass: 'Pass',
+    pick: 'Pick',
+  },
   discoveryControls: {
     filter: {
       title: 'Discovery preferences',
@@ -306,7 +312,13 @@ const ko = {
     filters: '탐색 조건 설정',
     notifications: '알림 열기',
   },
-  discoverDeck: { loading: '새로운 사람을 찾는 중', openProfile: '상세 프로필 열기' },
+  discoverDeck: {
+    loading: '새로운 사람을 찾는 중',
+    openProfile: '상세 프로필 열기',
+    profile: '프로필',
+    pass: '넘기기',
+    pick: 'Pick',
+  },
   discoveryControls: {
     filter: {
       title: '탐색 조건',
@@ -599,7 +611,13 @@ const ptBR = {
     filters: 'Preferências de descoberta',
     notifications: 'Abrir notificações',
   },
-  discoverDeck: { loading: 'Buscando novas pessoas', openProfile: 'Abrir perfil completo' },
+  discoverDeck: {
+    loading: 'Buscando novas pessoas',
+    openProfile: 'Abrir perfil completo',
+    profile: 'Perfil',
+    pass: 'Passar',
+    pick: 'Pick',
+  },
   discoveryControls: {
     ...en.discoveryControls,
     filter: {

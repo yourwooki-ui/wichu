@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -26,6 +26,7 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
+import { motionDuration, motionSpring, resolveMotionDuration } from '@/constants/motion';
 import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { PickMessageSheet } from '@/features/discover/components/PickMessageSheet';
@@ -46,6 +47,7 @@ import {
 } from '@/features/settings/components/ReportReasonSheet';
 import { safetyService } from '@/features/settings/services/safety-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
@@ -75,6 +77,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const { session } = useAuthSession();
   const insets = useSafeAreaInsets();
   const viewport = useAppViewport();
+  const reduceMotion = useReduceMotion();
   const { i18n, t } = useTranslation();
   const activeLocale = i18n.resolvedLanguage ?? i18n.language ?? 'ko';
   const entitlement = usePassEntitlement();
@@ -121,6 +124,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const [decisionAction, setDecisionAction] = useState<SwipeAction | null>(null);
   const [matchedMatchId, setMatchedMatchId] = useState<string | null>(null);
   const [pickMessageOpen, setPickMessageOpen] = useState(false);
+  const [pickMessageSeed, setPickMessageSeed] = useState('');
   const decisionX = useSharedValue(0);
   const decisionOpacity = useSharedValue(1);
   const decisionFeedback = useSharedValue(0);
@@ -147,7 +151,12 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   useEffect(() => {
     if (isPreview || !id || !session?.user.id) return;
     void profileVisitService.recordVisit(id, session.user.id).catch(() => undefined);
-  }, [id, isPreview, session?.user.id]);
+    productAnalyticsService.track(
+      'profile_detail_opened',
+      { context: profileContext },
+      `/profile/${id}`,
+    );
+  }, [id, isPreview, profileContext, session?.user.id]);
 
   useEffect(() => {
     if (remoteProfileQuery.error) {
@@ -268,7 +277,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     setDecisionBusy(true);
     setDecisionAction(action);
     hapticsService.swipe(action);
-    decisionFeedback.set(withSpring(1, { damping: 16, stiffness: 230 }));
+    decisionFeedback.set(reduceMotion ? 1 : withSpring(1, motionSpring.celebration));
     recordSwipe(profile.id, action);
 
     try {
@@ -283,36 +292,45 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
       if (reviewSamplesEnabled) recycleProfiles([profile]);
       if (result.matchId) {
         productAnalyticsService.track('match_created', undefined, `/profile/${profile.id}`);
-        decisionFeedback.set(withTiming(0, { duration: 120 }));
+        decisionFeedback.set(
+          withTiming(0, {
+            duration: resolveMotionDuration(reduceMotion, motionDuration.feedback),
+          }),
+        );
         setDecisionAction(null);
         setDecisionBusy(false);
         setMatchedMatchId(result.matchId);
         return;
       }
 
-      const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled();
       if (reduceMotion) {
         router.replace('/(tabs)/discover');
         return;
       }
 
-      decisionOpacity.set(withTiming(0.88, { duration: 230 }));
+      decisionOpacity.set(withTiming(0.88, { duration: motionDuration.standard }));
       decisionX.set(
         withTiming(action === 'like' ? viewport.width * 1.12 : -viewport.width * 1.12, {
-          duration: 230,
+          duration: motionDuration.standard,
           easing: Easing.out(Easing.cubic),
         }),
       );
-      await new Promise((resolve) => setTimeout(resolve, 230));
+      await new Promise((resolve) => setTimeout(resolve, motionDuration.standard));
       router.replace('/(tabs)/discover');
     } catch {
       restoreSwipe(profile);
       hapticsService.error();
       setDecisionBusy(false);
       setDecisionAction(null);
-      decisionFeedback.set(withTiming(0, { duration: 120 }));
-      decisionOpacity.set(withTiming(1, { duration: 160 }));
-      decisionX.set(withSpring(0, { damping: 18, stiffness: 210 }));
+      decisionFeedback.set(
+        withTiming(0, {
+          duration: resolveMotionDuration(reduceMotion, motionDuration.feedback),
+        }),
+      );
+      decisionOpacity.set(
+        withTiming(1, { duration: resolveMotionDuration(reduceMotion, motionDuration.fast) }),
+      );
+      decisionX.set(reduceMotion ? 0 : withSpring(0, motionSpring.responsive));
       Alert.alert(t('profileDetail.actionFailed'), t('reliability.swipeSaveBody'));
     }
   };
@@ -376,7 +394,10 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
         accessibilityRole="button"
         disabled={decisionBusy}
         hitSlop={6}
-        onPress={() => setPickMessageOpen(true)}
+        onPress={() => {
+          setPickMessageSeed('');
+          setPickMessageOpen(true);
+        }}
         style={({ pressed }) => [
           styles.messagePickButton,
           { borderColor: theme.colors.border },
@@ -401,8 +422,11 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   return (
     <Screen edges={['left', 'right']} padded={false} style={styles.screen}>
       <Animated.View
-        pointerEvents={decisionBusy ? 'none' : 'auto'}
-        style={[styles.detailSurface, decisionSurfaceStyle]}
+        style={[
+          styles.detailSurface,
+          { pointerEvents: decisionBusy ? 'none' : 'auto' },
+          decisionSurfaceStyle,
+        ]}
       >
         <StandardProfileDetail
           footer={footer}
@@ -419,6 +443,18 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
           }}
           onSafety={isPreview ? undefined : () => setSafetyOpen(true)}
+          onPromptPick={
+            isPreview || detailAction !== 'decision'
+              ? undefined
+              : (prompt) => {
+                  setPickMessageSeed(
+                    t('relationship.profilePrompts.pickPrefix', {
+                      prompt: t(`relationship.profilePrompts.options.${prompt.promptKey}`),
+                    }),
+                  );
+                  setPickMessageOpen(true);
+                }
+          }
           photoBlurRadius={
             isPreview && !profile.photoReviewStatuses?.length && !profile.isPhotoReviewed ? 18 : 0
           }
@@ -433,8 +469,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
           <Animated.View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            pointerEvents="none"
-            style={[styles.decisionFeedback, decisionFeedbackStyle]}
+            style={[styles.decisionFeedback, { pointerEvents: 'none' }, decisionFeedbackStyle]}
           >
             <View
               style={[
@@ -507,6 +542,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             visible={reportOpen}
           />
           <PickMessageSheet
+            initialMessage={pickMessageSeed}
             name={profile.name}
             onClose={() => setPickMessageOpen(false)}
             onPick={(message) => void handleDecision('like', message)}

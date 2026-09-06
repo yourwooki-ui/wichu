@@ -6,14 +6,16 @@ import { useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
+import { PresenceDot } from '@/components/PresenceDot';
 import { Screen } from '@/components/Screen';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
-import { listEntering, listExiting, listLayout } from '@/constants/motion';
+import { imageTransition, listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -25,8 +27,10 @@ import {
   mockConversations,
 } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { rankConversations } from '@/features/matches/utils/connection-ranking';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useActiveClock } from '@/hooks/use-active-clock';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { reportOperationalError } from '@/services/operational-error-service';
 
@@ -39,11 +43,7 @@ export function ChatListScreen() {
   const { session } = useAuthSession();
   const currentUserId = session?.user.id;
   const [query, setQuery] = useState('');
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
+  const now = useActiveClock();
   const matchesQuery = useQuery({
     enabled: Boolean(session?.user.id),
     queryFn: () => matchesService.listConnections(session!.user.id),
@@ -68,6 +68,7 @@ export function ChatListScreen() {
           isOnline:
             Boolean(connection.profile.last_active_at) &&
             now - new Date(connection.profile.last_active_at!).getTime() < 5 * 60_000,
+          lastActiveAt: connection.profile.last_active_at,
           isNew: now - new Date(connection.matchedAt).getTime() < 24 * 60 * 60_000,
         } satisfies ConnectionProfile,
         message: connection.lastMessage?.content ?? t('chatList.newMatch'),
@@ -82,8 +83,9 @@ export function ChatListScreen() {
       })),
     [currentUserId, matchesQuery.data, now, t],
   );
-  const sourceConversations =
-    realConversations.length || !reviewSamplesEnabled ? realConversations : mockConversations;
+  const sourceConversations = rankConversations(
+    realConversations.length || !reviewSamplesEnabled ? realConversations : mockConversations,
+  );
   const normalizedQuery = query.trim().toLowerCase();
   const conversations = useMemo(
     () =>
@@ -113,8 +115,8 @@ export function ChatListScreen() {
         onAction={() => router.push('/settings')}
       />
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAwareScrollView
+        keyboardFocusOffset={20}
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
@@ -152,6 +154,7 @@ export function ChatListScreen() {
           <View style={styles.searchWrap}>
             <Ionicons color={palette.inkMuted} name="search" size={19} />
             <TextInput
+              accessibilityLabel={t('chatList.searchPlaceholder')}
               autoCapitalize="none"
               onChangeText={setQuery}
               placeholder={t('chatList.searchPlaceholder')}
@@ -219,8 +222,13 @@ export function ChatListScreen() {
                       contentFit="cover"
                       source={{ uri: conversation.profile.photo }}
                       style={{ borderRadius: 29, height: 58, width: 58 }}
+                      transition={imageTransition.thumbnail}
                     />
-                    {conversation.profile.isOnline ? <View style={styles.onlineDot} /> : null}
+                    {conversation.profile.isOnline ? (
+                      <View style={styles.onlineDot}>
+                        <PresenceDot size={8} />
+                      </View>
+                    ) : null}
                   </View>
                   <View style={styles.rowCopy}>
                     <View style={styles.rowTop}>
@@ -291,7 +299,7 @@ export function ChatListScreen() {
             )
           ) : null}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </Screen>
   );
 }
@@ -358,12 +366,12 @@ const styles = StyleSheet.create({
   },
   avatarWrap: { height: 58, position: 'relative', width: 58 },
   onlineDot: {
-    backgroundColor: palette.lime,
-    borderColor: palette.paper,
+    alignItems: 'center',
+    backgroundColor: palette.paper,
     borderRadius: 7,
-    borderWidth: 2.5,
     bottom: 0,
     height: 14,
+    justifyContent: 'center',
     position: 'absolute',
     right: 0,
     width: 14,

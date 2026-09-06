@@ -19,6 +19,31 @@ for (const file of [...listSourceFiles('app'), ...listSourceFiles('src')]) {
     if (Number(match[1]) < 10) findings.push(`${file}: undersized text: ${match[0]}`);
   }
 
+  // 이미지 교체 속도도 모션 시스템의 일부다. 숫자를 직접 쓰면 화면마다
+  // fade가 달라지고 재활용되는 목록에서 잔상이 길어질 수 있다.
+  if (/transition=\{[0-9]+\}/.test(source)) {
+    findings.push(`${file}: expo-image transition must use imageTransition tokens`);
+  }
+
+  // 추천 신호는 정렬과 품질 분석에만 사용한다. 카드에 이유를 다시 노출하면
+  // 사용자가 요청한 사진 중심 탐색 경험과 어긋난다.
+  if (file.endsWith('.tsx') && /recommendationReasons/.test(source)) {
+    findings.push(`${file}: recommendation reasons must not be rendered in UI`);
+  }
+
+  // 접근성 설정 조회는 실패 안전성과 런타임 업데이트를 처리하는 공통 훅을 쓴다.
+  if (
+    !file.endsWith('use-reduce-motion.ts') &&
+    (/\buseReducedMotion\b/.test(source) || /AccessibilityInfo\.isReduceMotionEnabled/.test(source))
+  ) {
+    findings.push(`${file}: motion accessibility must use useReduceMotion`);
+  }
+
+  // 화면별 상대 시간 갱신은 공통 활성 시계로 모아 백그라운드 타이머를 남기지 않는다.
+  if (/[\\/]screens[\\/]/.test(file) && /setInterval\(/.test(source)) {
+    findings.push(`${file}: screen timers must use useActiveClock`);
+  }
+
   // 원격 프로필 사진은 화면을 오갈 때마다 다시 내려받지 않는다.
   for (const match of source.matchAll(/<Image\b[\s\S]*?\/>/g)) {
     const tag = match[0];
@@ -32,6 +57,19 @@ for (const file of [...listSourceFiles('app'), ...listSourceFiles('src')]) {
     if (!/onRequestClose=/.test(match[0])) {
       findings.push(`${file}: AppModal is missing onRequestClose`);
     }
+  }
+
+  // 텍스트 입력 화면은 키보드가 올라와도 포커스된 필드와 주요 동작이 보여야 한다.
+  // FormField는 소비 화면의 컨테이너가 처리하고, 검색형 바텀시트는 공통
+  // InteractiveBottomSheet가 키보드 회피를 담당한다.
+  if (
+    source.includes('<TextInput') &&
+    !file.endsWith('FormField.tsx') &&
+    !source.includes('KeyboardAwareScrollView') &&
+    !source.includes('KeyboardAvoidingView') &&
+    !source.includes('InteractiveBottomSheet')
+  ) {
+    findings.push(`${file}: TextInput surface is missing keyboard avoidance`);
   }
 
   // 모든 직접 터치 요소는 보조기기에 역할을 알려야 한다. 탭 바처럼 접근성
@@ -64,14 +102,11 @@ for (const file of FORBIDDEN_RAW_ERROR_SURFACES) {
   }
 }
 
-// Discover는 브랜드 계약상 1카드 제스처가 핵심이다. 화면 아래에 별도
-// Pick/Pass 버튼이 다시 생기면 카드 높이와 다음 카드 스택이 함께 무너진다.
-const swipeDeckSource = readFileSync(
-  'src/features/discover/components/SwipeDeck.tsx',
-  'utf8',
-);
-if (/function\s+DeckAction|styles\.actionPick|styles\.actionPass/.test(swipeDeckSource)) {
-  findings.push('SwipeDeck: visible Pick/Pass controls violate the gesture-first design contract');
+// Discover는 카드 제스처와 명시적 액션 독이 같은 결정을 실행해야 한다.
+// 별도 DeckAction 구현이 생기면 두 경로의 햅틱·잠금·애니메이션이 갈라진다.
+const swipeDeckSource = readFileSync('src/features/discover/components/SwipeDeck.tsx', 'utf8');
+if (/function\s+DeckAction/.test(swipeDeckSource)) {
+  findings.push('SwipeDeck: actions must keep using the shared startSwipe decision path');
 }
 
 if (findings.length) {

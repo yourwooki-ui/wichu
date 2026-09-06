@@ -1,11 +1,16 @@
 import type { MyOperationalProfile } from '../services/profile-service';
 import { getRegionDisplayName } from '../../../lib/display-names';
-import type { Gender, Profile, ProfileLanguageLevel } from '../../../types/profile';
+import type {
+  Gender,
+  Profile,
+  ProfileLanguageLevel,
+  ProfilePromptKey,
+} from '../../../types/profile';
 import { getProfileAge } from './profile-display';
 
 /** 마이 화면의 운영 프로필을 공개 미리보기 모델로 변환한다. */
 export function toMyPreviewProfile(operational: MyOperationalProfile, locale: string): Profile {
-  const { details, interests, languages, profile, tags } = operational;
+  const { details, interests, languages, profile, prompts, tags } = operational;
   const safeLanguages = Array.isArray(languages) ? languages : [];
   const safeInterests = Array.isArray(interests) ? interests : [];
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -40,6 +45,11 @@ export function toMyPreviewProfile(operational: MyOperationalProfile, locale: st
     connectionGoals: safeTags
       .filter((tag) => tag.category === 'connection_goal')
       .map((tag) => tag.value),
+    prompts: (prompts ?? []).map((prompt) => ({
+      promptKey: prompt.prompt_key as ProfilePromptKey,
+      answer: prompt.answer,
+      position: prompt.position,
+    })),
     photos: previewPhotos.map((photo) => photo.signed_url),
     photoReviewStatuses: previewPhotos.map((photo) => photo.review_status),
     lastActiveAt: profile.last_active_at,

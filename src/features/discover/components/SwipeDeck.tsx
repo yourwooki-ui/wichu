@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -7,7 +7,6 @@ import Animated, {
   interpolate,
   runOnJS,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSequence,
   withSpring,
@@ -22,18 +21,29 @@ import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
+import { motionDuration, motionSpring, resolveMotionDuration } from '@/constants/motion';
+import {
+  elevation,
+  palette,
+  pressFeedback,
+  radius,
+  spacing,
+  touchSlop,
+  typography,
+} from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
+import {
+  DISCOVER_SWIPE_THRESHOLD,
+  resolveDiscoverSwipe,
+} from '@/features/discover/utils/discover-gesture';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
+import { useActiveClock } from '@/hooks/use-active-clock';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import { Profile, SwipeAction } from '@/types/profile';
 
-const SWIPE_THRESHOLD = 96;
-const SWIPE_VELOCITY_THRESHOLD = 0.65;
-const SWIPE_MIN_DISTANCE = 28;
 const DOUBLE_TAP_DELAY = 260;
-const SWIPE_EXIT_DURATION = 360;
 
 type SwipeDeckProps = {
   profiles: Profile[];
@@ -60,8 +70,8 @@ export function SwipeDeck({
   const { t } = useTranslation();
   const theme = useAppTheme();
   const { height, width } = useAppViewport();
-  const reduceMotion = useReducedMotion();
-  const [presenceNow, setPresenceNow] = useState(() => Date.now());
+  const reduceMotion = useReduceMotion();
+  const presenceNow = useActiveClock();
   const lastTapRef = useRef(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const translateX = useSharedValue(0);
@@ -71,15 +81,10 @@ export function SwipeDeck({
   const currentProfile = profiles[0];
   const nextProfile = profiles[1];
   const nextCardOffsetX = Math.min(24, width * 0.06);
-  // 헤더와 하단 탭은 또렷하게 남기되, 별도 액션 버튼 없이 카드가 중심이 된다.
-  const deckHeight = Math.min(600, Math.max(340, height - 260));
+  // 명시적 액션을 카드 아래에 확보하면서도 사진이 화면의 주인공으로 남게 한다.
+  const deckHeight = Math.min(560, Math.max(320, height - 334));
 
   useProfilePrefetch(profiles);
-
-  useEffect(() => {
-    const interval = setInterval(() => setPresenceNow(Date.now()), 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const commitSwipe = useCallback(
     (action: SwipeAction) => {
@@ -98,6 +103,7 @@ export function SwipeDeck({
 
   const openProfile = useCallback(() => {
     if (currentProfile) {
+      hapticsService.selection();
       void navigateWithAdGate(`/profile/${currentProfile.id}?context=discover`);
     }
   }, [currentProfile, navigateWithAdGate]);
@@ -107,7 +113,7 @@ export function SwipeDeck({
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
       signalSwipeDecision(action);
-      const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
+      const exitDuration = resolveMotionDuration(reduceMotion, motionDuration.exit);
       translateY.set(withTiming(10, { duration: exitDuration, easing: Easing.in(Easing.cubic) }));
       translateX.set(
         withTiming(
@@ -141,7 +147,10 @@ export function SwipeDeck({
       lastTapRef.current = 0;
       if (!reduceMotion) {
         pickPulse.set(
-          withSequence(withTiming(1, { duration: 110 }), withTiming(0, { duration: 150 })),
+          withSequence(
+            withTiming(1, { duration: motionDuration.feedback }),
+            withTiming(0, { duration: motionDuration.fast }),
+          ),
         );
       }
       startSwipe('like');
@@ -168,7 +177,7 @@ export function SwipeDeck({
 
     if (isRestoredProfile && !reduceMotion) {
       translateX.set(restoredOffset);
-      translateX.set(withSpring(0, { damping: 19, stiffness: 185, mass: 0.82 }));
+      translateX.set(withSpring(0, motionSpring.settled));
     } else {
       translateX.set(0);
     }
@@ -196,7 +205,7 @@ export function SwipeDeck({
       if (interactionLocked.get()) return;
       interactionLocked.set(true);
       runOnJS(signalSwipeDecision)(action);
-      const exitDuration = reduceMotion ? 0 : SWIPE_EXIT_DURATION;
+      const exitDuration = resolveMotionDuration(reduceMotion, motionDuration.exit);
       translateY.set(withTiming(10, { duration: exitDuration, easing: Easing.in(Easing.cubic) }));
       translateX.set(
         withTiming(
@@ -219,21 +228,25 @@ export function SwipeDeck({
       })
       .onEnd((event) => {
         if (interactionLocked.get()) return;
-        const isFastRight =
-          event.velocityX > SWIPE_VELOCITY_THRESHOLD * 1000 &&
-          event.translationX > SWIPE_MIN_DISTANCE;
-        const isFastLeft =
-          event.velocityX < -SWIPE_VELOCITY_THRESHOLD * 1000 &&
-          event.translationX < -SWIPE_MIN_DISTANCE;
+        const action = resolveDiscoverSwipe(event.translationX, event.velocityX);
 
-        if (event.translationX > SWIPE_THRESHOLD || isFastRight) finishSwipe('like');
-        else if (event.translationX < -SWIPE_THRESHOLD || isFastLeft) finishSwipe('pass');
+        if (action) finishSwipe(action);
         else if (reduceMotion) {
-          translateX.set(withTiming(0, { duration: 0 }));
-          translateY.set(withTiming(0, { duration: 0 }));
+          translateX.set(withTiming(0, { duration: motionDuration.instant }));
+          translateY.set(withTiming(0, { duration: motionDuration.instant }));
         } else {
-          translateX.set(withSpring(0, { damping: 18, stiffness: 210 }));
-          translateY.set(withSpring(0, { damping: 18, stiffness: 210 }));
+          translateX.set(withSpring(0, motionSpring.responsive));
+          translateY.set(withSpring(0, motionSpring.responsive));
+        }
+      })
+      .onFinalize((_event, success) => {
+        if (success || interactionLocked.get()) return;
+        if (reduceMotion) {
+          translateX.set(0);
+          translateY.set(0);
+        } else {
+          translateX.set(withSpring(0, motionSpring.responsive));
+          translateY.set(withSpring(0, motionSpring.responsive));
         }
       });
 
@@ -269,7 +282,7 @@ export function SwipeDeck({
       {
         scale: interpolate(
           Math.abs(translateX.get()),
-          [0, SWIPE_THRESHOLD, width],
+          [0, DISCOVER_SWIPE_THRESHOLD, width],
           [1, 0.992, 0.975],
           Extrapolation.CLAMP,
         ),
@@ -279,7 +292,7 @@ export function SwipeDeck({
   const nextCardStyle = useAnimatedStyle(() => {
     const progress = interpolate(
       Math.abs(translateX.get()),
-      [0, SWIPE_THRESHOLD, width * 1.1],
+      [0, DISCOVER_SWIPE_THRESHOLD, width * 1.1],
       [0, 0.46, 1],
       Extrapolation.CLAMP,
     );
@@ -300,21 +313,76 @@ export function SwipeDeck({
     transform: [{ scale: interpolate(pickPulse.get(), [0, 1], [0.72, 1]) }],
   }));
   const likeDecisionStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
-    transform: [
-      {
-        scale: interpolate(translateX.get(), [15, SWIPE_THRESHOLD], [0.82, 1], Extrapolation.CLAMP),
-      },
-    ],
-  }));
-  const passDecisionStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.get(), [-SWIPE_THRESHOLD, -15], [1, 0], Extrapolation.CLAMP),
+    opacity: interpolate(
+      translateX.get(),
+      [15, DISCOVER_SWIPE_THRESHOLD],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
     transform: [
       {
         scale: interpolate(
           translateX.get(),
-          [-SWIPE_THRESHOLD, -15],
+          [15, DISCOVER_SWIPE_THRESHOLD],
+          [0.82, 1],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+  const passDecisionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.get(),
+      [-DISCOVER_SWIPE_THRESHOLD, -15],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        scale: interpolate(
+          translateX.get(),
+          [-DISCOVER_SWIPE_THRESHOLD, -15],
           [1, 0.82],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+  const likeWashStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.get(),
+      [0, DISCOVER_SWIPE_THRESHOLD],
+      [0, 0.17],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  const passWashStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.get(),
+      [-DISCOVER_SWIPE_THRESHOLD, 0],
+      [0.18, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  const pickActionStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale: interpolate(
+          translateX.get(),
+          [0, DISCOVER_SWIPE_THRESHOLD],
+          [1, 1.12],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+  const passActionStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale: interpolate(
+          translateX.get(),
+          [-DISCOVER_SWIPE_THRESHOLD, 0],
+          [1.12, 1],
           Extrapolation.CLAMP,
         ),
       },
@@ -399,8 +467,8 @@ export function SwipeDeck({
             <ProfileCard
               accessibilityActions={[
                 { label: t('discoverDeck.openProfile'), name: 'activate' },
-                { label: 'Pick', name: 'increment' },
-                { label: 'Pass', name: 'decrement' },
+                { label: t('discoverDeck.pick'), name: 'increment' },
+                { label: t('discoverDeck.pass'), name: 'decrement' },
               ]}
               now={presenceNow}
               onAccessibilityAction={(event) => {
@@ -411,6 +479,8 @@ export function SwipeDeck({
               onPress={handleCardPress}
               profile={currentProfile}
             />
+            <Animated.View style={[styles.pickWash, styles.nonInteractive, likeWashStyle]} />
+            <Animated.View style={[styles.passWash, styles.nonInteractive, passWashStyle]} />
             <Animated.View
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
@@ -434,6 +504,64 @@ export function SwipeDeck({
             </Animated.View>
           </Animated.View>
         </GestureDetector>
+      </View>
+      <View accessibilityRole="toolbar" style={styles.actionDock}>
+        <Pressable
+          accessibilityLabel={t('discoverDeck.pass')}
+          accessibilityRole="button"
+          hitSlop={touchSlop.icon}
+          onPress={() => startSwipe('pass')}
+          style={({ pressed }) => [styles.action, pressed && pressFeedback.control]}
+        >
+          <Animated.View style={passActionStyle}>
+            <View
+              style={[
+                styles.actionButton,
+                styles.passButton,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            >
+              <Ionicons color={theme.colors.text} name="close" size={28} />
+            </View>
+          </Animated.View>
+          <Text style={[styles.actionLabel, { color: theme.colors.textMuted }]}>
+            {t('discoverDeck.pass')}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={t('discoverDeck.openProfile')}
+          accessibilityRole="button"
+          hitSlop={touchSlop.icon}
+          onPress={openProfile}
+          style={({ pressed }) => [styles.action, pressed && pressFeedback.control]}
+        >
+          <View
+            style={[
+              styles.actionButton,
+              styles.profileButton,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <Ionicons color={palette.pink} name="person-outline" size={22} />
+          </View>
+          <Text style={[styles.actionLabel, { color: theme.colors.textMuted }]}>
+            {t('discoverDeck.profile')}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={t('discoverDeck.pick')}
+          accessibilityRole="button"
+          hitSlop={touchSlop.icon}
+          onPress={() => startSwipe('like')}
+          style={({ pressed }) => [styles.action, pressed && pressFeedback.control]}
+        >
+          <Animated.View style={pickActionStyle}>
+            <View style={[styles.actionButton, styles.pickButton]}>
+              <Ionicons color={palette.white} name="heart" size={28} />
+            </View>
+          </Animated.View>
+          <Text style={[styles.actionLabel, styles.pickLabel]}>{t('discoverDeck.pick')}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -460,7 +588,7 @@ const styles = StyleSheet.create({
   deck: {
     alignSelf: 'center',
     flexShrink: 1,
-    marginBottom: 10,
+    marginBottom: 12,
     maxWidth: 520,
     minHeight: 0,
     width: '100%',
@@ -487,6 +615,25 @@ const styles = StyleSheet.create({
     top: '42%',
     width: 88,
   },
+  nonInteractive: { pointerEvents: 'none' },
+  pickWash: {
+    backgroundColor: palette.pink,
+    borderRadius: 28,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  passWash: {
+    backgroundColor: '#101014',
+    borderRadius: 28,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   decision: {
     position: 'absolute',
     top: 68,
@@ -501,6 +648,40 @@ const styles = StyleSheet.create({
   passDecision: { right: 22, borderColor: palette.white, transform: [{ rotate: '8deg' }] },
   likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
+  actionDock: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 24,
+    justifyContent: 'center',
+    minHeight: 72,
+    width: '100%',
+  },
+  action: { alignItems: 'center', minWidth: 64 },
+  actionButton: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+  },
+  passButton: { ...elevation.sm, height: 52, width: 52 },
+  profileButton: { ...elevation.sm, height: 46, marginTop: 3, width: 46 },
+  pickButton: {
+    ...elevation.md,
+    backgroundColor: palette.pink,
+    borderColor: palette.pink,
+    height: 58,
+    marginTop: -3,
+    width: 58,
+  },
+  actionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 14,
+    marginTop: 5,
+    maxWidth: 86,
+    textAlign: 'center',
+  },
+  pickLabel: { color: palette.pink },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   loadingCard: {
     borderRadius: 28,

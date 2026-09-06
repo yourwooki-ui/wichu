@@ -1,5 +1,20 @@
 # WICHU 1.0 Launch TODO
 
+## 2026-09-06 경쟁 앱 격차 해소
+
+- [x] 프로필 대화 프롬프트 최대 3개 — 원자 저장 RPC, 공개 상세 노출, 답변을 인용한 메시지 Pick 연결
+- [x] 후보 추천 — 실시간 접속(5분 이내)·최근 접속 시각을 최우선 노출하고, 동률일 때 공통 목표·관심사·언어 적합도 적용
+- [x] 추천 개선용 퍼널 신호 — 후보 노출, 상세 진입, 프롬프트 저장, 만남 피드백, 신고 상태 조회 이벤트
+- [x] 만남 후 비공개 피드백 — 실제 만남·재만남 의향·안전 우려·메모 저장, 우려 선택 시 신고 흐름 연결
+- [x] 사용자 안전 센터 — 본인 신고 접수·검토·종료 상태와 조치 결과 조회, 내부 운영 메모 권한 차단
+- [x] 신규 관계·안전 데이터 RLS/최소 권한과 pgTAP 계약 테스트 추가
+- [x] 휴대폰 OTP — Supabase Auth + Twilio Verify 기반 가입·로그인, E.164 정규화, 60초 재전송 제한, 오류·분석 로그 개인정보 차단과 로컬 고정 OTP 완료
+- [ ] 휴대폰 OTP 운영 개통 — Supabase Auth에서 Twilio Verify 자격 증명 연결, 허용 국가·Fraud Guard·CAPTCHA·비용 알림 설정, `EXPO_PUBLIC_PHONE_AUTH_ENABLED=true` 배포 후 한국/해외 실기기 수신 QA
+- [ ] 셀피 liveness/신분증·연령 검증 — 검증 공급자 선정, 생체정보 동의·보존 정책, webhook 자격 증명 필요
+- [ ] 연락처 기반 지인 차단 — 연락처 권한 UX, 서버측 salted hash 설계와 개인정보 영향평가 필요
+- [ ] 음성 프롬프트·음성 메시지 — 녹음 권한·신고용 보존·오디오 moderation 정책 확정 후 네이티브 구현
+- [ ] iOS/Android 구매·푸시·접근성·성능 실기기 출시 QA — 각 스토어 계정과 실제 기기 필요
+
 ## P0 — 기반과 데이터
 
 - [x] Expo Router, TypeScript, Query, Zustand, i18n 기본 구조
@@ -41,7 +56,7 @@
 - [x] 프로필/대화 신고, 차단, match 종료 — 7개 공통 신고 사유, 차단 확인 UI와 저장, 차단 RLS, 채팅 안전 메뉴의 매치 종료 및 즉시 메시지 차단 연결
 - [x] 차단 사용자 최소 read model 원격 적용 — 앱 목록·차단 해제, 최소 필드 RPC, `anon` 실행 차단·`authenticated` 전용 권한 검증 완료
 - [x] 비활성화·탈퇴·데이터 삭제 완주 — 즉시 비공개/매치 종료/푸시 해제, 동시 실행 방지 queue, Storage/Auth 실제 삭제 worker와 비식별 완료 감사 기록 연결
-- [x] 신고 triage와 프로필 심사용 최소 운영 센터 — DB role 기반 진입, queue/approve/reject/resolve 전용 RPC 연결
+- [x] 세분화된 운영 센터 — 역할 기반 현황판, 긴급·24시간 SLA 필터, 프로필·신고·데이트 후 안전 신호 큐, 조치 사유, 마스터 전용 감사 로그·권한·노출 중지와 전용 RPC 연결
 - [ ] Push 등록과 Match/메시지 deep link — 권한 재진입 token 갱신, Match/메시지 outbox, Edge Function 발송, 티켓/receipt 추적, `DeviceNotRegistered` 자동 비활성화, 안전한 앱 딥링크까지 완료; 15분 receipt 전용 Cron과 EAS 실기기 수신 QA 대기
 - [x] 개인정보 최소화, 민감 로그 redaction, rate limit — 좌표 30일·삭제 감사 1년·완료 Push 30일 자동 파기와 공개 정책 일치 검증 완료
 - [ ] 크래시·API 실패·핵심 funnel 관측성 연결 — 개인정보 없는 앱 오류·구매 시작/취소/실패/완료/복원 이벤트와 UUID 세션 상관관계는 연결, 네이티브 crash symbolication/alert 대기

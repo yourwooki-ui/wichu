@@ -130,15 +130,6 @@ export const layout = {
   maxContentWidth: 620,
 } as const;
 
-/** 모션 duration(ms). 값이 흩어지지 않도록 여기서만 정의한다. */
-export const duration = {
-  fast: 140,
-  base: 220,
-  slow: 420,
-  /** skeleton shimmer 1회 왕복 */
-  shimmer: 1100,
-} as const;
-
 /**
  * 터치 영역 확장 프리셋.
  *

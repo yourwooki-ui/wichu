@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { BrandWordmark } from '@/components/BrandWordmark';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { authService } from '@/features/auth/services/auth-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -45,18 +46,20 @@ export default function AuthCallbackRoute() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {state === 'error' ? (
         <View style={styles.errorContent}>
+          <BrandWordmark align="center" color={theme.colors.text} size={26} />
           <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
             {t('auth.authFailed')}
           </Text>
           <PrimaryButton label={t('auth.back')} onPress={() => router.replace('/login')} />
         </View>
       ) : (
-        <>
+        <View style={styles.waitContent}>
+          <BrandWordmark align="center" color={theme.colors.text} size={28} />
           <ActivityIndicator color={theme.colors.primary} />
           <Text style={[styles.label, { color: theme.colors.textMuted }]}>
             {state === 'success' ? t('auth.signIn') : t('auth.signInWithGoogle')}
           </Text>
-        </>
+        </View>
       )}
     </View>
   );
@@ -64,7 +67,14 @@ export default function AuthCallbackRoute() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  errorContent: { gap: 18, maxWidth: 320, paddingHorizontal: 24, width: '100%' },
+  errorContent: {
+    alignItems: 'center',
+    gap: 18,
+    maxWidth: 320,
+    paddingHorizontal: 24,
+    width: '100%',
+  },
   errorTitle: { fontSize: 18, fontWeight: '800', lineHeight: 25, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: '700' },
+  waitContent: { alignItems: 'center', gap: 14, paddingHorizontal: 24, width: '100%' },
 });

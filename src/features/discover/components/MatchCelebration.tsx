@@ -15,7 +15,9 @@ import {
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
+import { motionDuration, motionScale, motionSpring } from '@/constants/motion';
 import { palette, pressFeedback, radius } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import type { Profile } from '@/types/profile';
 
@@ -32,6 +34,7 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
   const [enter] = useState(() => new Animated.Value(0));
   const [contentEnter] = useState(() => new Animated.Value(0));
   const [markEnter] = useState(() => new Animated.Value(0));
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     if (!visible) {
@@ -51,62 +54,53 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
       }
     }
 
-    let cancelled = false;
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduceMotion) => {
-        if (cancelled) return;
-        if (reduceMotion) {
-          enter.setValue(1);
-          contentEnter.setValue(1);
-          markEnter.setValue(1);
-          return;
-        }
-        Animated.parallel([
-          Animated.spring(enter, {
-            bounciness: 8,
-            speed: 14,
-            toValue: 1,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-          Animated.sequence([
-            Animated.delay(90),
-            Animated.spring(markEnter, {
-              bounciness: 11,
-              speed: 16,
-              toValue: 1,
-              useNativeDriver: USE_NATIVE_DRIVER,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.delay(120),
-            Animated.timing(contentEnter, {
-              duration: 180,
-              toValue: 1,
-              useNativeDriver: USE_NATIVE_DRIVER,
-            }),
-          ]),
-        ]).start();
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // 접근성 조회 실패 시 모션 없이 최종 상태를 노출한다.
-        enter.setValue(1);
-        contentEnter.setValue(1);
-        markEnter.setValue(1);
-      });
+    if (reduceMotion) {
+      enter.setValue(1);
+      contentEnter.setValue(1);
+      markEnter.setValue(1);
+      return;
+    }
+
+    Animated.parallel([
+      Animated.spring(enter, {
+        ...motionSpring.celebration,
+        toValue: 1,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+      Animated.sequence([
+        Animated.delay(90),
+        Animated.spring(markEnter, {
+          ...motionSpring.pressIn,
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.delay(motionDuration.feedback),
+        Animated.timing(contentEnter, {
+          duration: motionDuration.fast,
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+      ]),
+    ]).start();
 
     return () => {
-      cancelled = true;
       enter.stopAnimation();
       contentEnter.stopAnimation();
       markEnter.stopAnimation();
     };
-  }, [contentEnter, enter, markEnter, profile, visible]);
+  }, [contentEnter, enter, markEnter, profile, reduceMotion, visible]);
 
   const cardStyle = {
     opacity: enter,
     transform: [
-      { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) },
+      {
+        scale: enter.interpolate({
+          inputRange: [0, 1],
+          outputRange: [motionScale.celebrationFrom, 1],
+        }),
+      },
       { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
     ],
   };

@@ -5,17 +5,47 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AppModal } from '@/components/AppModal';
 import { EmptyState } from '@/components/EmptyState';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, pressFeedback, radius } from '@/constants/theme';
+import { imageTransition } from '@/constants/motion';
+import { elevation, palette, pressFeedback, radius } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
+import {
+  getQueueAgeLabel,
+  getQueuePriority,
+  getReportPriority,
+  includesNormalizedSearch,
+  matchesQueueFilter,
+  type QueuePriority,
+} from '@/features/operations/utils/operations-workspace';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { formatDateTime } from '@/lib/intl-format';
 
-type Section = 'profiles' | 'reports' | 'team';
+type Section = 'overview' | 'profiles' | 'reports' | 'safety' | 'activity' | 'team';
+type QueueFilter = 'all' | QueuePriority;
+type PendingAction =
+  | { kind: 'profile-reject'; id: string; name: string }
+  | { kind: 'report-close' | 'report-review' | 'report-hide'; id: string; name: string }
+  | { kind: 'safety-close' | 'safety-review' | 'safety-hide'; id: string; name: string };
+
+const SECTIONS: {
+  key: Section;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  masterOnly?: boolean;
+}[] = [
+  { key: 'overview', label: '현황', icon: 'grid-outline' },
+  { key: 'profiles', label: '프로필', icon: 'images-outline' },
+  { key: 'reports', label: '신고', icon: 'flag-outline' },
+  { key: 'safety', label: '안전 신호', icon: 'warning-outline' },
+  { key: 'activity', label: '감사 로그', icon: 'receipt-outline', masterOnly: true },
+  { key: 'team', label: '권한', icon: 'people-outline', masterOnly: true },
+];
 
 function useSignedPhoto(path: string | null | undefined) {
   return useQuery({
@@ -34,7 +64,16 @@ export function OperationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { adminRole } = useAuthSession();
-  const [section, setSection] = useState<Section>('profiles');
+  const isMaster = adminRole === 'master';
+  const [section, setSection] = useState<Section>('overview');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<QueueFilter>('all');
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+
+  const overviewQuery = useQuery({
+    queryKey: ['operations', 'overview'],
+    queryFn: operationsService.getOverview,
+  });
   const profileQuery = useQuery({
     queryKey: ['operations', 'profile-reviews'],
     queryFn: operationsService.getProfileReviews,
@@ -43,72 +82,162 @@ export function OperationsScreen() {
     queryKey: ['operations', 'reports'],
     queryFn: operationsService.getPendingReports,
   });
+  const safetyQuery = useQuery({
+    queryKey: ['operations', 'safety'],
+    queryFn: operationsService.getPendingSafetyFeedback,
+  });
   const teamQuery = useQuery({
     queryKey: ['operations', 'team'],
-    enabled: adminRole === 'master',
+    enabled: isMaster,
     queryFn: operationsService.getAdminTeam,
   });
   const activityQuery = useQuery({
     queryKey: ['operations', 'activity'],
-    enabled: adminRole === 'master',
+    enabled: isMaster,
     queryFn: operationsService.getModerationActivity,
   });
-  const reviewMutation = useMutation({
-    mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'rejected' }) =>
-      operationsService.reviewProfile(
-        id,
-        decision,
-        decision === 'rejected' ? '사진 기준을 확인한 뒤 해당 사진을 교체해 주세요.' : undefined,
+
+  const refreshWorkspace = async (...keys: string[]) => {
+    await Promise.all(
+      ['overview', ...keys].map((key) =>
+        queryClient.invalidateQueries({ queryKey: ['operations', key] }),
       ),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['operations', 'profile-reviews'] }),
-        queryClient.invalidateQueries({ queryKey: ['operations', 'activity'] }),
-      ]);
-    },
+    );
+  };
+  const reviewMutation = useMutation({
+    mutationFn: ({
+      decision,
+      id,
+      note,
+    }: {
+      decision: 'approved' | 'rejected';
+      id: string;
+      note?: string;
+    }) => operationsService.reviewProfile(id, decision, note),
+    onSuccess: () => refreshWorkspace('profile-reviews', 'activity'),
     onError: () => Alert.alert('처리하지 못했어요', '심사 상태를 확인하고 다시 시도해 주세요.'),
   });
   const reportMutation = useMutation({
     mutationFn: ({
-      action,
+      action = 'none',
       id,
+      note,
       resolution,
     }: {
       action?: 'none' | 'profile_hidden';
       id: string;
+      note?: string;
       resolution: 'reviewed' | 'closed';
-    }) => operationsService.resolveReport(id, resolution, { action }),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['operations', 'reports'] }),
-        queryClient.invalidateQueries({ queryKey: ['operations', 'activity'] }),
-      ]);
-    },
+    }) => operationsService.resolveReport(id, resolution, { action, note }),
+    onSuccess: () => refreshWorkspace('reports', 'activity'),
     onError: () => Alert.alert('처리하지 못했어요', '신고 상태를 확인하고 다시 시도해 주세요.'),
+  });
+  const safetyMutation = useMutation({
+    mutationFn: ({
+      action = 'none',
+      id,
+      note,
+      resolution,
+    }: {
+      action?: 'none' | 'profile_hidden';
+      id: string;
+      note?: string;
+      resolution: 'reviewed' | 'closed';
+    }) => operationsService.resolveSafetyFeedback(id, resolution, { action, note }),
+    onSuccess: () => refreshWorkspace('safety', 'activity'),
+    onError: () =>
+      Alert.alert('처리하지 못했어요', '안전 신호 상태를 확인하고 다시 시도해 주세요.'),
   });
   const operatorMutation = useMutation({
     mutationFn: ({ active, email }: { active: boolean; email: string }) =>
       operationsService.setOperatorAccess(email, active),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['operations', 'team'] }),
-        queryClient.invalidateQueries({ queryKey: ['operations', 'activity'] }),
-      ]);
-    },
-    onError: () =>
-      Alert.alert('권한을 변경하지 못했어요', '가입된 이메일인지 확인하고 다시 시도해 주세요.'),
+    onSuccess: () => refreshWorkspace('team', 'activity'),
+    onError: () => Alert.alert('권한을 변경하지 못했어요', '가입된 이메일인지 확인해 주세요.'),
   });
-  const activeQuery =
-    section === 'profiles' ? profileQuery : section === 'reports' ? reportQuery : teamQuery;
-  const count = useMemo(
+
+  const profileItems = useMemo(
     () =>
-      (section === 'profiles'
-        ? profileQuery.data?.length
-        : section === 'reports'
-          ? reportQuery.data?.length
-          : teamQuery.data?.length) ?? 0,
-    [profileQuery.data?.length, reportQuery.data?.length, section, teamQuery.data?.length],
+      (profileQuery.data ?? []).filter((item) => {
+        const matchesSearch = includesNormalizedSearch(
+          [item.display_name, item.country_code, item.bio, ...item.languages],
+          search,
+        );
+        const priority = getQueuePriority(item.submitted_at ?? new Date().toISOString());
+        return matchesSearch && matchesQueueFilter(filter, priority, item.submitted_at ?? '');
+      }),
+    [filter, profileQuery.data, search],
   );
+  const reportItems = useMemo(
+    () =>
+      (reportQuery.data ?? []).filter((item) => {
+        const matchesSearch = includesNormalizedSearch(
+          [item.reported_display_name, item.details, ...item.reasons],
+          search,
+        );
+        const priority = getReportPriority(item.reasons, item.created_at);
+        return matchesSearch && matchesQueueFilter(filter, priority, item.created_at);
+      }),
+    [filter, reportQuery.data, search],
+  );
+  const safetyItems = useMemo(
+    () =>
+      (safetyQuery.data ?? []).filter((item) => {
+        const matchesSearch = includesNormalizedSearch(
+          [item.subject_display_name, item.notes],
+          search,
+        );
+        const agePriority = getQueuePriority(item.updated_at);
+        const priority = agePriority === 'overdue' ? 'overdue' : 'urgent';
+        return matchesSearch && matchesQueueFilter(filter, priority, item.updated_at);
+      }),
+    [filter, safetyQuery.data, search],
+  );
+
+  const queueCount =
+    (overviewQuery.data?.pending_profiles ?? profileQuery.data?.length ?? 0) +
+    (overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0) +
+    (overviewQuery.data?.pending_safety ?? safetyQuery.data?.length ?? 0);
+  const activeQuery =
+    section === 'overview'
+      ? overviewQuery
+      : section === 'profiles'
+        ? profileQuery
+        : section === 'reports'
+          ? reportQuery
+          : section === 'safety'
+            ? safetyQuery
+            : section === 'activity'
+              ? activityQuery
+              : teamQuery;
+  const isBusy = reviewMutation.isPending || reportMutation.isPending || safetyMutation.isPending;
+
+  const changeSection = (next: Section) => {
+    setSection(next);
+    setSearch('');
+    setFilter('all');
+  };
+  const submitPendingAction = (note: string) => {
+    if (!pendingAction) return;
+    const { id, kind } = pendingAction;
+    if (kind === 'profile-reject') {
+      reviewMutation.mutate({ decision: 'rejected', id, note });
+    } else if (kind.startsWith('report-')) {
+      reportMutation.mutate({
+        action: kind === 'report-hide' ? 'profile_hidden' : 'none',
+        id,
+        note,
+        resolution: kind === 'report-close' ? 'closed' : 'reviewed',
+      });
+    } else {
+      safetyMutation.mutate({
+        action: kind === 'safety-hide' ? 'profile_hidden' : 'none',
+        id,
+        note,
+        resolution: kind === 'safety-close' ? 'closed' : 'reviewed',
+      });
+    }
+    setPendingAction(null);
+  };
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
@@ -122,31 +251,29 @@ export function OperationsScreen() {
           <Ionicons color={palette.ink} name="chevron-back" size={25} />
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>
-            WICHU OPS · {adminRole === 'master' ? 'MASTER' : 'OPERATOR'}
-          </Text>
+          <Text style={styles.eyebrow}>WICHU OPS · {isMaster ? 'MASTER' : 'OPERATOR'}</Text>
           <Text style={styles.title}>운영 센터</Text>
         </View>
-        <View style={styles.countPill}>
-          <Text style={styles.countText}>{count}</Text>
+        <View style={[styles.countPill, queueCount > 0 && styles.countPillActive]}>
+          <Text style={styles.countText}>{queueCount}</Text>
         </View>
       </View>
 
-      <View style={styles.tabs}>
-        <Tab
-          active={section === 'profiles'}
-          label="프로필 심사"
-          onPress={() => setSection('profiles')}
-        />
-        <Tab
-          active={section === 'reports'}
-          label="신고 처리"
-          onPress={() => setSection('reports')}
-        />
-        {adminRole === 'master' ? (
-          <Tab active={section === 'team'} label="운영 권한" onPress={() => setSection('team')} />
-        ) : null}
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.tabs}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        {SECTIONS.filter((item) => !item.masterOnly || isMaster).map((item) => (
+          <Tab
+            key={item.key}
+            active={section === item.key}
+            icon={item.icon}
+            label={item.label}
+            onPress={() => changeSection(item.key)}
+          />
+        ))}
+      </ScrollView>
 
       {activeQuery.isLoading ? (
         <View style={styles.loadingContent}>
@@ -155,71 +282,127 @@ export function OperationsScreen() {
       ) : activeQuery.isError ? (
         <EmptyState
           actionLabel="다시 시도"
-          description="연결 상태를 확인하고 다시 불러와 주세요."
+          description="연결 상태와 운영자 권한을 확인하고 다시 불러와 주세요."
           illustration={illustratedIcons.connectionError}
           onAction={() => void activeQuery.refetch()}
-          title="운영 큐를 불러오지 못했어요"
+          title="운영 데이터를 불러오지 못했어요"
           tone="error"
         />
-      ) : section !== 'team' && count === 0 ? (
-        <EmptyState
-          illustration={illustratedIcons.safety}
-          title="처리할 항목이 없어요"
-          description="새 요청이 들어오면 이곳에 오래된 순서부터 표시됩니다."
-        />
       ) : (
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.content}
+          keyboardFocusOffset={24}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
-          {section === 'profiles' ? (
-            profileQuery.data?.map((item) => (
-              <ReviewCard
-                key={item.id}
-                item={item}
-                busy={reviewMutation.isPending}
-                onApprove={() => reviewMutation.mutate({ id: item.id, decision: 'approved' })}
-                onReject={() => reviewMutation.mutate({ id: item.id, decision: 'rejected' })}
-              />
-            ))
+          {section === 'overview' ? (
+            <OverviewPanel
+              data={overviewQuery.data}
+              onOpen={changeSection}
+              recentActivity={activityQuery.data?.slice(0, 4) ?? []}
+              showActivity={isMaster}
+            />
+          ) : section === 'profiles' ? (
+            <QueuePanel
+              count={profileItems.length}
+              filter={filter}
+              onFilter={setFilter}
+              onSearch={setSearch}
+              search={search}
+              title="프로필·사진 심사"
+            >
+              {profileItems.map((item) => (
+                <ReviewCard
+                  key={item.id}
+                  busy={reviewMutation.isPending}
+                  item={item}
+                  onApprove={() => reviewMutation.mutate({ decision: 'approved', id: item.id })}
+                  onReject={() =>
+                    setPendingAction({
+                      id: item.id,
+                      kind: 'profile-reject',
+                      name: item.display_name,
+                    })
+                  }
+                />
+              ))}
+            </QueuePanel>
           ) : section === 'reports' ? (
-            reportQuery.data?.map((item) => (
-              <ReportCard
-                key={item.id}
-                item={item}
-                busy={reportMutation.isPending}
-                onClose={() => reportMutation.mutate({ id: item.id, resolution: 'closed' })}
-                onHide={
-                  adminRole === 'master'
-                    ? () =>
-                        confirmProfileHide(item.reported_display_name, () =>
-                          reportMutation.mutate({
-                            action: 'profile_hidden',
-                            id: item.id,
-                            resolution: 'reviewed',
-                          }),
-                        )
-                    : undefined
-                }
-                onReview={() => reportMutation.mutate({ id: item.id, resolution: 'reviewed' })}
-              />
-            ))
+            <QueuePanel
+              count={reportItems.length}
+              filter={filter}
+              onFilter={setFilter}
+              onSearch={setSearch}
+              search={search}
+              title="신고 처리 큐"
+            >
+              {reportItems.map((item) => (
+                <ReportCard
+                  key={item.id}
+                  busy={reportMutation.isPending}
+                  item={item}
+                  onAction={(kind) =>
+                    setPendingAction({ id: item.id, kind, name: item.reported_display_name })
+                  }
+                  showHide={isMaster}
+                />
+              ))}
+            </QueuePanel>
+          ) : section === 'safety' ? (
+            <QueuePanel
+              count={safetyItems.length}
+              filter={filter}
+              onFilter={setFilter}
+              onSearch={setSearch}
+              search={search}
+              title="데이트 후 안전 신호"
+            >
+              {safetyItems.map((item) => (
+                <SafetyCard
+                  key={item.id}
+                  busy={safetyMutation.isPending}
+                  item={item}
+                  onAction={(kind) =>
+                    setPendingAction({ id: item.id, kind, name: item.subject_display_name })
+                  }
+                  showHide={isMaster}
+                />
+              ))}
+            </QueuePanel>
+          ) : section === 'activity' ? (
+            <ActivityPanel activity={activityQuery.data ?? []} />
           ) : (
             <TeamPanel
-              activity={activityQuery.data ?? []}
               busy={operatorMutation.isPending}
               members={teamQuery.data ?? []}
               onSetAccess={(email, active) => operatorMutation.mutate({ active, email })}
             />
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       )}
+
+      <ActionDialog
+        key={pendingAction ? `${pendingAction.kind}-${pendingAction.id}` : 'closed'}
+        action={pendingAction}
+        busy={isBusy}
+        onClose={() => setPendingAction(null)}
+        onSubmit={submitPendingAction}
+      />
     </Screen>
   );
 }
 
-function Tab({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
+function Tab({
+  active,
+  icon,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityLabel={label}
@@ -232,26 +415,256 @@ function Tab({ active, label, onPress }: { active: boolean; label: string; onPre
         pressed && pressFeedback.control,
       ]}
     >
+      <Ionicons color={active ? palette.white : palette.inkMuted} name={icon} size={15} />
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
     </Pressable>
+  );
+}
+
+type Overview = Awaited<ReturnType<typeof operationsService.getOverview>>;
+type ModerationActivity = Awaited<
+  ReturnType<typeof operationsService.getModerationActivity>
+>[number];
+
+function OverviewPanel({
+  data,
+  onOpen,
+  recentActivity,
+  showActivity,
+}: {
+  data: Overview | undefined;
+  onOpen: (section: Section) => void;
+  recentActivity: ModerationActivity[];
+  showActivity: boolean;
+}) {
+  const total =
+    (data?.pending_profiles ?? 0) + (data?.pending_reports ?? 0) + (data?.pending_safety ?? 0);
+  return (
+    <>
+      <View style={styles.heroCard}>
+        <View style={styles.heroIcon}>
+          <Ionicons color={palette.ink} name={total ? 'pulse' : 'checkmark'} size={22} />
+        </View>
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroEyebrow}>QUEUE HEALTH</Text>
+          <Text style={styles.heroTitle}>
+            {total ? `지금 ${total}건을 확인해야 해요` : '모든 큐가 비어 있어요'}
+          </Text>
+          <Text style={styles.heroBody}>긴급 신고와 24시간 초과 건이 먼저 보입니다.</Text>
+        </View>
+      </View>
+      <View style={styles.metricsGrid}>
+        <MetricCard
+          color="#FFF0F5"
+          icon="images-outline"
+          label="프로필 심사"
+          onPress={() => onOpen('profiles')}
+          value={data?.pending_profiles ?? 0}
+        />
+        <MetricCard
+          color="#FFF4E5"
+          icon="flag-outline"
+          label="신고"
+          onPress={() => onOpen('reports')}
+          value={data?.pending_reports ?? 0}
+        />
+        <MetricCard
+          color="#FFF0ED"
+          icon="warning-outline"
+          label="안전 신호"
+          onPress={() => onOpen('safety')}
+          value={data?.pending_safety ?? 0}
+        />
+        <MetricCard
+          color="#F1F2F5"
+          icon="time-outline"
+          label="24시간 초과"
+          onPress={() => onOpen('reports')}
+          value={data?.overdue_items ?? 0}
+        />
+      </View>
+      <View style={styles.summaryStrip}>
+        <SummaryStat danger label="긴급 신고" value={data?.urgent_reports ?? 0} />
+        <View style={styles.summaryDivider} />
+        <SummaryStat label="오늘 처리" value={data?.resolved_today ?? 0} />
+      </View>
+      {showActivity ? (
+        <View style={styles.block}>
+          <View style={styles.blockHeader}>
+            <Text style={styles.sectionTitle}>최근 운영 기록</Text>
+            <Pressable accessibilityRole="button" onPress={() => onOpen('activity')}>
+              <Text style={styles.linkText}>전체 보기</Text>
+            </Pressable>
+          </View>
+          <ActivityRows activity={recentActivity} compact />
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function MetricCard({
+  color,
+  icon,
+  label,
+  onPress,
+  value,
+}: {
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  value: number;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.metricCard,
+        { backgroundColor: color },
+        pressed && pressFeedback.surface,
+      ]}
+    >
+      <View style={styles.metricTop}>
+        <Ionicons color={palette.ink} name={icon} size={19} />
+        <Ionicons color={palette.inkMuted} name="chevron-forward" size={16} />
+      </View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function SummaryStat({
+  danger = false,
+  label,
+  value,
+}: {
+  danger?: boolean;
+  label: string;
+  value: number;
+}) {
+  return (
+    <View style={styles.summaryStat}>
+      <Text style={[styles.summaryValue, danger && styles.dangerText]}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function QueuePanel({
+  children,
+  count,
+  filter,
+  onFilter,
+  onSearch,
+  search,
+  title,
+}: {
+  children: React.ReactNode;
+  count: number;
+  filter: QueueFilter;
+  onFilter: (value: QueueFilter) => void;
+  onSearch: (value: string) => void;
+  search: string;
+  title: string;
+}) {
+  return (
+    <>
+      <View style={styles.queueHeader}>
+        <View>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.queueCount}>조건에 맞는 항목 {count}건</Text>
+        </View>
+      </View>
+      <View style={styles.searchBox}>
+        <Ionicons color={palette.inkMuted} name="search" size={18} />
+        <TextInput
+          autoCapitalize="none"
+          onChangeText={onSearch}
+          placeholder="이름, 국가, 사유 검색"
+          placeholderTextColor="#96969E"
+          style={styles.searchInput}
+          value={search}
+        />
+        {search ? (
+          <Pressable
+            accessibilityLabel="검색어 지우기"
+            accessibilityRole="button"
+            onPress={() => onSearch('')}
+          >
+            <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.filters}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        <FilterChip active={filter === 'all'} label="전체" onPress={() => onFilter('all')} />
+        <FilterChip active={filter === 'urgent'} label="긴급" onPress={() => onFilter('urgent')} />
+        <FilterChip
+          active={filter === 'overdue'}
+          label="24시간 초과"
+          onPress={() => onFilter('overdue')}
+        />
+        <FilterChip active={filter === 'normal'} label="일반" onPress={() => onFilter('normal')} />
+      </ScrollView>
+      {count ? children : <InlineEmpty />}
+    </>
+  );
+}
+
+function FilterChip({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.filterChip, active && styles.filterChipActive]}
+    >
+      <Text style={[styles.filterText, active && styles.filterTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function InlineEmpty() {
+  return (
+    <View style={styles.inlineEmpty}>
+      <Ionicons color={palette.inkMuted} name="checkmark-circle-outline" size={30} />
+      <Text style={styles.inlineEmptyTitle}>조건에 맞는 항목이 없어요</Text>
+      <Text style={styles.inlineEmptyBody}>검색어나 필터를 바꾸거나 새 요청을 기다려 주세요.</Text>
+    </View>
   );
 }
 
 type ProfileReview = Awaited<ReturnType<typeof operationsService.getProfileReviews>>[number];
 
 function ReviewCard({
-  item,
   busy,
+  item,
   onApprove,
   onReject,
 }: {
-  item: ProfileReview;
   busy: boolean;
+  item: ProfileReview;
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const submittedAt = item.submitted_at ?? new Date().toISOString();
+  const priority = getQueuePriority(submittedAt);
   return (
     <View style={styles.card}>
+      <QueueBadge priority={priority} timestamp={submittedAt} />
       <ScrollView
         contentContainerStyle={styles.reviewPhotos}
         horizontal
@@ -268,17 +681,12 @@ function ReviewCard({
         <Text style={styles.meta}>
           {item.country_code} · {item.gender} · {item.languages.join(', ')}
         </Text>
-        <Text numberOfLines={2} style={styles.body}>
+        <Text numberOfLines={3} style={styles.body}>
           {item.bio || '소개 없음'}
         </Text>
-        <Text style={styles.time}>
-          {item.submitted_at
-            ? formatDateTime('ko-KR', new Date(item.submitted_at))
-            : '제출 시간 없음'}
-        </Text>
-        <Text style={styles.photoCount}>이번 심사 사진 {item.photo_paths.length}장</Text>
+        <Text style={styles.photoCount}>신규·변경 사진 {item.photo_paths.length}장</Text>
         <View style={styles.actions}>
-          <Action disabled={busy} label="반려" onPress={onReject} />
+          <Action disabled={busy} label="사유 입력 후 반려" onPress={onReject} />
           <Action primary disabled={busy} label="승인" onPress={onApprove} />
         </View>
       </View>
@@ -295,101 +703,200 @@ function ReviewPhoto({ index, path }: { index: number; path: string }) {
         contentFit="cover"
         source={{ uri: photo.data }}
         style={styles.photo}
-        transition={140}
+        transition={imageTransition.thumbnail}
       />
       <Text style={styles.reviewPhotoIndex}>{index + 1}</Text>
     </View>
   ) : (
-    <View style={[styles.photo, styles.photoEmpty]}>
-      <Ionicons color={palette.inkMuted} name="person" size={32} />
-    </View>
+    <PhotoPlaceholder icon="person" />
   );
 }
 
 type PendingReport = Awaited<ReturnType<typeof operationsService.getPendingReports>>[number];
 
 function ReportCard({
-  item,
   busy,
-  onClose,
-  onHide,
-  onReview,
+  item,
+  onAction,
+  showHide,
 }: {
-  item: PendingReport;
   busy: boolean;
-  onClose: () => void;
-  onHide?: () => void;
-  onReview: () => void;
+  item: PendingReport;
+  onAction: (kind: 'report-close' | 'report-review' | 'report-hide') => void;
+  showHide: boolean;
 }) {
   const photo = useSignedPhoto(item.reported_photo_path);
+  const priority = getReportPriority(item.reasons, item.created_at);
   return (
     <View style={styles.card}>
-      {photo.data ? (
-        <Image
-          cachePolicy="memory-disk"
-          contentFit="cover"
-          source={{ uri: photo.data }}
-          style={styles.photo}
-          transition={140}
-        />
-      ) : (
-        <View style={[styles.photo, styles.photoEmpty]}>
-          <Ionicons color={palette.inkMuted} name="flag" size={28} />
+      <QueueBadge priority={priority} timestamp={item.created_at} />
+      <View style={styles.subjectRow}>
+        {photo.data ? (
+          <Image
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            source={{ uri: photo.data }}
+            style={styles.avatar}
+            transition={imageTransition.thumbnail}
+          />
+        ) : (
+          <PhotoPlaceholder avatar icon="flag" />
+        )}
+        <View style={styles.subjectCopy}>
+          <Text style={styles.cardTitle}>{item.reported_display_name}</Text>
+          <Text style={styles.contextBadge}>
+            {item.report_context === 'chat' ? '채팅 신고' : '프로필 신고'}
+          </Text>
         </View>
-      )}
-      <View style={styles.cardCopy}>
-        <Text style={styles.cardTitle}>{item.reported_display_name}</Text>
-        <Text style={styles.contextBadge}>
-          {item.report_context === 'chat' ? '채팅 신고' : '프로필 신고'}
-        </Text>
-        <View style={styles.reasonWrap}>
-          {item.reasons.map((reason) => (
-            <Text key={reason} style={styles.reason}>
-              {getReportReasonLabel(reason)}
-            </Text>
-          ))}
-        </View>
-        <Text numberOfLines={3} style={styles.body}>
-          {item.details || '상세 내용 없음'}
-        </Text>
-        <Text style={styles.time}>{formatDateTime('ko-KR', new Date(item.created_at))}</Text>
-        <View style={styles.actions}>
-          <Action disabled={busy} label="문제 없음" onPress={onClose} />
-          <Action primary disabled={busy} label="처리 완료" onPress={onReview} />
-        </View>
-        {onHide ? (
-          <Pressable
-            accessibilityLabel={`${item.reported_display_name} 프로필 노출 중지`}
-            accessibilityRole="button"
-            disabled={busy}
-            onPress={onHide}
-            style={({ pressed }) => [
-              styles.hideAction,
-              busy && styles.disabled,
-              pressed && !busy && pressFeedback.control,
-            ]}
-          >
-            <Ionicons color="#B3263F" name="eye-off-outline" size={18} />
-            <Text style={styles.hideActionText}>프로필 노출 중지</Text>
-          </Pressable>
-        ) : null}
       </View>
+      <View style={styles.reasonWrap}>
+        {item.reasons.map((reason) => (
+          <Text
+            key={reason}
+            style={[styles.reason, ['underage', 'scam'].includes(reason) && styles.reasonUrgent]}
+          >
+            {getReportReasonLabel(reason)}
+          </Text>
+        ))}
+      </View>
+      <Text numberOfLines={5} style={styles.body}>
+        {item.details || '상세 내용 없음'}
+      </Text>
+      <View style={styles.actions}>
+        <Action disabled={busy} label="문제 없음" onPress={() => onAction('report-close')} />
+        <Action
+          primary
+          disabled={busy}
+          label="검토 완료"
+          onPress={() => onAction('report-review')}
+        />
+      </View>
+      {showHide ? (
+        <DangerAction
+          disabled={busy}
+          label="프로필 노출 중지"
+          onPress={() => onAction('report-hide')}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+type SafetyFeedback = Awaited<
+  ReturnType<typeof operationsService.getPendingSafetyFeedback>
+>[number];
+
+function SafetyCard({
+  busy,
+  item,
+  onAction,
+  showHide,
+}: {
+  busy: boolean;
+  item: SafetyFeedback;
+  onAction: (kind: 'safety-close' | 'safety-review' | 'safety-hide') => void;
+  showHide: boolean;
+}) {
+  const photo = useSignedPhoto(item.subject_photo_path);
+  const agePriority = getQueuePriority(item.updated_at);
+  const priority = agePriority === 'overdue' ? 'overdue' : 'urgent';
+  return (
+    <View style={[styles.card, styles.safetyCard]}>
+      <QueueBadge priority={priority} timestamp={item.updated_at} urgentLabel="안전 확인 필요" />
+      <View style={styles.subjectRow}>
+        {photo.data ? (
+          <Image
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            source={{ uri: photo.data }}
+            style={styles.avatar}
+            transition={imageTransition.thumbnail}
+          />
+        ) : (
+          <PhotoPlaceholder avatar icon="shield" />
+        )}
+        <View style={styles.subjectCopy}>
+          <Text style={styles.cardTitle}>{item.subject_display_name}</Text>
+          <Text style={styles.contextBadge}>데이트 후 피드백 · 제보자 비공개</Text>
+        </View>
+      </View>
+      <View style={styles.safetyFacts}>
+        <Text style={styles.safetyFact}>실제 만남 {item.met ? '확인' : '미확인'}</Text>
+        <Text style={styles.safetyFact}>
+          다시 만날 의향 {item.meet_again == null ? '미응답' : item.meet_again ? '있음' : '없음'}
+        </Text>
+      </View>
+      <Text numberOfLines={6} style={styles.safetyNote}>
+        {item.notes || '메모 없이 안전 우려만 접수됐어요.'}
+      </Text>
+      <View style={styles.actions}>
+        <Action disabled={busy} label="우려 없음" onPress={() => onAction('safety-close')} />
+        <Action
+          primary
+          disabled={busy}
+          label="확인 완료"
+          onPress={() => onAction('safety-review')}
+        />
+      </View>
+      {showHide ? (
+        <DangerAction
+          disabled={busy}
+          label="프로필 노출 중지"
+          onPress={() => onAction('safety-hide')}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function QueueBadge({
+  priority,
+  timestamp,
+  urgentLabel = '긴급',
+}: {
+  priority: QueuePriority;
+  timestamp: string;
+  urgentLabel?: string;
+}) {
+  return (
+    <View style={styles.queueBadgeRow}>
+      <View
+        style={[
+          styles.priorityBadge,
+          priority === 'urgent' && styles.priorityUrgent,
+          priority === 'overdue' && styles.priorityOverdue,
+        ]}
+      >
+        <Text style={[styles.priorityText, priority !== 'normal' && styles.priorityTextEmphasis]}>
+          {priority === 'urgent' ? urgentLabel : priority === 'overdue' ? 'SLA 초과' : '일반'}
+        </Text>
+      </View>
+      <Text style={styles.waitTime}>{getQueueAgeLabel(timestamp)}</Text>
+    </View>
+  );
+}
+
+function PhotoPlaceholder({
+  avatar = false,
+  icon,
+}: {
+  avatar?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+}) {
+  return (
+    <View style={[avatar ? styles.avatar : styles.photo, styles.photoEmpty]}>
+      <Ionicons color={palette.inkMuted} name={icon} size={avatar ? 24 : 32} />
     </View>
   );
 }
 
 type AdminTeamMember = Awaited<ReturnType<typeof operationsService.getAdminTeam>>[number];
-type ModerationActivity = Awaited<
-  ReturnType<typeof operationsService.getModerationActivity>
->[number];
 
 function TeamPanel({
-  activity,
   busy,
   members,
   onSetAccess,
 }: {
-  activity: ModerationActivity[];
   busy: boolean;
   members: AdminTeamMember[];
   onSetAccess: (email: string, active: boolean) => void;
@@ -397,14 +904,13 @@ function TeamPanel({
   const [email, setEmail] = useState('');
   const normalizedEmail = email.trim().toLowerCase();
   const canSubmit = normalizedEmail.includes('@') && !busy;
-
   return (
-    <View style={styles.teamPanel}>
-      <View style={styles.teamIntro}>
+    <>
+      <View style={styles.block}>
         <Text style={styles.sectionTitle}>운영자 권한 관리</Text>
         <Text style={styles.sectionBody}>
-          가입된 계정만 운영자로 지정할 수 있어요. 운영자는 심사와 신고 처리만 가능하며, 권한 변경과
-          노출 중지는 마스터만 실행합니다.
+          운영자는 심사·신고·안전 신호를 처리하고, 마스터만 권한 변경과 프로필 노출 중지를
+          실행합니다.
         </Text>
         <View style={styles.operatorForm}>
           <TextInput
@@ -420,24 +926,18 @@ function TeamPanel({
           />
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: !canSubmit }}
             disabled={!canSubmit}
             onPress={() => {
               onSetAccess(normalizedEmail, true);
               setEmail('');
             }}
-            style={({ pressed }) => [
-              styles.operatorSubmit,
-              !canSubmit && styles.disabled,
-              pressed && canSubmit && pressFeedback.control,
-            ]}
+            style={[styles.operatorSubmit, !canSubmit && styles.disabled]}
           >
             <Text style={styles.operatorSubmitText}>운영자 지정</Text>
           </Pressable>
         </View>
       </View>
-
-      <Text style={styles.sectionTitle}>현재 운영팀</Text>
+      <Text style={styles.sectionTitle}>현재 운영팀 · {members.length}명</Text>
       <View style={styles.teamList}>
         {members.map((member) => (
           <View key={member.user_id} style={styles.teamRow}>
@@ -462,56 +962,232 @@ function TeamPanel({
                 accessibilityRole="button"
                 disabled={busy}
                 onPress={() => onSetAccess(member.email, !member.active)}
-                style={({ pressed }) => [
-                  styles.teamToggle,
-                  member.active && styles.teamToggleDanger,
-                  pressed && pressFeedback.control,
-                ]}
+                style={[styles.teamToggle, member.active && styles.teamToggleDanger]}
               >
                 <Text style={[styles.teamToggleText, member.active && styles.teamToggleDangerText]}>
-                  {member.active ? '권한 중지' : '다시 활성화'}
+                  {member.active ? '권한 중지' : '활성화'}
                 </Text>
               </Pressable>
             ) : null}
           </View>
         ))}
       </View>
+    </>
+  );
+}
 
-      <Text style={[styles.sectionTitle, styles.activityTitle]}>최근 운영 기록</Text>
-      {activity.length ? (
-        <View style={styles.activityList}>
-          {activity.map((item) => (
-            <View key={item.id} style={styles.activityRow}>
-              <View style={styles.activityDot} />
-              <View style={styles.teamCopy}>
-                <Text style={styles.activityAction}>{getActivityLabel(item.action)}</Text>
-                <Text style={styles.teamMeta}>
-                  {item.actor_email || '삭제된 운영자'}
-                  {item.subject_display_name ? ` · ${item.subject_display_name}` : ''}
-                </Text>
-                <Text style={styles.time}>
-                  {formatDateTime('ko-KR', new Date(item.created_at))}
-                </Text>
-              </View>
-            </View>
-          ))}
+function ActivityPanel({ activity }: { activity: ModerationActivity[] }) {
+  return (
+    <>
+      <View style={styles.queueHeader}>
+        <View>
+          <Text style={styles.sectionTitle}>감사 로그</Text>
+          <Text style={styles.queueCount}>최근 특권 작업 {activity.length}건</Text>
         </View>
-      ) : (
-        <Text style={styles.emptyInline}>기록된 운영 작업이 아직 없어요.</Text>
-      )}
+      </View>
+      <ActivityRows activity={activity} />
+    </>
+  );
+}
+
+function ActivityRows({
+  activity,
+  compact = false,
+}: {
+  activity: ModerationActivity[];
+  compact?: boolean;
+}) {
+  if (!activity.length)
+    return <Text style={styles.emptyInline}>기록된 운영 작업이 아직 없어요.</Text>;
+  return (
+    <View style={styles.activityList}>
+      {activity.map((item) => (
+        <View key={item.id} style={styles.activityRow}>
+          <View style={styles.activityDot} />
+          <View style={styles.teamCopy}>
+            <Text style={styles.activityAction}>{getActivityLabel(item.action)}</Text>
+            <Text style={styles.teamMeta}>
+              {item.actor_email || '삭제된 운영자'}
+              {item.subject_display_name ? ` · ${item.subject_display_name}` : ''}
+            </Text>
+            {compact ? null : (
+              <Text style={styles.time}>{formatDateTime('ko-KR', new Date(item.created_at))}</Text>
+            )}
+          </View>
+          <Text style={styles.activityTime}>
+            {compact ? getQueueAgeLabel(item.created_at) : ''}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
 
-function confirmProfileHide(name: string, onConfirm: () => void) {
-  Alert.alert(
-    `${name} 프로필 노출을 중지할까요?`,
-    '발견과 매치 화면에서 즉시 숨겨집니다. 마스터 권한이 필요한 조치이며 운영 기록에 남습니다.',
-    [
-      { text: '취소', style: 'cancel' },
-      { text: '노출 중지', style: 'destructive', onPress: onConfirm },
-    ],
+function ActionDialog({
+  action,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  action: PendingAction | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (note: string) => void;
+}) {
+  const [note, setNote] = useState('');
+  if (!action) return null;
+  const isHide = action.kind.endsWith('-hide');
+  const requiresNote = action.kind === 'profile-reject' || isHide;
+  const presets = getActionPresets(action.kind);
+  const canSubmit = !busy && (!requiresNote || note.trim().length >= 3);
+  return (
+    <AppModal animationType="fade" onRequestClose={onClose} transparent visible>
+      <View accessibilityViewIsModal style={styles.modalLayer}>
+        <Pressable
+          accessibilityLabel="닫기"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.dialog}>
+          <View style={styles.dialogHeader}>
+            <View style={[styles.dialogIcon, isHide && styles.dialogIconDanger]}>
+              <Ionicons
+                color={isHide ? '#B3263F' : palette.ink}
+                name={isHide ? 'eye-off-outline' : 'create-outline'}
+                size={21}
+              />
+            </View>
+            <Pressable accessibilityLabel="닫기" accessibilityRole="button" onPress={onClose}>
+              <Ionicons color={palette.inkMuted} name="close" size={23} />
+            </Pressable>
+          </View>
+          <Text style={styles.dialogTitle}>{getActionTitle(action)}</Text>
+          <Text style={styles.dialogBody}>
+            {isHide
+              ? `${action.name}의 프로필이 즉시 비활성화되고 감사 로그에 남습니다.`
+              : '판단 근거를 남기면 이후 이의 제기와 운영 품질 검토에 도움이 됩니다.'}
+          </Text>
+          <View style={styles.presetWrap}>
+            {presets.map((preset) => (
+              <Pressable
+                key={preset}
+                accessibilityRole="button"
+                onPress={() => setNote(preset)}
+                style={styles.preset}
+              >
+                <Text style={styles.presetText}>{preset}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            maxLength={1000}
+            multiline
+            onChangeText={setNote}
+            placeholder={requiresNote ? '조치 사유를 입력해 주세요 (필수)' : '운영 메모 (선택)'}
+            placeholderTextColor="#96969E"
+            style={styles.noteInput}
+            textAlignVertical="top"
+            value={note}
+          />
+          <Text style={styles.noteCount}>{note.length}/1000</Text>
+          <View style={styles.dialogActions}>
+            <Action disabled={busy} label="취소" onPress={onClose} />
+            <Action
+              danger={isHide}
+              disabled={!canSubmit}
+              label={isHide ? '노출 중지' : '처리 확정'}
+              onPress={() => onSubmit(note.trim())}
+              primary
+            />
+          </View>
+        </View>
+      </View>
+    </AppModal>
   );
+}
+
+function Action({
+  danger = false,
+  disabled,
+  label,
+  onPress,
+  primary = false,
+}: {
+  danger?: boolean;
+  disabled: boolean;
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.action,
+        primary && styles.actionPrimary,
+        danger && styles.actionDanger,
+        disabled && styles.disabled,
+        pressed && !disabled && pressFeedback.control,
+      ]}
+    >
+      <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function DangerAction({
+  disabled,
+  label,
+  onPress,
+}: {
+  disabled: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.hideAction,
+        disabled && styles.disabled,
+        pressed && pressFeedback.control,
+      ]}
+    >
+      <Ionicons color="#B3263F" name="eye-off-outline" size={18} />
+      <Text style={styles.hideActionText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function getActionTitle(action: PendingAction) {
+  if (action.kind === 'profile-reject') return `${action.name} 프로필을 반려할까요?`;
+  if (action.kind.endsWith('-hide')) return `${action.name} 프로필 노출을 중지할까요?`;
+  if (action.kind.endsWith('-close')) return '문제없음으로 종결할까요?';
+  return '검토 완료로 처리할까요?';
+}
+
+function getActionPresets(kind: PendingAction['kind']) {
+  if (kind === 'profile-reject') {
+    return [
+      '얼굴 식별이 어려워요',
+      '타인·저작물 사진이 포함됐어요',
+      '부적절한 콘텐츠가 포함됐어요',
+    ];
+  }
+  if (kind.endsWith('-hide')) {
+    return ['반복 신고와 증거를 확인했어요', '안전 정책 위반이 확인됐어요'];
+  }
+  if (kind.startsWith('safety-')) {
+    return ['추가 안전 확인을 마쳤어요', '현재 위험 정황을 확인하지 못했어요'];
+  }
+  return ['신고 내용을 확인했어요', '현재 정책 위반을 확인하지 못했어요'];
 }
 
 function getReportReasonLabel(reason: string) {
@@ -537,43 +1213,15 @@ function getActivityLabel(action: string) {
       profile_rejected: '프로필 반려',
       report_closed: '신고 문제 없음 종결',
       report_reviewed: '신고 검토 완료',
+      safety_closed: '안전 신호 종결',
+      safety_reviewed: '안전 신호 검토 완료',
     }[action] ?? action
-  );
-}
-
-function Action({
-  disabled,
-  label,
-  onPress,
-  primary = false,
-}: {
-  disabled: boolean;
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.action,
-        primary && styles.actionPrimary,
-        disabled && styles.disabled,
-        pressed && !disabled && pressFeedback.control,
-      ]}
-    >
-      <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: { alignItems: 'center', flexDirection: 'row', minHeight: 82, paddingHorizontal: 15 },
+  header: { alignItems: 'center', flexDirection: 'row', minHeight: 78, paddingHorizontal: 15 },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerCopy: { flex: 1, marginLeft: 4 },
   eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
@@ -587,28 +1235,145 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
+  countPillActive: { backgroundColor: palette.pink },
   countText: { color: palette.white, fontSize: 11, fontWeight: '900' },
-  tabs: {
-    backgroundColor: '#DDDDE1',
+  tabs: { gap: 7, paddingHorizontal: 18, paddingBottom: 10 },
+  tab: {
+    alignItems: 'center',
+    backgroundColor: '#E6E6EA',
     borderRadius: radius.pill,
     flexDirection: 'row',
-    marginHorizontal: 18,
-    padding: 4,
+    gap: 5,
+    minHeight: 38,
+    paddingHorizontal: 13,
   },
-  tab: { alignItems: 'center', borderRadius: radius.pill, flex: 1, paddingVertical: 11 },
-  tabActive: { backgroundColor: palette.white },
+  tabActive: { backgroundColor: palette.ink },
   tabText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
-  tabTextActive: { color: palette.ink },
+  tabTextActive: { color: palette.white },
   scroll: { flex: 1, minHeight: 0 },
-  content: { gap: 12, padding: 18, paddingBottom: 40 },
-  loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 6 },
-  card: {
+  content: { gap: 12, padding: 18, paddingBottom: 44 },
+  loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 8 },
+  heroCard: {
+    ...elevation.md,
+    alignItems: 'center',
+    backgroundColor: palette.ink,
+    borderRadius: 24,
+    flexDirection: 'row',
+    padding: 18,
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.lime,
+    borderRadius: 18,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  heroCopy: { flex: 1, marginLeft: 13 },
+  heroEyebrow: { color: palette.lime, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  heroTitle: {
+    color: palette.white,
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    marginTop: 4,
+  },
+  heroBody: { color: '#B8B8C0', fontSize: 10, lineHeight: 15, marginTop: 4 },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  metricCard: { borderRadius: 20, minHeight: 132, padding: 15, width: '48%' },
+  metricTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  metricValue: {
+    color: palette.ink,
+    fontSize: 29,
+    fontWeight: '900',
+    letterSpacing: -1,
+    marginTop: 16,
+  },
+  metricLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '800', marginTop: 1 },
+  summaryStrip: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 20,
+    flexDirection: 'row',
+    paddingVertical: 15,
+  },
+  summaryStat: { alignItems: 'center', flex: 1 },
+  summaryValue: { color: palette.ink, fontSize: 20, fontWeight: '900' },
+  summaryLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 3 },
+  summaryDivider: { backgroundColor: palette.line, height: 32, width: StyleSheet.hairlineWidth },
+  dangerText: { color: '#B3263F' },
+  block: { backgroundColor: palette.white, borderRadius: 22, padding: 16 },
+  blockHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
+  sectionBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
+  linkText: { color: palette.pink, fontSize: 11, fontWeight: '900' },
+  queueHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  queueCount: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
+  searchBox: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: '#E5E5E8',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 48,
+    paddingHorizontal: 13,
+  },
+  searchInput: {
+    color: palette.ink,
+    flex: 1,
+    fontSize: 12,
+    marginHorizontal: 9,
+    paddingVertical: 10,
+  },
+  filters: { gap: 7 },
+  filterChip: {
+    backgroundColor: '#E7E7EA',
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterChipActive: { backgroundColor: palette.ink },
+  filterText: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
+  filterTextActive: { color: palette.white },
+  inlineEmpty: {
+    alignItems: 'center',
     backgroundColor: palette.white,
     borderRadius: 22,
-    flexDirection: 'column',
-    overflow: 'hidden',
-    padding: 12,
+    padding: 28,
   },
+  inlineEmptyTitle: { color: palette.ink, fontSize: 13, fontWeight: '900', marginTop: 9 },
+  inlineEmptyBody: { color: palette.inkMuted, fontSize: 10, marginTop: 4, textAlign: 'center' },
+  card: {
+    ...elevation.sm,
+    backgroundColor: palette.white,
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: 13,
+  },
+  safetyCard: { borderColor: '#FFD3C9', borderWidth: 1 },
+  queueBadgeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  priorityBadge: {
+    backgroundColor: '#EFEFF2',
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  priorityUrgent: { backgroundColor: '#FFE3E7' },
+  priorityOverdue: { backgroundColor: '#FFF0D7' },
+  priorityText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
+  priorityTextEmphasis: { color: '#A63628' },
+  waitTime: { color: '#A0A0A7', fontSize: 10, fontWeight: '700' },
   reviewPhotos: { gap: 8 },
   reviewPhotoWrap: { position: 'relative' },
   reviewPhotoIndex: {
@@ -628,9 +1393,14 @@ const styles = StyleSheet.create({
   },
   photo: { backgroundColor: '#E5E5E8', borderRadius: 16, height: 160, width: 120 },
   photoEmpty: { alignItems: 'center', justifyContent: 'center' },
+  subjectRow: { alignItems: 'center', flexDirection: 'row' },
+  avatar: { backgroundColor: '#E5E5E8', borderRadius: 17, height: 58, width: 58 },
+  subjectCopy: { flex: 1, marginLeft: 11 },
   cardCopy: { marginTop: 13, minWidth: 0 },
   cardTitle: { color: palette.ink, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
   meta: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4 },
+  contextBadge: { color: palette.inkMuted, fontSize: 10, fontWeight: '800', marginTop: 4 },
+  reasonWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 11 },
   reason: {
     alignSelf: 'flex-start',
     backgroundColor: '#FFE7EF',
@@ -642,26 +1412,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  contextBadge: {
+  reasonUrgent: { backgroundColor: '#FFE0D9', color: '#A63628' },
+  body: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 8 },
+  time: { color: '#A0A0A7', fontSize: 10, marginTop: 5 },
+  photoCount: { color: palette.pink, fontSize: 10, fontWeight: '900', marginTop: 6 },
+  safetyFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 11 },
+  safetyFact: {
+    backgroundColor: '#F1F1F4',
+    borderRadius: radius.pill,
     color: palette.inkMuted,
     fontSize: 10,
     fontWeight: '800',
-    marginTop: 4,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  reasonWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 7 },
-  body: { color: palette.inkMuted, fontSize: 10, lineHeight: 14, marginTop: 7 },
-  time: { color: '#A0A0A7', fontSize: 10, marginTop: 5 },
-  photoCount: { color: palette.pink, fontSize: 10, fontWeight: '900', marginTop: 5 },
-  actions: { flexDirection: 'row', gap: 7, marginTop: 9 },
+  safetyNote: {
+    backgroundColor: '#FFF8F5',
+    borderRadius: 14,
+    color: palette.ink,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 9,
+    padding: 11,
+  },
+  actions: { flexDirection: 'row', gap: 7, marginTop: 11 },
   action: {
     alignItems: 'center',
     borderColor: palette.line,
     borderRadius: radius.pill,
     borderWidth: 1,
     flex: 1,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    minHeight: 41,
+    paddingHorizontal: 10,
   },
   actionPrimary: { backgroundColor: palette.ink, borderColor: palette.ink },
+  actionDanger: { backgroundColor: '#B3263F', borderColor: '#B3263F' },
   actionText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
   actionTextPrimary: { color: palette.white },
   hideAction: {
@@ -674,14 +1461,6 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   hideActionText: { color: '#B3263F', fontSize: 11, fontWeight: '900', marginLeft: 7 },
-  teamPanel: { gap: 12 },
-  teamIntro: {
-    backgroundColor: palette.white,
-    borderRadius: 22,
-    padding: 16,
-  },
-  sectionTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
-  sectionBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
   operatorForm: { flexDirection: 'row', gap: 7, marginTop: 13 },
   operatorInput: {
     backgroundColor: '#F3F3F5',
@@ -726,22 +1505,21 @@ const styles = StyleSheet.create({
   teamToggle: {
     backgroundColor: '#EEF8F1',
     borderRadius: radius.pill,
-    minHeight: 36,
     justifyContent: 'center',
+    minHeight: 36,
     paddingHorizontal: 10,
   },
   teamToggleDanger: { backgroundColor: '#FFF1F3' },
   teamToggleText: { color: '#197143', fontSize: 10, fontWeight: '900' },
   teamToggleDangerText: { color: '#B3263F' },
-  activityTitle: { marginTop: 6 },
-  activityList: { backgroundColor: palette.white, borderRadius: 22, overflow: 'hidden' },
+  activityList: { backgroundColor: palette.white, borderRadius: 18, overflow: 'hidden' },
   activityRow: {
     alignItems: 'flex-start',
     borderBottomColor: '#ECECEF',
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    minHeight: 66,
-    padding: 13,
+    minHeight: 64,
+    padding: 12,
   },
   activityDot: {
     backgroundColor: palette.pink,
@@ -751,6 +1529,7 @@ const styles = StyleSheet.create({
     width: 9,
   },
   activityAction: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  activityTime: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
   emptyInline: {
     backgroundColor: palette.white,
     borderRadius: 18,
@@ -758,5 +1537,60 @@ const styles = StyleSheet.create({
     fontSize: 11,
     padding: 16,
   },
+  modalLayer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(12,12,16,0.52)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  dialog: {
+    ...elevation.lg,
+    backgroundColor: palette.white,
+    borderRadius: 26,
+    maxWidth: 480,
+    padding: 19,
+    width: '100%',
+  },
+  dialogHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  dialogIcon: {
+    alignItems: 'center',
+    backgroundColor: '#EFEFF2',
+    borderRadius: 15,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  dialogIconDanger: { backgroundColor: '#FFF1F3' },
+  dialogTitle: {
+    color: palette.ink,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    marginTop: 14,
+  },
+  dialogBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
+  presetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 13 },
+  preset: {
+    backgroundColor: '#EFEFF2',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  presetText: { color: palette.ink, fontSize: 10, fontWeight: '800' },
+  noteInput: {
+    backgroundColor: '#F5F5F7',
+    borderColor: palette.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    color: palette.ink,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 11,
+    minHeight: 104,
+    padding: 12,
+  },
+  noteCount: { color: palette.inkMuted, fontSize: 10, marginTop: 4, textAlign: 'right' },
+  dialogActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   disabled: { opacity: 0.45 },
 });

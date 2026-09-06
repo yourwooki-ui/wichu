@@ -1,26 +1,45 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
   InteractiveBottomSheet,
 } from '@/components/InteractiveBottomSheet';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
 
 type Props = {
+  initialMessage?: string;
   name: string;
   onClose: () => void;
   onPick: (message?: string) => void;
   visible: boolean;
 };
 
-export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
-  const { t } = useTranslation();
-  const [message, setMessage] = useState('');
+export function PickMessageSheet({ initialMessage = '', name, onClose, onPick, visible }: Props) {
   if (!visible) return null;
+  return (
+    <VisiblePickMessageSheet
+      initialMessage={initialMessage}
+      key={initialMessage}
+      name={name}
+      onClose={onClose}
+      onPick={onPick}
+    />
+  );
+}
+
+function VisiblePickMessageSheet({
+  initialMessage,
+  name,
+  onClose,
+  onPick,
+}: Omit<Props, 'visible'>) {
+  const { t } = useTranslation();
+  const [message, setMessage] = useState(initialMessage ?? '');
 
   const submit = () => {
     const normalized = message.trim();
@@ -36,9 +55,10 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
       sheetStyle={styles.sheet}
       visible
     >
-      <ScrollView
+      <KeyboardAwareScrollView
+        automaticallyAdjustKeyboardInsets={false}
         contentContainerStyle={styles.sheetContent}
-        keyboardShouldPersistTaps="handled"
+        keyboardFocusOffset={24}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -83,7 +103,7 @@ export function PickMessageSheet({ name, onClose, onPick, visible }: Props) {
         >
           <Text style={styles.cancelText}>{t('experience.common.cancel')}</Text>
         </BottomSheetCloseButton>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </InteractiveBottomSheet>
   );
 }

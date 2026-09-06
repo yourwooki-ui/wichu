@@ -30,6 +30,8 @@ describe('정책 문서', () => {
     const body = LEGAL_DOCUMENTS.privacy.sections.map((section) => section.body).join('\n');
     expect(body).toContain('DeepL');
     expect(body).toContain('Supabase');
+    expect(body).toContain('Twilio Verify');
+    expect(body).toContain('최대 30일');
   });
 
   it('권리 행사 연락처를 제공한다', () => {

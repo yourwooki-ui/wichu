@@ -1,16 +1,6 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  Animated,
   KeyboardAvoidingView,
-  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
@@ -20,10 +10,22 @@ import {
   type ViewStyle,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  cancelAnimation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { resolveBottomSheetSnap, type BottomSheetSnap } from '@/components/bottom-sheet-motion';
+import { motionDuration, motionSpring } from '@/constants/motion';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
 type InteractiveBottomSheetProps = {
@@ -40,7 +42,6 @@ type InteractiveBottomSheetProps = {
 };
 
 const BottomSheetDismissContext = createContext<() => void>(() => undefined);
-const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export function BottomSheetCloseButton(props: Omit<PressableProps, 'onPress'>) {
   const dismiss = useContext(BottomSheetDismissContext);
@@ -70,35 +71,37 @@ function VisibleInteractiveBottomSheet({
   const { height } = useWindowDimensions();
   const closeOffset = height + 80;
   const collapsedOffset = collapsedOffsetProp ?? Math.min(height * 0.24, 210);
-  const [translateY] = useState(() => new Animated.Value(closeOffset));
+  const reduceMotion = useReduceMotion();
+  const translateY = useSharedValue(closeOffset);
+  const gestureStartY = useSharedValue(0);
 
   const completeClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
-    Animated.spring(translateY, {
-      damping: 23,
-      mass: 0.9,
-      stiffness: 230,
-      toValue: 0,
-      useNativeDriver: USE_NATIVE_DRIVER,
-    }).start();
+    cancelAnimation(translateY);
+    translateY.set(reduceMotion ? 0 : closeOffset);
+    if (!reduceMotion) translateY.set(withSpring(0, motionSpring.sheet));
 
     return () => {
-      translateY.stopAnimation();
+      cancelAnimation(translateY);
     };
-  }, [translateY]);
+  }, [closeOffset, reduceMotion, translateY]);
 
   const dismiss = useCallback(() => {
     if (!dismissEnabled) return;
     hapticsService.selection();
-    Animated.timing(translateY, {
-      duration: 210,
-      toValue: closeOffset,
-      useNativeDriver: USE_NATIVE_DRIVER,
-    }).start(({ finished }) => {
-      if (finished) completeClose();
-    });
-  }, [closeOffset, completeClose, dismissEnabled, translateY]);
+    cancelAnimation(translateY);
+    if (reduceMotion) {
+      translateY.set(closeOffset);
+      completeClose();
+      return;
+    }
+    translateY.set(
+      withTiming(closeOffset, { duration: motionDuration.standard }, (finished) => {
+        if (finished) runOnJS(completeClose)();
+      }),
+    );
+  }, [closeOffset, completeClose, dismissEnabled, reduceMotion, translateY]);
 
   const snapTo = useCallback(
     (snap: BottomSheetSnap) => {
@@ -108,63 +111,62 @@ function VisibleInteractiveBottomSheet({
       }
 
       hapticsService.selection();
-      Animated.spring(translateY, {
-        damping: 23,
-        mass: 0.9,
-        stiffness: 230,
-        toValue: snap === 'collapsed' ? collapsedOffset : 0,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
+      cancelAnimation(translateY);
+      const target = snap === 'collapsed' ? collapsedOffset : 0;
+      translateY.set(reduceMotion ? target : withSpring(target, motionSpring.sheet));
     },
-    [collapsedOffset, dismiss, translateY],
+    [collapsedOffset, dismiss, reduceMotion, translateY],
   );
 
   const toggleSheet = useCallback(() => {
-    translateY.stopAnimation((position) => {
-      snapTo(position > collapsedOffset * 0.5 ? 'expanded' : 'collapsed');
-    });
+    snapTo(translateY.get() > collapsedOffset * 0.5 ? 'expanded' : 'collapsed');
   }, [collapsedOffset, snapTo, translateY]);
 
-  const handlePanResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gestureState) =>
-          dismissEnabled &&
-          Math.abs(gestureState.dy) > 7 &&
-          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
-        onPanResponderGrant: () => {
-          translateY.stopAnimation(() => {
-            translateY.extractOffset();
-          });
-        },
-        onPanResponderMove: (_event, gestureState) => {
-          translateY.setValue(gestureState.dy);
-        },
-        onPanResponderRelease: (_event, gestureState) => {
-          translateY.flattenOffset();
-          translateY.stopAnimation((position) => {
-            snapTo(
-              resolveBottomSheetSnap({
-                collapsedOffset,
-                position: Math.max(0, Math.min(closeOffset, position)),
-                velocityY: gestureState.vy * 1000,
-              }),
-            );
-          });
-        },
-        onPanResponderTerminate: () => {
-          translateY.flattenOffset();
-          snapTo('expanded');
-        },
-      }),
-    [closeOffset, collapsedOffset, dismissEnabled, snapTo, translateY],
+  const settleGesture = useCallback(
+    (position: number, velocityY: number) => {
+      snapTo(
+        resolveBottomSheetSnap({
+          collapsedOffset,
+          position: Math.max(0, Math.min(closeOffset, position)),
+          velocityY,
+        }),
+      );
+    },
+    [closeOffset, collapsedOffset, snapTo],
   );
 
-  const backdropOpacityValue = translateY.interpolate({
-    extrapolate: 'clamp',
-    inputRange: [0, collapsedOffset, closeOffset],
-    outputRange: [backdropOpacity, backdropOpacity * 0.44, 0],
-  });
+  const handleGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(dismissEnabled)
+        .activeOffsetY([-7, 7])
+        .failOffsetX([-18, 18])
+        .onBegin(() => {
+          cancelAnimation(translateY);
+          gestureStartY.set(translateY.get());
+        })
+        .onUpdate((event) => {
+          translateY.set(
+            Math.max(0, Math.min(closeOffset, gestureStartY.get() + event.translationY)),
+          );
+        })
+        .onEnd((event) => {
+          runOnJS(settleGesture)(translateY.get(), event.velocityY);
+        }),
+    [closeOffset, dismissEnabled, gestureStartY, settleGesture, translateY],
+  );
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.get(),
+      [0, collapsedOffset, closeOffset],
+      [backdropOpacity, backdropOpacity * 0.44, 0],
+      'clamp',
+    ),
+  }));
+  const sheetMotionStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.get() }],
+  }));
 
   return (
     <AppModal animationType="none" onRequestClose={dismiss} transparent visible>
@@ -172,10 +174,7 @@ function VisibleInteractiveBottomSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.backdrop, { opacity: backdropOpacityValue }]}
-        />
+        <Animated.View style={[styles.backdrop, styles.nonInteractive, backdropStyle]} />
         <Pressable
           accessibilityLabel={`${accessibilityLabel} 닫기`}
           accessibilityRole="button"
@@ -185,31 +184,32 @@ function VisibleInteractiveBottomSheet({
         />
         <Animated.View
           accessibilityViewIsModal
-          style={[styles.sheet, sheetStyle, { transform: [{ translateY }] }]}
+          style={[styles.sheet, sheetStyle, sheetMotionStyle]}
         >
           <SafeAreaView edges={['bottom']} style={[styles.safeSheet, contentStyle]}>
-            <Pressable
-              {...handlePanResponder.panHandlers}
-              accessibilityActions={[
-                { label: `${accessibilityLabel} 펼치기`, name: 'increment' },
-                { label: `${accessibilityLabel} 줄이기`, name: 'decrement' },
-                { label: `${accessibilityLabel} 닫기`, name: 'escape' },
-              ]}
-              accessibilityHint="탭하면 높이가 바뀌고, 위아래로 밀어 조절할 수 있어요"
-              accessibilityLabel={`${accessibilityLabel} 높이 조절`}
-              accessibilityRole="adjustable"
-              accessibilityState={{ disabled: !dismissEnabled }}
-              disabled={!dismissEnabled}
-              onAccessibilityAction={(event) => {
-                if (event.nativeEvent.actionName === 'increment') snapTo('expanded');
-                else if (event.nativeEvent.actionName === 'decrement') snapTo('collapsed');
-                else if (event.nativeEvent.actionName === 'escape') dismiss();
-              }}
-              onPress={toggleSheet}
-              style={styles.handleTouch}
-            >
-              <View style={[styles.handle, { backgroundColor: handleColor }]} />
-            </Pressable>
+            <GestureDetector gesture={handleGesture}>
+              <Pressable
+                accessibilityActions={[
+                  { label: `${accessibilityLabel} 펼치기`, name: 'increment' },
+                  { label: `${accessibilityLabel} 줄이기`, name: 'decrement' },
+                  { label: `${accessibilityLabel} 닫기`, name: 'escape' },
+                ]}
+                accessibilityHint="탭하면 높이가 바뀌고, 위아래로 밀어 조절할 수 있어요"
+                accessibilityLabel={`${accessibilityLabel} 높이 조절`}
+                accessibilityRole="adjustable"
+                accessibilityState={{ disabled: !dismissEnabled }}
+                disabled={!dismissEnabled}
+                onAccessibilityAction={(event) => {
+                  if (event.nativeEvent.actionName === 'increment') snapTo('expanded');
+                  else if (event.nativeEvent.actionName === 'decrement') snapTo('collapsed');
+                  else if (event.nativeEvent.actionName === 'escape') dismiss();
+                }}
+                onPress={toggleSheet}
+                style={styles.handleTouch}
+              >
+                <View style={[styles.handle, { backgroundColor: handleColor }]} />
+              </Pressable>
+            </GestureDetector>
             <BottomSheetDismissContext.Provider value={dismiss}>
               {children}
             </BottomSheetDismissContext.Provider>
@@ -230,6 +230,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
+  nonInteractive: { pointerEvents: 'none' },
   sheet: {
     alignSelf: 'center',
     backgroundColor: '#F8F8FA',

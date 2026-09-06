@@ -2,6 +2,7 @@ import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getRegionDisplayName } from '@/lib/display-names';
+import { rankDiscoveryProfiles } from '@/features/discover/utils/recommendation';
 import type {
   Gender,
   Profile,
@@ -18,6 +19,8 @@ export type DiscoveryFilters = {
   countryCodes?: string[];
   excludeSameCountry: boolean;
   connectionGoals: string[];
+  viewerInterestLabels?: string[];
+  viewerLanguageCodes?: string[];
 };
 
 const PHOTO_BUCKET = 'profile-photos';
@@ -29,6 +32,15 @@ function isMissingProfileDetails(error: { code?: string; message?: string } | nu
     (error.code === '42P01' ||
       error.code === 'PGRST205' ||
       error.message?.includes('profile_details')),
+  );
+}
+
+function isMissingProfilePrompts(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+    (error.code === '42P01' ||
+      error.code === 'PGRST205' ||
+      error.message?.includes('profile_prompts')),
   );
 }
 
@@ -156,19 +168,44 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
   const photoPaths = [...new Set(candidates.flatMap((candidate) => candidate.photo_paths))];
   const signedUrlsByPath = new Map<string, string>();
   const candidateIds = candidates.map((candidate) => candidate.id);
-  const { data: goalRows, error: goalError } = candidateIds.length
-    ? await supabase
-        .from('profile_tags')
-        .select('profile_id, value')
-        .eq('category', 'connection_goal')
-        .in('profile_id', candidateIds)
-    : { data: [], error: null };
+  const [goalResult, promptResult] = candidateIds.length
+    ? await Promise.all([
+        supabase
+          .from('profile_tags')
+          .select('profile_id, value')
+          .eq('category', 'connection_goal')
+          .in('profile_id', candidateIds),
+        supabase
+          .from('profile_prompts')
+          .select('profile_id, prompt_key, answer, position')
+          .in('profile_id', candidateIds)
+          .order('position'),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
   // Connection goals improve ranking, but must never make the core profile fail to load.
   // Older deployments can legitimately lack the optional tag read permission.
-  const availableGoalRows = goalError ? [] : (goalRows ?? []);
+  const availableGoalRows = goalResult.error ? [] : (goalResult.data ?? []);
   const goalsByProfile = new Map<string, string[]>();
   for (const row of availableGoalRows) {
     goalsByProfile.set(row.profile_id, [...(goalsByProfile.get(row.profile_id) ?? []), row.value]);
+  }
+  const availablePromptRows =
+    promptResult.error && !isMissingProfilePrompts(promptResult.error)
+      ? []
+      : (promptResult.data ?? []);
+  const promptsByProfile = new Map<string, Profile['prompts']>();
+  for (const row of availablePromptRows) {
+    promptsByProfile.set(row.profile_id, [
+      ...(promptsByProfile.get(row.profile_id) ?? []),
+      {
+        promptKey: row.prompt_key as NonNullable<Profile['prompts']>[number]['promptKey'],
+        answer: row.answer,
+        position: row.position,
+      },
+    ]);
   }
 
   if (photoPaths.length > 0) {
@@ -211,6 +248,7 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         bio: localizedDevCopy?.bio ?? candidate.bio,
         interests: localizedDevCopy?.interests ?? candidate.interests,
         connectionGoals: goalsByProfile.get(candidate.id) ?? [],
+        prompts: promptsByProfile.get(candidate.id) ?? [],
         photos,
         lastActiveAt: candidate.last_active_at,
         isPhotoReviewed: true,
@@ -297,16 +335,23 @@ export const discoveryService = {
   },
   async getPreferences(userId: string): Promise<DiscoveryPreferences> {
     const supabase = getSupabaseClient();
-    const [profileResult, settingsWithExclusionResult] = await Promise.all([
-      supabase.from('profiles').select('interested_in, country_code').eq('id', userId).single(),
-      supabase
-        .from('user_settings')
-        .select(
-          'min_age, max_age, max_distance_km, country_codes, exclude_same_country, connection_goals',
-        )
-        .eq('user_id', userId)
-        .maybeSingle(),
-    ]);
+    const [profileResult, settingsWithExclusionResult, interestSelectionResult, languageResult] =
+      await Promise.all([
+        supabase
+          .from('profiles')
+          .select('interested_in, country_code, native_language')
+          .eq('id', userId)
+          .single(),
+        supabase
+          .from('user_settings')
+          .select(
+            'min_age, max_age, max_distance_km, country_codes, exclude_same_country, connection_goals',
+          )
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase.from('profile_interests').select('interest_id').eq('profile_id', userId),
+        supabase.from('profile_languages').select('language_code').eq('profile_id', userId),
+      ]);
 
     let settingsData = settingsWithExclusionResult.data;
     let settingsError = settingsWithExclusionResult.error;
@@ -339,6 +384,14 @@ export const discoveryService = {
 
     if (profileResult.error) throw profileResult.error;
     if (settingsError) throw settingsError;
+    if (interestSelectionResult.error) throw interestSelectionResult.error;
+    if (languageResult.error) throw languageResult.error;
+
+    const interestIds = (interestSelectionResult.data ?? []).map((row) => row.interest_id);
+    const interestResult = interestIds.length
+      ? await supabase.from('interests').select('label').in('id', interestIds)
+      : { data: [], error: null };
+    if (interestResult.error) throw interestResult.error;
 
     return {
       minAge: settingsData?.min_age ?? 18,
@@ -349,6 +402,11 @@ export const discoveryService = {
       excludeSameCountry: settingsData?.exclude_same_country ?? false,
       connectionGoals: settingsData?.connection_goals ?? [],
       viewerCountryCode: profileResult.data.country_code,
+      viewerInterestLabels: (interestResult.data ?? []).map((interest) => interest.label),
+      viewerLanguageCodes: [
+        ...(profileResult.data.native_language ? [profileResult.data.native_language] : []),
+        ...(languageResult.data ?? []).map((language) => language.language_code),
+      ],
     };
   },
   async getCandidates(filters: DiscoveryFilters, locale: string, offset = 0): Promise<Profile[]> {
@@ -365,16 +423,11 @@ export const discoveryService = {
 
     if (error) throw error;
     const hydrated = await hydrateCandidates((data ?? []) as CandidateRow[], locale);
-    const preferredGoals = new Set(filters.connectionGoals);
-    return hydrated
-      .map((profile, index) => ({
-        index,
-        profile,
-        score: (profile.connectionGoals ?? []).filter((goal) => preferredGoals.has(goal)).length,
-      }))
-      .sort((left, right) => right.score - left.score || left.index - right.index)
-      .slice(0, DISCOVER_PREPARE_COUNT)
-      .map(({ profile }) => profile);
+    return rankDiscoveryProfiles(hydrated, {
+      connectionGoals: filters.connectionGoals,
+      interestLabels: filters.viewerInterestLabels ?? [],
+      languageCodes: filters.viewerLanguageCodes ?? [],
+    }).slice(0, DISCOVER_PREPARE_COUNT);
   },
   async updatePreferences(
     userId: string,
@@ -425,10 +478,11 @@ export const discoveryService = {
     const error = profileResult.error ?? settingsError;
     if (error) throw error;
     if (!profileResult.data) throw new Error('Profile country is unavailable.');
-    return { ...filters, viewerCountryCode: profileResult.data.country_code };
+    const refreshed = await discoveryService.getPreferences(userId);
+    return { ...refreshed, viewerCountryCode: profileResult.data.country_code };
   },
   async getDevelopmentSampleCandidates(
-    _filters: DiscoveryPreferences,
+    filters: DiscoveryPreferences,
     locale: string,
   ): Promise<Profile[]> {
     const supabase = getSupabaseClient();
@@ -489,7 +543,12 @@ export const discoveryService = {
     // Review samples are a deterministic QA deck. They intentionally bypass
     // live discovery filters so a narrow saved distance/country setting cannot
     // leave the review build empty.
-    return hydrateCandidates(candidateRows, locale);
+    const hydrated = await hydrateCandidates(candidateRows, locale);
+    return rankDiscoveryProfiles(hydrated, {
+      connectionGoals: filters.connectionGoals,
+      interestLabels: filters.viewerInterestLabels ?? [],
+      languageCodes: filters.viewerLanguageCodes ?? [],
+    });
   },
   async swipe(_userId: string, targetId: string, action: SwipeAction, introMessage?: string) {
     if (isDevelopmentSampleProfile(targetId)) return { matchId: null };

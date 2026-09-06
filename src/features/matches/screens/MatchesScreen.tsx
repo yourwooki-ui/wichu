@@ -10,7 +10,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -19,14 +18,17 @@ import { AppTabHeader } from '@/components/AppTabHeader';
 import { CountryFlag } from '@/components/CountryFlag';
 import { GoldBadge } from '@/components/GoldBadge';
 import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
+import { PresenceDot } from '@/components/PresenceDot';
 import { Screen } from '@/components/Screen';
 import { ConnectionGridSkeleton } from '@/components/Skeleton';
 import {
   categoryEntering,
   categoryExiting,
+  imageTransition,
   listEntering,
   listExiting,
   listLayout,
+  motionDuration,
 } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -35,10 +37,13 @@ import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import { rankConnectionProfiles } from '@/features/matches/utils/connection-ranking';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useActiveClock } from '@/hooks/use-active-clock';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { hapticsService } from '@/services/haptics-service';
 import { reportOperationalError } from '@/services/operational-error-service';
@@ -75,11 +80,7 @@ export function MatchesScreen() {
   const { session } = useAuthSession();
   const [category, setCategory] = useState<MatchCategory>('picked-me');
   const [categoryDirection, setCategoryDirection] = useState<-1 | 1>(1);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
+  const now = useActiveClock();
   const categories: { key: MatchCategory; label: string }[] = [
     { key: 'picked-me', label: t('matches.categories.picked') },
     { key: 'matched', label: t('matches.categories.matched') },
@@ -146,6 +147,7 @@ export function MatchesScreen() {
     isOnline:
       Boolean(visitor.last_active_at) &&
       now - new Date(visitor.last_active_at!).getTime() <= 5 * 60 * 1000,
+    lastActiveAt: visitor.last_active_at,
     isNew: false,
     isGoldPass: visitor.is_gold_pass,
   }));
@@ -160,6 +162,7 @@ export function MatchesScreen() {
     isOnline:
       Boolean(connection.profile.last_active_at) &&
       now - new Date(connection.profile.last_active_at!).getTime() <= 5 * 60 * 1000,
+    lastActiveAt: connection.profile.last_active_at,
     isNew: now - new Date(connection.matchedAt).getTime() <= 24 * 60 * 60 * 1000,
   }));
   const incomingLikes = (incomingLikesQuery.data ?? []).map((like): ConnectionProfile => ({
@@ -172,15 +175,20 @@ export function MatchesScreen() {
     matchedAt: like.likedAt,
     isOnline:
       Boolean(like.lastActiveAt) && now - new Date(like.lastActiveAt!).getTime() <= 5 * 60 * 1000,
+    lastActiveAt: like.lastActiveAt,
     isNew: now - new Date(like.likedAt).getTime() <= 24 * 60 * 60 * 1000,
     isGoldPass: like.isGoldPass,
     introMessage: like.introMessage,
   }));
-  const matchedProfiles = includeReviewSamples(realMatches, profilesByCategory.matched);
-  const pickedProfiles = prioritizeGoldProfiles(
+  const matchedProfiles = rankConnectionProfiles(
+    includeReviewSamples(realMatches, profilesByCategory.matched),
+  );
+  const pickedProfiles = rankConnectionProfiles(
     includeReviewSamples(incomingLikes, profilesByCategory['picked-me']),
   );
-  const visitorProfiles = includeReviewSamples(visitors, profilesByCategory.visitors);
+  const visitorProfiles = rankConnectionProfiles(
+    includeReviewSamples(visitors, profilesByCategory.visitors),
+  );
   const profiles =
     category === 'visitors'
       ? visitorProfiles
@@ -401,11 +409,17 @@ function MatchCategoryTab({
   onPress: () => void;
   selected: boolean;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const active = useSharedValue(selected ? 1 : 0);
 
   useEffect(() => {
-    active.set(reduceMotion ? (selected ? 1 : 0) : withTiming(selected ? 1 : 0, { duration: 180 }));
+    active.set(
+      reduceMotion
+        ? selected
+          ? 1
+          : 0
+        : withTiming(selected ? 1 : 0, { duration: motionDuration.fast }),
+    );
   }, [active, reduceMotion, selected]);
 
   const selectionStyle = useAnimatedStyle(() => ({
@@ -429,7 +443,9 @@ function MatchCategoryTab({
       onPress={onPress}
       style={({ pressed }) => [styles.category, pressed && styles.categoryPressed]}
     >
-      <Animated.View pointerEvents="none" style={[styles.categorySelection, selectionStyle]} />
+      <Animated.View
+        style={[styles.categorySelection, { pointerEvents: 'none' }, selectionStyle]}
+      />
       <View style={styles.categoryContent}>
         <Animated.Text
           maxFontSizeMultiplier={1.15}
@@ -501,7 +517,7 @@ function ProfileTile({
           contentFit="cover"
           source={{ uri: profile.photo }}
           style={StyleSheet.absoluteFill}
-          transition={160}
+          transition={imageTransition.profile}
         />
         {locked ? <View style={[styles.lockedVeil, styles.nonInteractive]} /> : null}
         {!locked && profile.isGoldPass ? (
@@ -518,7 +534,7 @@ function ProfileTile({
             <View style={styles.statusSlot}>
               {profile.isOnline ? (
                 <View style={styles.onlinePill}>
-                  <View style={styles.onlineDot} />
+                  <PresenceDot size={6} />
                   <Text style={styles.onlineText}>{t('matches.online')}</Text>
                 </View>
               ) : profile.isNew ? (
@@ -612,12 +628,6 @@ function formatSampleVisitTime(profileId: string, t: TFunction) {
   return t(sampleTime.unit === 'minutes' ? 'matches.time.minutesAgo' : 'matches.time.daysAgo', {
     count: sampleTime.count,
   });
-}
-
-function prioritizeGoldProfiles(profiles: ConnectionProfile[]) {
-  return [...profiles].sort(
-    (left, right) => Number(Boolean(right.isGoldPass)) - Number(Boolean(left.isGoldPass)),
-  );
 }
 
 const styles = StyleSheet.create({
@@ -774,7 +784,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  onlineDot: { backgroundColor: palette.lime, borderRadius: 3, height: 6, width: 6 },
   onlineText: { color: palette.white, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   newPill: {
     backgroundColor: palette.lime,

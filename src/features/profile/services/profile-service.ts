@@ -4,7 +4,7 @@ import type { ProfileTag } from '@/features/profile/types/profile-tag';
 import type { ProfileDetails } from '@/features/profile/types/profile-details';
 import { toMyPreviewProfile } from '@/features/profile/utils/my-profile-preview';
 import { Json, TablesInsert } from '@/types/database';
-import type { Profile } from '@/types/profile';
+import type { Profile, ProfilePrompt } from '@/types/profile';
 
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
   return Boolean(
@@ -12,6 +12,15 @@ function isMissingProfileDetails(error: { code?: string; message?: string } | nu
     (error.code === '42P01' ||
       error.code === 'PGRST205' ||
       error.message?.includes('profile_details')),
+  );
+}
+
+function isMissingProfilePrompts(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+    (error.code === '42P01' ||
+      error.code === 'PGRST205' ||
+      error.message?.includes('profile_prompts')),
   );
 }
 
@@ -41,6 +50,7 @@ export const profileService = {
       interestSelectionResult,
       languageResult,
       tagResult,
+      promptResult,
       settingsResult,
     ] = await Promise.all([
       supabase.rpc('get_my_private_profile').single(),
@@ -48,6 +58,7 @@ export const profileService = {
       supabase.from('profile_interests').select('interest_id').eq('profile_id', userId),
       supabase.from('profile_languages').select('*').eq('profile_id', userId),
       supabase.from('profile_tags').select('*').eq('profile_id', userId),
+      supabase.from('profile_prompts').select('*').eq('profile_id', userId).order('position'),
       supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
     ]);
 
@@ -57,6 +68,7 @@ export const profileService = {
       interestSelectionResult.error,
       languageResult.error,
       tagResult.error,
+      isMissingProfilePrompts(promptResult.error) ? null : promptResult.error,
       settingsResult.error,
     ].find(Boolean);
     if (firstError) throw firstError;
@@ -94,6 +106,7 @@ export const profileService = {
       interests: interestResult.data,
       languages: languageResult.data ?? [],
       tags: tagResult.data ?? [],
+      prompts: promptResult.data ?? [],
       settings: settingsResult.data,
     };
   },
@@ -229,6 +242,21 @@ export const profileService = {
       })),
     );
     if (insertError) throw insertError;
+  },
+  async replaceMyPrompts(prompts: ProfilePrompt[]) {
+    const { data, error } = await getSupabaseClient().rpc('replace_my_profile_prompts', {
+      p_prompts: prompts.map((prompt, position) => ({
+        prompt_key: prompt.promptKey,
+        answer: prompt.answer.trim(),
+        position,
+      })),
+    });
+    if (error) {
+      // During a rolling deployment the profile itself remains usable; the editor
+      // can safely retry once the new RPC reaches the database.
+      throw error;
+    }
+    return data;
   },
 };
 

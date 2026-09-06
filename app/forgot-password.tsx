@@ -2,18 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { FormField } from '@/components/FormField';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { palette } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
@@ -27,6 +21,7 @@ export default function ForgotPasswordRoute() {
   const [sent, setSent] = useState(false);
 
   const submit = async () => {
+    if (busy) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail.includes('@')) {
       setMessage(t('passwordReset.invalidEmail'));
@@ -57,9 +52,10 @@ export default function ForgotPasswordRoute() {
         >
           <Ionicons color={palette.white} name="arrow-back" size={20} />
         </Pressable>
-        <ScrollView
+        <KeyboardAwareScrollView
+          automaticallyAdjustKeyboardInsets={false}
           contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+          keyboardFocusOffset={28}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
@@ -83,7 +79,9 @@ export default function ForgotPasswordRoute() {
                 keyboardType="email-address"
                 label={t('passwordReset.email')}
                 onChangeText={setEmail}
+                onSubmitEditing={() => void submit()}
                 placeholder="you@example.com"
+                returnKeyType="done"
                 tone="dark"
                 value={email}
               />
@@ -96,7 +94,7 @@ export default function ForgotPasswordRoute() {
               />
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

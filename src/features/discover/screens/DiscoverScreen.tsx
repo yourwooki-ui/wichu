@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { BrandAtmosphere } from '@/components/BrandAtmosphere';
 import { AmbientIconMotion } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -125,6 +126,7 @@ export function DiscoverScreen() {
 
   return (
     <Screen edges={['top', 'left', 'right']} style={styles.screen}>
+      <BrandAtmosphere strength="vivid" />
       <View style={styles.header}>
         <View style={styles.headerSide}>
           <HeaderAction
@@ -210,7 +212,7 @@ function HeaderAction({
       accessibilityLabel={label}
       accessibilityRole="button"
       disabled={disabled}
-      hitSlop={4}
+      hitSlop={10}
       onPress={onPress}
       style={({ pressed }) => [
         styles.headerAction,
@@ -264,8 +266,8 @@ const styles = StyleSheet.create({
     width: 48,
   },
   headerActionIcon: {
-    height: 47,
-    width: 47,
+    height: 40,
+    width: 40,
   },
   headerActionBadge: {
     // 테두리는 화면 배경과 같은 색이어야 '파낸' 것처럼 보인다. 색은 호출부에서 넣는다.
@@ -274,8 +276,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     height: 10,
     position: 'absolute',
-    right: 1,
-    top: 1,
+    right: 3,
+    top: 3,
     width: 10,
   },
 });

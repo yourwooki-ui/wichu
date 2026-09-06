@@ -9,7 +9,6 @@ import Animated, {
   Easing,
   interpolate,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -19,7 +18,9 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { CountryFlag } from '@/components/CountryFlag';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
+import { PresenceDot } from '@/components/PresenceDot';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { imageTransition, motionDuration, resolveMotionDuration } from '@/constants/motion';
 import {
   layout,
   palette,
@@ -31,6 +32,7 @@ import {
 } from '@/constants/theme';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
 const TUTORIAL_PHOTOS = {
@@ -72,7 +74,7 @@ export function ProductTutorialScreen() {
   const { height } = useAppViewport();
   const [stepIndex, setStepIndex] = useState(0);
   const [finishing, setFinishing] = useState(false);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const transitionProgress = useSharedValue(1);
   const transitionDirection = useSharedValue(1);
   const mounted = useRef(false);
@@ -101,7 +103,7 @@ export function ProductTutorialScreen() {
     transitionProgress.set(0);
     transitionProgress.set(
       withTiming(1, {
-        duration: reduceMotion ? 0 : 220,
+        duration: resolveMotionDuration(reduceMotion, motionDuration.standard),
         easing: Easing.out(Easing.cubic),
       }),
     );
@@ -282,7 +284,7 @@ function DiscoverVisual({ height }: { height: number }) {
         contentFit="cover"
         source={{ uri: TUTORIAL_PHOTOS.lina }}
         style={StyleSheet.absoluteFill}
-        transition={180}
+        transition={imageTransition.hero}
       />
       <LinearGradient
         colors={['rgba(12,12,14,0.02)', 'rgba(12,12,14,0.12)', 'rgba(12,12,14,0.88)']}
@@ -291,7 +293,7 @@ function DiscoverVisual({ height }: { height: number }) {
       />
       <View style={styles.discoverTopRow}>
         <View style={styles.livePill}>
-          <View style={styles.liveDot} />
+          <PresenceDot size={7} />
           <Text style={styles.liveText}>ONLINE</Text>
         </View>
         <View style={styles.distancePill}>
@@ -340,7 +342,7 @@ function MatchVisual({ height }: { height: number }) {
             contentFit="cover"
             source={{ uri: TUTORIAL_PHOTOS.lina }}
             style={styles.matchImage}
-            transition={180}
+            transition={imageTransition.hero}
           />
         </View>
         <View style={[styles.matchPortrait, styles.matchPortraitRight]}>
@@ -349,7 +351,7 @@ function MatchVisual({ height }: { height: number }) {
             contentFit="cover"
             source={{ uri: TUTORIAL_PHOTOS.mia }}
             style={styles.matchImage}
-            transition={180}
+            transition={imageTransition.hero}
           />
         </View>
         <View style={styles.matchCenter}>
@@ -376,7 +378,7 @@ function ChatVisual({ height }: { height: number }) {
           contentFit="cover"
           source={{ uri: TUTORIAL_PHOTOS.mia }}
           style={styles.chatAvatar}
-          transition={180}
+          transition={imageTransition.hero}
         />
         <View style={styles.chatHeaderCopy}>
           <Text style={styles.chatName}>Mia</Text>
@@ -463,7 +465,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  liveDot: { backgroundColor: '#7DFF8A', borderRadius: 4, height: 7, width: 7 },
   liveText: { color: palette.white, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   distancePill: {
     alignItems: 'center',

@@ -10,6 +10,16 @@ export type ReportInput = {
 };
 
 export const safetyService = {
+  async listMyReports() {
+    const { data, error } = await getSupabaseClient()
+      .from('reports')
+      .select(
+        'id, reported_id, reasons, details, report_context, source_match_id, status, moderation_action, created_at, updated_at, resolved_at',
+      )
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
   async listBlockedUsers() {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('get_my_blocked_users');

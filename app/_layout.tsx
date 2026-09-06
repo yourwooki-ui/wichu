@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -15,6 +15,7 @@ import { NativePreviewFrame } from '@/components/NativePreviewFrame';
 import { QueryLifecycleManager } from '@/components/QueryLifecycleManager';
 import { GlobalInAppNotificationHost } from '@/components/GlobalInAppNotificationHost';
 import { StateView } from '@/components/StateView';
+import { motionDuration } from '@/constants/motion';
 import { palette } from '@/constants/theme';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
@@ -35,7 +36,7 @@ import { productAnalyticsService } from '@/services/product-analytics-service';
 // 스플래시 설정도 모듈 평가 시점의 네이티브 호출이다. 여기서 예외가 나면
 // 화면이 뜨기 전에 앱이 죽으므로, 실패해도 앱은 계속 열리게 감싼다.
 try {
-  SplashScreen.setOptions({ duration: 240, fade: true });
+  SplashScreen.setOptions({ duration: motionDuration.standard, fade: true });
 } catch {
   // 스플래시 연출은 없어도 앱 실행에 지장이 없다.
 }
@@ -46,22 +47,24 @@ try {
 }
 
 function AppLaunchSurface() {
-  const theme = useAppTheme();
-
   return (
     <View
       accessibilityLabel="WICHU를 여는 중"
       accessibilityRole="progressbar"
-      style={[styles.launchSurface, { backgroundColor: theme.colors.background }]}
+      style={styles.launchSurface}
     >
-      <BrandWordmark color={theme.colors.text} size={34} />
-      <ActivityIndicator color={palette.pink} size="small" style={styles.launchIndicator} />
+      <StatusBar style="dark" />
+      <View style={styles.launchMark}>
+        <BrandWordmark align="center" color={palette.ink} size={34} />
+        <ActivityIndicator color={palette.pink} size="small" style={styles.launchIndicator} />
+      </View>
     </View>
   );
 }
 
 function RootNavigator() {
   const theme = useAppTheme();
+  const pathname = usePathname();
   const { session, profileCompleted, profileLoadError, refreshProfile, adminRole, isLoading } =
     useAuthSession();
   const { t } = useTranslation();
@@ -130,6 +133,7 @@ function RootNavigator() {
           <Stack.Screen name="chat/[matchId]" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="blocked-users" />
+          <Stack.Screen name="safety-center" />
           <Stack.Screen name="support" />
           <Stack.Screen name="ad-free" options={{ animation: 'slide_from_bottom' }} />
         </Stack.Protected>
@@ -144,6 +148,8 @@ function RootNavigator() {
       />
       {session?.user.id && profileCompleted ? (
         <GlobalInAppNotificationHost userId={session.user.id} />
+      ) : __DEV__ && pathname === '/design-qa' ? (
+        <GlobalInAppNotificationHost realtimeEnabled={false} userId="design-qa" />
       ) : null}
     </>
   );
@@ -151,7 +157,14 @@ function RootNavigator() {
 
 const styles = StyleSheet.create({
   launchIndicator: { marginTop: 22, opacity: 0.78 },
-  launchSurface: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  launchMark: { alignItems: 'center', width: '100%' },
+  launchSurface: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
   recoverySurface: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
 });
 

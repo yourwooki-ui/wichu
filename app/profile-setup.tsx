@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { ConsentRow } from '@/components/ConsentRow';
 import { FormField } from '@/components/FormField';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
@@ -31,6 +32,7 @@ import { CountryPickerField } from '@/features/profile/components/CountryPickerF
 import { LanguagePreferencesField } from '@/features/profile/components/LanguagePreferencesField';
 import { ProfileAdditionalInfoFields } from '@/features/profile/components/ProfileAdditionalInfoFields';
 import { ProfilePhotoPicker } from '@/features/profile/components/ProfilePhotoPicker';
+import { ProfilePromptEditor } from '@/features/profile/components/ProfilePromptEditor';
 import { ProfileReviewState } from '@/features/profile/components/ProfileReviewState';
 import { ProfileTagPicker } from '@/features/profile/components/ProfileTagPicker';
 import { EMPTY_PROFILE_TAG_SELECTIONS } from '@/features/profile/constants/profile-tags';
@@ -47,6 +49,7 @@ import type { ProfileTagSelections } from '@/features/profile/types/profile-tag'
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
+import type { ProfilePrompt, ProfilePromptKey } from '@/types/profile';
 
 const TOTAL_STEPS = 4;
 const GENDER_VALUES = ['woman', 'man', 'nonbinary', 'other'] as const;
@@ -166,6 +169,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     EMPTY_PROFILE_TAG_SELECTIONS,
   );
   const [profileDetails, setProfileDetails] = useState<ProfileDetails>(EMPTY_PROFILE_DETAILS);
+  const [profilePrompts, setProfilePrompts] = useState<ProfilePrompt[]>([]);
   const [bio, setBio] = useState('');
   const [photos, setPhotos] = useState<ProfilePhotoDraft[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(
@@ -207,7 +211,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     const existing = existingProfileQuery.data;
     if (!existing || profileHydrated) return;
     queueMicrotask(() => {
-      const { details, profile, interests, languages, settings, tags } = existing;
+      const { details, profile, interests, languages, prompts, settings, tags } = existing;
       setDisplayName(profile.display_name);
       setBirthDate(profile.birth_date);
       setGender(profile.gender as Gender);
@@ -242,6 +246,13 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         exercise: (details?.exercise as ProfileDetails['exercise']) ?? null,
         pets: (details?.pets as ProfileDetails['pets']) ?? null,
       });
+      setProfilePrompts(
+        prompts.map((prompt) => ({
+          promptKey: prompt.prompt_key as ProfilePromptKey,
+          answer: prompt.answer,
+          position: prompt.position,
+        })),
+      );
       setBio(profile.bio);
       setPhotos(
         profile.profile_photos.map((photo) => ({
@@ -275,6 +286,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     nativeLanguage,
     photos: photos.map((photo) => photo.draftId),
     profileDetails,
+    profilePrompts,
     profileTags,
     selectedInterestIds,
     spokenLanguages,
@@ -285,7 +297,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const pristineFingerprint = useMemo(() => {
     const existing = existingProfileQuery.data;
     if (!existing) return null;
-    const { details, profile, interests, languages, settings, tags } = existing;
+    const { details, profile, interests, languages, prompts, settings, tags } = existing;
     return JSON.stringify({
       bio: profile.bio,
       birthDate: profile.birth_date,
@@ -307,6 +319,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         exercise: details?.exercise ?? null,
         pets: details?.pets ?? null,
       },
+      profilePrompts: prompts.map((prompt) => ({
+        promptKey: prompt.prompt_key,
+        answer: prompt.answer,
+        position: prompt.position,
+      })),
       profileTags: tags.reduce<ProfileTagSelections>(
         (selection, tag) => ({
           ...selection,
@@ -412,6 +429,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         return issue(t('profileSetup.errors.connectionGoal'));
       if (profileTags.vibe.length === 0) return issue(t('profileSetup.errors.vibe'));
       if (!nativeLanguage) return issue(t('profileSetup.errors.nativeLanguage'));
+      if (profilePrompts.some((prompt) => prompt.answer.trim().length < 3))
+        return issue(t('relationship.profilePrompts.answerError'));
     }
 
     if (targetSection === 'photos') {
@@ -449,7 +468,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     setLoading(true);
     setMessage(null);
     setErrorField(null);
-    let saveStage: 'profile' | 'photos' | 'review' = 'profile';
+    let saveStage: 'profile' | 'photos' | 'review' | 'prompts' = 'profile';
     try {
       const tags = Object.entries(profileTags).flatMap(([category, values]) =>
         values.map((value) => ({ category: category as keyof ProfileTagSelections, value })),
@@ -494,6 +513,16 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         },
       });
 
+      saveStage = 'prompts';
+      await profileService.replaceMyPrompts(profilePrompts);
+      if (profilePrompts.length > 0) {
+        productAnalyticsService.track(
+          'profile_prompts_saved',
+          { prompt_count: profilePrompts.length },
+          requestedEditMode ? '/profile-edit' : '/profile-setup',
+        );
+      }
+
       if (!requestedEditMode) {
         await tutorialState.requireProductTutorial(session.user.id).catch(() => undefined);
         productAnalyticsService.track('profile_completed', undefined, '/profile-setup');
@@ -519,7 +548,10 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     }
   }
 
-  function getProfileSaveError(error: unknown, stage: 'profile' | 'details' | 'photos' | 'review') {
+  function getProfileSaveError(
+    error: unknown,
+    stage: 'profile' | 'details' | 'photos' | 'review' | 'prompts',
+  ) {
     const serverError = error as { code?: string; message?: string } | null;
     const code = serverError?.code ?? '';
     const detail = serverError?.message ?? '';
@@ -527,6 +559,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     if (code === '42P01' || code === 'PGRST205' || detail.includes('schema cache')) {
       return t('profileSetup.errors.serverUpdate');
     }
+    if (stage === 'prompts') return t('relationship.profilePrompts.saveError');
     if (detail.includes('main profile photo')) return t('profileSetup.errors.mainPhoto');
     if (detail.includes('required profile fields')) return t('profileSetup.errors.requiredFields');
     return t(`profileSetup.errors.saveStages.${stage}`);
@@ -536,7 +569,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.editState}>
-          <ActivityIndicator color={palette.pink} size="small" />
+          <BrandWordmark align="center" color={palette.ink} size={24} />
+          <ActivityIndicator color={palette.pink} size="small" style={styles.editStateLoader} />
           <Text style={styles.editStateTitle}>{t('profileEditor.loadingTitle')}</Text>
           <Text style={styles.editStateBody}>{t('profileEditor.loadingBody')}</Text>
         </View>
@@ -701,10 +735,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             )}
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
+            automaticallyAdjustKeyboardInsets={false}
             ref={scrollRef}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
+            keyboardFocusOffset={32}
             showsVerticalScrollIndicator={false}
             style={styles.scroll}
           >
@@ -799,6 +834,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
             {activeSection === 'about' ? (
               <View style={[styles.form, styles.formCard]}>
                 <ProfileTagPicker value={profileTags} onChange={setProfileTags} />
+                <ProfilePromptEditor value={profilePrompts} onChange={setProfilePrompts} />
                 <LanguagePreferencesField
                   nativeLanguage={nativeLanguage}
                   spokenLanguages={spokenLanguages}
@@ -843,7 +879,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                 ) : null}
               </View>
             ) : null}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           <View style={styles.footer}>
             {/* 필드에 직접 표시된 오류는 footer에서 되풀이하지 않는다. */}
@@ -989,7 +1025,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     width: 50,
   },
-  editStateTitle: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 14 },
+  editStateLoader: { marginTop: 14 },
+  editStateTitle: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 2 },
   editStateBody: {
     color: palette.inkMuted,
     fontSize: 12,

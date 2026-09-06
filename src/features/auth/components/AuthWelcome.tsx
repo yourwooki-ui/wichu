@@ -6,7 +6,9 @@ import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
+import { PresenceDot } from '@/components/PresenceDot';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { imageTransition } from '@/constants/motion';
 import { palette, radius, spacing, typography } from '@/constants/theme';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
 
@@ -39,12 +41,17 @@ export function AuthWelcome({ onCreateAccount, onSignIn }: AuthWelcomeProps) {
               contentPosition="top center"
               source={WELCOME_HERO}
               style={StyleSheet.absoluteFill}
+              transition={imageTransition.hero}
             />
             <LinearGradient
               colors={['rgba(252,250,248,0)', 'rgba(252,250,248,0.08)', '#FCFAF8']}
               locations={[0.54, 0.76, 1]}
               style={StyleSheet.absoluteFill}
             />
+            <View style={styles.liveBadge}>
+              <PresenceDot size={9} />
+              <Text style={styles.liveText}>{t('discover.presence.online')}</Text>
+            </View>
           </View>
 
           <View style={styles.topRow}>
@@ -98,7 +105,22 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1, minHeight: 0 },
   pageContent: { flexGrow: 1 },
-  heroVisual: { minHeight: 260 },
+  heroVisual: { minHeight: 260, position: 'relative' },
+  liveBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderColor: 'rgba(17,17,17,0.08)',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    bottom: 34,
+    flexDirection: 'row',
+    gap: 6,
+    left: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    position: 'absolute',
+  },
+  liveText: { color: palette.ink, fontSize: 11, fontWeight: '900' },
   topRow: {
     alignItems: 'center',
     flexDirection: 'row',

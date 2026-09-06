@@ -36,7 +36,6 @@ import Animated, {
   interpolate,
   runOnJS,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
@@ -56,8 +55,17 @@ import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { reviewSamplesEnabled } from '@/constants/feature-flags';
-import { listLayout, messageEntering, stateEntering, stateExiting } from '@/constants/motion';
+import {
+  imageTransition,
+  listLayout,
+  messageEntering,
+  motionDuration,
+  motionSpring,
+  stateEntering,
+  stateExiting,
+} from '@/constants/motion';
 import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
+import { DateFeedbackSheet } from '@/features/chat/components/DateFeedbackSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
@@ -86,6 +94,7 @@ import {
   type ReportSubmission,
 } from '@/features/settings/components/ReportReasonSheet';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import { reportOperationalError } from '@/services/operational-error-service';
 import { productAnalyticsService } from '@/services/product-analytics-service';
@@ -119,7 +128,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const translationTargetLanguage = getTranslationLanguage(activeAppLanguage);
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const userId = session?.user.id;
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
@@ -134,6 +143,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [now] = useState(() => Date.now());
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [dateShareOpen, setDateShareOpen] = useState(false);
+  const [dateFeedbackOpen, setDateFeedbackOpen] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
@@ -642,7 +652,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
         style={styles.keyboard}
       >
@@ -712,7 +722,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                 contentFit="cover"
                 source={{ uri: profile.photo }}
                 style={styles.matchPhotoLeft}
-                transition={140}
+                transition={imageTransition.thumbnail}
               />
               <View style={styles.matchMark}>
                 <Ionicons color={palette.white} name="checkmark" size={14} />
@@ -937,8 +947,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
 
         {showJumpToLatest ? (
           <Animated.View
-            entering={reduceMotion ? undefined : FadeInDown.duration(180)}
-            exiting={reduceMotion ? undefined : FadeOutDown.duration(140)}
+            entering={reduceMotion ? undefined : FadeInDown.duration(motionDuration.fast)}
+            exiting={reduceMotion ? undefined : FadeOutDown.duration(motionDuration.fast)}
             style={[styles.jumpToLatestAnchor, { bottom: selectedImages.length ? 154 : 72 }]}
           >
             <Pressable
@@ -1084,6 +1094,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         />
         <SafetyAction
           disabled={safetyBusy}
+          icon="checkmark-circle-outline"
+          label={t('relationship.dateFeedback.action')}
+          onPress={() => {
+            setSafetyOpen(false);
+            setDateFeedbackOpen(true);
+          }}
+        />
+        <SafetyAction
+          disabled={safetyBusy}
           icon="person-outline"
           label={t('chatRoom.viewProfile')}
           onPress={() => {
@@ -1140,6 +1159,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         matchName={profile.name}
         onClose={() => setDateShareOpen(false)}
         visible={dateShareOpen}
+      />
+
+      <DateFeedbackSheet
+        matchId={matchId}
+        matchName={profile.name}
+        mock={isMock}
+        onClose={() => setDateFeedbackOpen(false)}
+        onSafetyConcern={() => setReportOpen(true)}
+        visible={dateFeedbackOpen}
       />
 
       <ImageViewer
@@ -1281,7 +1309,7 @@ function UploadProgress({ completed, total }: { completed: number; total: number
   const progress = useSharedValue(total > 0 ? completed / total : 0);
 
   useEffect(() => {
-    progress.set(withTiming(total > 0 ? completed / total : 0, { duration: 180 }));
+    progress.set(withTiming(total > 0 ? completed / total : 0, { duration: motionDuration.fast }));
   }, [completed, progress, total]);
 
   const fillStyle = useAnimatedStyle(() => ({
@@ -1329,7 +1357,7 @@ function MessageImageGrid({
               contentFit="cover"
               source={{ uri: image.uri }}
               style={styles.messageImage}
-              transition={140}
+              transition={imageTransition.thumbnail}
             />
           ) : (
             <View style={styles.messageImageFallback}>
@@ -1338,7 +1366,7 @@ function MessageImageGrid({
             </View>
           )}
           {hidden && image.uri ? (
-            <View pointerEvents="none" style={styles.hiddenImageOverlay}>
+            <View style={[styles.hiddenImageOverlay, { pointerEvents: 'none' }]}>
               <IllustratedIcon size={30} source={illustratedIcons.safety} />
               <Text style={styles.hiddenImageTitle}>{t('experience.chatSafety.imageHidden')}</Text>
               <Text style={styles.hiddenImageBody}>{t('experience.chatSafety.revealImage')}</Text>
@@ -1472,7 +1500,7 @@ function ZoomableViewerImage({
           runOnJS(onClose)();
           return;
         }
-        translateY.set(withSpring(0, { damping: 20, stiffness: 220 }));
+        translateY.set(withSpring(0, motionSpring.responsive));
       });
 
     const doubleTap = Gesture.Tap()
@@ -1480,13 +1508,13 @@ function ZoomableViewerImage({
       .onEnd((_event, success) => {
         if (!success) return;
         if (scale.get() > 1.02) {
-          scale.set(withSpring(1, { damping: 20, stiffness: 220 }));
+          scale.set(withSpring(1, motionSpring.responsive));
           savedScale.set(1);
-          translateX.set(withSpring(0, { damping: 20, stiffness: 220 }));
-          translateY.set(withSpring(0, { damping: 20, stiffness: 220 }));
+          translateX.set(withSpring(0, motionSpring.responsive));
+          translateY.set(withSpring(0, motionSpring.responsive));
           return;
         }
-        scale.set(withSpring(2.2, { damping: 20, stiffness: 220 }));
+        scale.set(withSpring(2.2, motionSpring.responsive));
         savedScale.set(2.2);
       });
 
@@ -1525,7 +1553,13 @@ function SafetyAction({
 }: {
   danger?: boolean;
   disabled: boolean;
-  icon: 'person-outline' | 'flag-outline' | 'exit-outline' | 'ban-outline' | 'share-social-outline';
+  icon:
+    | 'person-outline'
+    | 'flag-outline'
+    | 'exit-outline'
+    | 'ban-outline'
+    | 'share-social-outline'
+    | 'checkmark-circle-outline';
   label: string;
   onPress: () => void;
 }) {

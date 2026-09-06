@@ -7,6 +7,11 @@ type ReviewDecision = Extract<
 >;
 
 export const operationsService = {
+  async getOverview() {
+    const { data, error } = await getSupabaseClient().rpc('get_operations_overview');
+    if (error) throw error;
+    return data[0] ?? null;
+  },
   async getProfileReviews() {
     const { data, error } = await getSupabaseClient().rpc('get_pending_profile_reviews', {
       p_limit: 30,
@@ -49,6 +54,28 @@ export const operationsService = {
       p_action: options?.action ?? 'none',
       p_note: options?.note ?? null,
       p_report_id: reportId,
+      p_resolution: resolution,
+    });
+    if (error) throw error;
+    return data;
+  },
+  async getPendingSafetyFeedback() {
+    const { data, error } = await getSupabaseClient().rpc('get_pending_safety_feedback', {
+      p_limit: 30,
+      p_before: null,
+    });
+    if (error) throw error;
+    return data;
+  },
+  async resolveSafetyFeedback(
+    feedbackId: string,
+    resolution: 'reviewed' | 'closed',
+    options?: { action?: 'none' | 'profile_hidden'; note?: string },
+  ) {
+    const { data, error } = await getSupabaseClient().rpc('resolve_safety_feedback', {
+      p_action: options?.action ?? 'none',
+      p_feedback_id: feedbackId,
+      p_note: options?.note ?? null,
       p_resolution: resolution,
     });
     if (error) throw error;

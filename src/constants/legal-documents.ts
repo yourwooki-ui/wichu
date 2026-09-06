@@ -14,7 +14,7 @@ export type LegalDocument = {
 
 /** 운영 책임자의 공개 승인 전에는 draft로 유지한다. */
 export const POLICY_STATUS: 'draft' | 'effective' = 'effective';
-export const POLICY_EFFECTIVE_DATE = '2026.08.25';
+export const POLICY_EFFECTIVE_DATE = '2026.09.06';
 
 export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
   terms: {
@@ -53,7 +53,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
     sections: [
       {
         title: '수집 정보',
-        body: '계정 이메일, 생년월일, 프로필 정보(이름·성별·국적·소개·관심사·언어), 업로드한 사진, 탐색 조건(관심 성별과 연령 범위), 주고받은 메시지, 앱 사용 기록, 기기 정보와 알림 토큰을 처리합니다. 유료 상품을 이용하면 스토어 상품 ID, 구매 상태, 구독 만료일과 스토어가 발급한 거래 식별자를 처리하며 카드번호 등 결제수단 원문은 WICHU가 수집하지 않습니다. 위치 정보는 아래 항목에서 따로 안내합니다.',
+        body: '계정 이메일 또는 휴대폰 번호, 생년월일, 프로필 정보(이름·성별·국적·소개·관심사·언어), 업로드한 사진, 탐색 조건(관심 성별과 연령 범위), 주고받은 메시지, 앱 사용 기록, 기기 정보와 알림 토큰을 처리합니다. 유료 상품을 이용하면 스토어 상품 ID, 구매 상태, 구독 만료일과 스토어가 발급한 거래 식별자를 처리하며 카드번호 등 결제수단 원문은 WICHU가 수집하지 않습니다. 위치 정보는 아래 항목에서 따로 안내합니다.',
       },
       {
         title: '위치 정보',
@@ -65,11 +65,11 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '처리 위탁',
-        body: '서비스 운영을 위해 Supabase(계정 인증, 서울 리전 데이터베이스·사진 저장·실시간 메시지), DeepL(이용자가 요청한 메시지 번역), 650 Industries의 Expo Push Service 및 Google Firebase Cloud Messaging·Apple Push Notification service(알림 발송), RevenueCat(스토어 구매 검증·구독 상태 동기화), Google AdMob(광고 제공·보상 검증)에 처리를 위탁합니다. Google 계정 로그인 또는 Google Play 결제를 선택한 경우 Google이 제공한 계정·상품·거래 정보를 해당 기능에 사용합니다. 수탁사는 서비스 제공에 필요한 범위에서만 정보를 처리합니다.',
+        body: '서비스 운영을 위해 Supabase(계정 인증, 서울 리전 데이터베이스·사진 저장·실시간 메시지), Twilio Verify(이용자가 휴대폰 로그인을 선택한 경우 문자 인증코드 발송·검증과 부정 사용 방지), DeepL(이용자가 요청한 메시지 번역), 650 Industries의 Expo Push Service 및 Google Firebase Cloud Messaging·Apple Push Notification service(알림 발송), RevenueCat(스토어 구매 검증·구독 상태 동기화), Google AdMob(광고 제공·보상 검증)에 처리를 위탁합니다. Google 계정 로그인 또는 Google Play 결제를 선택한 경우 Google이 제공한 계정·상품·거래 정보를 해당 기능에 사용합니다. 수탁사는 서비스 제공에 필요한 범위에서만 정보를 처리합니다.',
       },
       {
         title: '국외 이전',
-        body: 'Supabase의 계정·데이터베이스·사진 원본은 대한민국 서울 리전(ap-northeast-2)에 저장됩니다. 국외 이전은 다음 기능을 사용할 때만 발생합니다. ① DeepL SE(독일·유럽경제지역): 이용자가 번역을 누를 때 메시지 원문과 대상 언어를 TLS 암호화 통신으로 전송하며, 원문과 번역문은 번역 완료 후 DeepL에서 삭제됩니다. 번역 결과는 WICHU의 서울 리전에 해당 메시지가 삭제되거나 계정이 탈퇴할 때까지 저장됩니다. ② 650 Industries, Inc.와 Google LLC 또는 Apple Inc.(미국): 알림을 허용하고 매치·메시지 알림이 발생할 때 푸시 토큰과 알림 내용을 TLS로 전송합니다. 알림 내용은 전달에 필요한 동안만 처리되고 Expo의 전송 영수증은 24시간 후 삭제되며, WICHU가 보유한 토큰은 로그아웃·알림 해제·탈퇴 시 삭제합니다. 이용자는 번역 요청 또는 알림 동의를 하지 않는 방법으로 해당 이전을 거부할 수 있고, 이 경우 번역 또는 알림 기능만 제한됩니다.',
+        body: 'Supabase의 계정·데이터베이스·사진 원본은 대한민국 서울 리전(ap-northeast-2)에 저장됩니다. 국외 이전은 다음 기능을 사용할 때만 발생합니다. ① Twilio Inc.(미국): 이용자가 휴대폰 로그인을 선택할 때 휴대폰 번호, 인증 요청 시각·국가·전달 상태를 TLS 암호화 통신으로 전송해 문자 인증과 부정 사용 방지에 사용합니다. Twilio Verify 발송 로그의 휴대폰 번호는 최대 30일 보관됩니다. 휴대폰 로그인을 사용하지 않고 이메일 또는 Google 로그인을 선택해 이전을 거부할 수 있습니다. ② DeepL SE(독일·유럽경제지역): 이용자가 번역을 누를 때 메시지 원문과 대상 언어를 TLS 암호화 통신으로 전송하며, 원문과 번역문은 번역 완료 후 DeepL에서 삭제됩니다. 번역 결과는 WICHU의 서울 리전에 해당 메시지가 삭제되거나 계정이 탈퇴할 때까지 저장됩니다. ③ 650 Industries, Inc.와 Google LLC 또는 Apple Inc.(미국): 알림을 허용하고 매치·메시지 알림이 발생할 때 푸시 토큰과 알림 내용을 TLS로 전송합니다. 알림 내용은 전달에 필요한 동안만 처리되고 Expo의 전송 영수증은 24시간 후 삭제되며, WICHU가 보유한 토큰은 로그아웃·알림 해제·탈퇴 시 삭제합니다. 이용자는 번역 요청 또는 알림 동의를 하지 않는 방법으로 해당 이전을 거부할 수 있고, 이 경우 번역 또는 알림 기능만 제한됩니다.',
       },
       {
         title: '제3자 제공',
@@ -77,7 +77,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       },
       {
         title: '공개 범위',
-        body: '정확한 생년월일, 이메일, 관심 성별과 수집한 위치 좌표는 다른 이용자에게 공개하지 않습니다. 프로필에는 나이, 국가, 대략적인 거리와 이용자가 공개하기로 선택한 사진·소개·언어·관심사·추가 정보만 표시합니다. 공개 항목은 마이 → 프로필 수정에서 변경할 수 있고, 메시지는 활성 상태로 매치된 상대에게만 전달됩니다.',
+        body: '정확한 생년월일, 이메일, 휴대폰 번호, 관심 성별과 수집한 위치 좌표는 다른 이용자에게 공개하지 않습니다. 프로필에는 나이, 국가, 대략적인 거리와 이용자가 공개하기로 선택한 사진·소개·언어·관심사·추가 정보만 표시합니다. 공개 항목은 마이 → 프로필 수정에서 변경할 수 있고, 메시지는 활성 상태로 매치된 상대에게만 전달됩니다.',
       },
       {
         title: '보유 기간과 파기',

@@ -2,6 +2,7 @@ const baseConfig = {
   name: 'WICHU',
   slug: 'wichu',
   version: '1.0.1',
+  backgroundColor: '#FFFFFF',
   orientation: 'portrait',
   icon: './assets/brand/wichu-app-icon.png',
   scheme: 'wichu',
@@ -101,7 +102,7 @@ const baseConfig = {
       {
         backgroundColor: '#FFFFFF',
         image: './assets/brand/wichu-app-icon.png',
-        imageWidth: 168,
+        imageWidth: 148,
         resizeMode: 'contain',
         dark: {
           backgroundColor: '#FFFFFF',

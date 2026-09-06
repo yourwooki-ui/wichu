@@ -19,7 +19,7 @@ import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton'
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
-import { sectionEntering } from '@/constants/motion';
+import { imageTransition, sectionEntering } from '@/constants/motion';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
 import { getProfileCompletion } from '@/features/profile/utils/profile-completion';
@@ -265,6 +265,7 @@ export function MeScreen() {
                 contentPosition="center"
                 source={{ uri: primaryPhoto.uri }}
                 style={styles.previewImage}
+                transition={imageTransition.profile}
               />
             ) : (
               <LinearGradient colors={['#DDDDE3', '#BDBEC7']} style={styles.previewPlaceholder}>

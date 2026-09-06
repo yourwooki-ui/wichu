@@ -2,7 +2,12 @@ import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import {
+  BottomSheetCloseButton,
+  InteractiveBottomSheet,
+} from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { PresenceDot } from '@/components/PresenceDot';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import {
@@ -17,11 +22,14 @@ import { StateView } from '@/components/StateView';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { mockProfiles } from '@/features/discover/data/mock-profiles';
+import { ChatListScreen } from '@/features/chat/screens/ChatListScreen';
 import { MatchesScreen } from '@/features/matches/screens/MatchesScreen';
+import { ShopScreen } from '@/features/monetization/screens/ShopScreen';
 import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, layout, radius, spacing, typography } from '@/constants/theme';
+import { useInAppNotificationCenter } from '@/services/in-app-notification-center';
 
 /**
  * 개발 전용 디자인 QA 화면.
@@ -34,6 +42,8 @@ export default function DesignQaScreen() {
   const theme = useAppTheme();
   const [qaProfiles, setQaProfiles] = useState(mockProfiles);
   const [matchPreviewOpen, setMatchPreviewOpen] = useState(false);
+  const [motionSheetOpen, setMotionSheetOpen] = useState(false);
+  const enqueueNotification = useInAppNotificationCenter((state) => state.enqueue);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -79,6 +89,33 @@ export default function DesignQaScreen() {
           <PrimaryButton label="Small" onPress={() => {}} size="sm" />
           <PrimaryButton label="Loading" loading onPress={() => {}} />
           <PrimaryButton disabled label="Disabled" onPress={() => {}} />
+        </Section>
+
+        <Section title="Motion foundation">
+          <View style={[styles.presenceSample, { backgroundColor: theme.colors.surface }]}>
+            <PresenceDot active />
+            <View style={styles.presenceCopy}>
+              <Text style={[typography.label, { color: theme.colors.text }]}>지금 접속 중</Text>
+              <Text style={[typography.caption, { color: theme.colors.textMuted }]}>
+                반복 모션은 백그라운드와 모션 줄이기 설정에서 자동으로 멈춥니다.
+              </Text>
+            </View>
+          </View>
+          <PrimaryButton label="바텀시트 모션 확인" onPress={() => setMotionSheetOpen(true)} />
+          <PrimaryButton
+            label="인앱 알림 모션 확인"
+            onPress={() =>
+              enqueueNotification({
+                body: '백그라운드에서는 남은 노출 시간이 일시정지됩니다.',
+                id: `design-qa:${Date.now()}`,
+                photo: null,
+                route: '/matches',
+                title: '새로운 Pick이 도착했어요',
+                type: 'match',
+              })
+            }
+            variant="secondary"
+          />
         </Section>
 
         <Section title="Soft illustration icons">
@@ -177,6 +214,18 @@ export default function DesignQaScreen() {
           </View>
         </Section>
 
+        <Section title="Chat list screen">
+          <View style={styles.chatFrame}>
+            <ChatListScreen />
+          </View>
+        </Section>
+
+        <Section title="Shop screen">
+          <View style={styles.shopFrame}>
+            <ShopScreen />
+          </View>
+        </Section>
+
         {/* 튜토리얼은 인증 뒤에 있어 평소 웹 프리뷰로 열 수 없다. 여기서 실제 렌더를 확인한다. */}
         <Section title="Tutorial (onboarding)">
           <View style={styles.tutorialFrame}>
@@ -192,6 +241,26 @@ export default function DesignQaScreen() {
           <ListRowsSkeleton count={2} />
         </Section>
       </ScrollView>
+
+      <InteractiveBottomSheet
+        accessibilityLabel="모션 QA 패널"
+        onClose={() => setMotionSheetOpen(false)}
+        visible={motionSheetOpen}
+      >
+        <View style={styles.motionSheetContent}>
+          <Text style={[typography.title, { color: theme.colors.text }]}>제스처 기반 바텀시트</Text>
+          <Text style={[typography.body, { color: theme.colors.textMuted }]}>
+            핸들을 위아래로 드래그해 확장·축소·닫기 스프링을 확인하세요.
+          </Text>
+          <BottomSheetCloseButton
+            accessibilityLabel="모션 QA 패널 닫기"
+            accessibilityRole="button"
+            style={[styles.sheetClose, { backgroundColor: theme.colors.primary }]}
+          >
+            <Text style={[typography.label, styles.sheetCloseLabel]}>닫기</Text>
+          </BottomSheetCloseButton>
+        </View>
+      </InteractiveBottomSheet>
     </Screen>
   );
 }
@@ -233,6 +302,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 96,
   },
+  presenceSample: {
+    alignItems: 'center',
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  presenceCopy: { flex: 1, gap: spacing.xxs },
+  motionSheetContent: { gap: spacing.sm, padding: spacing.md, paddingTop: spacing.xs },
+  sheetClose: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    minHeight: 48,
+  },
+  sheetCloseLabel: { color: '#FFFFFF' },
   skeletonCard: { borderRadius: radius.lg, height: 120 },
   goldBed: {
     alignItems: 'center',
@@ -242,5 +328,7 @@ const styles = StyleSheet.create({
   },
   deckFrame: { height: 620 },
   matchesFrame: { borderRadius: radius.lg, height: 760, overflow: 'hidden' },
+  chatFrame: { borderRadius: radius.lg, height: 760, overflow: 'hidden' },
+  shopFrame: { borderRadius: radius.lg, height: 860, overflow: 'hidden' },
   tutorialFrame: { borderRadius: radius.lg, height: 780, overflow: 'hidden' },
 });

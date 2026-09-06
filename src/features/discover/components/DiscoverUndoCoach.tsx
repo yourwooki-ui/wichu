@@ -1,21 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  AccessibilityInfo,
-  Animated,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppViewport } from '@/components/NativePreviewFrame';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { motionSpring } from '@/constants/motion';
 import { palette, radius, typography } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 type DiscoverUndoCoachProps = {
   onClose: () => void;
@@ -29,6 +23,7 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
   const insets = useSafeAreaInsets();
   const viewport = useAppViewport();
   const [enter] = useState(() => new Animated.Value(0));
+  const reduceMotion = useReduceMotion();
   const width = Math.min(viewport.width, 620);
   const target = {
     height: 58,
@@ -43,31 +38,20 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
       return;
     }
 
-    let cancelled = false;
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduceMotion) => {
-        if (cancelled) return;
-        if (reduceMotion) {
-          enter.setValue(1);
-          return;
-        }
-        Animated.spring(enter, {
-          bounciness: 6,
-          speed: 16,
-          toValue: 1,
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }).start();
-      })
-      .catch(() => {
-        if (cancelled) return;
-        enter.setValue(1);
-      });
+    if (reduceMotion) {
+      enter.setValue(1);
+      return;
+    }
+    Animated.spring(enter, {
+      ...motionSpring.responsive,
+      toValue: 1,
+      useNativeDriver: USE_NATIVE_DRIVER,
+    }).start();
 
     return () => {
-      cancelled = true;
       enter.stopAnimation();
     };
-  }, [enter, visible]);
+  }, [enter, reduceMotion, visible]);
 
   if (!visible) return null;
 
@@ -86,7 +70,7 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
     <AppModal animationType="fade" onRequestClose={onClose} transparent visible>
       <View accessibilityViewIsModal style={styles.modalRoot}>
         <View style={[styles.stage, { height: viewport.height, width }]}>
-          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             <View style={[styles.dim, { height: target.y, left: 0, top: 0, width }]} />
             <View
               style={[
@@ -119,9 +103,9 @@ export function DiscoverUndoCoach({ onClose, visible }: DiscoverUndoCoachProps) 
           </View>
 
           <View
-            pointerEvents="none"
             style={[
               styles.focusRing,
+              { pointerEvents: 'none' },
               {
                 height: target.height,
                 left: target.x,

@@ -1,11 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { duration, radius, spacing } from '@/constants/theme';
+import { motionDuration } from '@/constants/motion';
+import { radius, spacing } from '@/constants/theme';
+import { useMotionEnabled } from '@/hooks/use-reduce-motion';
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+const shimmerProgress = new Animated.Value(0);
+let shimmerConsumers = 0;
+let shimmerAnimation: Animated.CompositeAnimation | null = null;
+
+function acquireShimmer() {
+  shimmerConsumers += 1;
+  if (shimmerConsumers > 1) return;
+
+  shimmerProgress.setValue(0);
+  shimmerAnimation = Animated.loop(
+    Animated.sequence([
+      Animated.timing(shimmerProgress, {
+        duration: motionDuration.shimmer,
+        easing: Easing.inOut(Easing.ease),
+        toValue: 1,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+      Animated.timing(shimmerProgress, {
+        duration: motionDuration.shimmer,
+        easing: Easing.inOut(Easing.ease),
+        toValue: 0,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+    ]),
+  );
+  shimmerAnimation.start();
+}
+
+function releaseShimmer() {
+  shimmerConsumers = Math.max(0, shimmerConsumers - 1);
+  if (shimmerConsumers > 0) return;
+  shimmerAnimation?.stop();
+  shimmerAnimation = null;
+  shimmerProgress.setValue(0);
+}
 
 /**
  * 로딩 중 실제 콘텐츠와 같은 골격을 먼저 그려주는 shimmer 블록.
@@ -15,33 +51,13 @@ const USE_NATIVE_DRIVER = Platform.OS !== 'web';
  */
 export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
   const theme = useAppTheme();
-  const reduceMotion = useReduceMotion();
-  const [progress] = useState(() => new Animated.Value(0));
+  const motionEnabled = useMotionEnabled();
 
   useEffect(() => {
-    if (reduceMotion) {
-      progress.setValue(0);
-      return;
-    }
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(progress, {
-          toValue: 1,
-          duration: duration.shimmer,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-        Animated.timing(progress, {
-          toValue: 0,
-          duration: duration.shimmer,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [progress, reduceMotion]);
+    if (!motionEnabled) return;
+    acquireShimmer();
+    return releaseShimmer;
+  }, [motionEnabled]);
 
   return (
     <Animated.View
@@ -51,7 +67,11 @@ export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
         styles.block,
         { backgroundColor: theme.isDark ? '#1E1E24' : '#E4E4EA' },
         style,
-        { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.45] }) },
+        {
+          opacity: motionEnabled
+            ? shimmerProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.45] })
+            : 1,
+        },
       ]}
     />
   );

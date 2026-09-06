@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
+import { imageTransition } from '@/constants/motion';
 import { palette } from '@/constants/theme';
 
 type CountryFlagProps = {
@@ -28,7 +29,7 @@ export function CountryFlag({ countryCode, compact = false, label, style }: Coun
           recyclingKey={normalizedCode}
           source={{ uri: `https://flagcdn.com/w80/${normalizedCode}.png` }}
           style={styles.image}
-          transition={120}
+          transition={imageTransition.icon}
         />
       )}
     </View>

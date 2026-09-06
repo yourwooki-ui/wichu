@@ -15,6 +15,9 @@ the app bundle.
 
 - Passwords are handled by Supabase Auth as one-way password verifiers. WICHU
   never stores, encrypts, logs, or decrypts user passwords.
+- Phone numbers and one-time codes are handled by Supabase Auth and Twilio
+  Verify. WICHU does not copy them into application tables or analytics, and
+  Twilio credentials remain in the hosted Auth provider configuration.
 - Native access and refresh tokens are stored through `expo-secure-store`, using
   Android Keystore-backed encryption and iOS Keychain. Existing AsyncStorage
   sessions migrate on first read and are deleted from AsyncStorage.
@@ -29,13 +32,18 @@ the app bundle.
 - Push tokens cannot be hashed because the delivery provider needs the original
   value. They are therefore hidden from direct Data API access and are managed
   only through authenticated registration/removal RPCs and server workers.
-- DeepL, Expo push, Supabase secret/service-role, signing, Vercel, and future IAP
+- DeepL, Twilio Verify, Expo push, Supabase secret/service-role, signing, Vercel, and future IAP
   verification keys are server-only secrets. They must never use an
   `EXPO_PUBLIC_` prefix.
 - Message bodies must remain decryptable for chat and translation. Current
   protection is TLS, Supabase encryption at rest, match-only RLS, block checks,
   and server-side translation authorization. End-to-end encryption is a separate
   product decision because it conflicts with server translation and moderation.
+- Operations RPCs require an active database admin role. Profile visibility
+  actions and operator access changes remain master-only and every privileged
+  resolution is written to the immutable moderation audit log.
+- The post-date safety queue exposes the subject and review facts required for
+  triage, but does not return the reporter or match identifiers to operators.
 
 ## Security boundaries
 
@@ -98,6 +106,8 @@ the app bundle.
 
 - Enable leaked-password protection, CAPTCHA/bot protection, and MFA for all
   master/operator accounts in the Supabase dashboard.
+- Enable Twilio Verify Fraud Guard, restrict allowed destination countries, set
+  spend alerts, and review Auth SMS rate limits before public phone login.
 - Restrict direct database network access to operator/VPN addresses when the plan
   supports Network Restrictions. This does not replace Data API RLS.
 - Configure log drains/alerts for repeated auth failures, RLS denials, abnormal

@@ -1,35 +1,63 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { type Href, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  cancelAnimation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import {
+  getRemainingNotificationTime,
+  IN_APP_NOTIFICATION_DISMISS_DISTANCE,
+  IN_APP_NOTIFICATION_DISMISS_VELOCITY,
+  IN_APP_NOTIFICATION_HIDDEN_OFFSET,
+} from '@/components/in-app-notification-motion';
 import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { imageTransition, motionDelay, motionDuration, motionSpring } from '@/constants/motion';
 import { elevation, palette, radius } from '@/constants/theme';
+import { useAppActive } from '@/hooks/use-app-active';
 import { useInAppRealtimeNotifications } from '@/hooks/use-in-app-realtime-notifications';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import { useInAppNotificationCenter } from '@/services/in-app-notification-center';
 
-const DISPLAY_DURATION_MS = 3000;
-const HIDDEN_OFFSET = -132;
-const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+const DISPLAY_DURATION_MS = motionDelay.notificationHold;
 
-export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
+export function GlobalInAppNotificationHost({
+  realtimeEnabled = true,
+  userId,
+}: {
+  realtimeEnabled?: boolean;
+  userId: string;
+}) {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const appActive = useAppActive();
   const reduceMotion = useReduceMotion();
   const notice = useInAppNotificationCenter((state) => state.queue[0]);
   const dismissNotice = useInAppNotificationCenter((state) => state.dismiss);
   const clearNotices = useInAppNotificationCenter((state) => state.clear);
-  const [translateY] = useState(() => new Animated.Value(HIDDEN_OFFSET));
-  const [progress] = useState(() => new Animated.Value(1));
+  const translateY = useSharedValue(IN_APP_NOTIFICATION_HIDDEN_OFFSET);
+  const gestureStartY = useSharedValue(0);
+  const progress = useSharedValue(1);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerStartedAtRef = useRef(0);
+  const remainingMsRef = useRef<number>(DISPLAY_DURATION_MS);
+  const dismissing = useSharedValue(false);
 
-  useInAppRealtimeNotifications(userId);
+  useInAppRealtimeNotifications(userId, realtimeEnabled);
 
   const completeDismiss = useCallback(
     (id: string) => {
@@ -38,178 +66,233 @@ export function GlobalInAppNotificationHost({ userId }: { userId: string }) {
     [dismissNotice],
   );
 
-  const hide = useCallback(() => {
-    if (!notice) return;
-    translateY.stopAnimation();
-    progress.stopAnimation();
-    if (reduceMotion) {
-      translateY.setValue(HIDDEN_OFFSET);
-      completeDismiss(notice.id);
-      return;
-    }
-    Animated.timing(translateY, {
-      duration: 170,
-      toValue: HIDDEN_OFFSET,
-      useNativeDriver: USE_NATIVE_DRIVER,
-    }).start(({ finished }) => {
-      if (finished) completeDismiss(notice.id);
-    });
-  }, [completeDismiss, notice, progress, reduceMotion, translateY]);
+  const clearDisplayTimer = useCallback(() => {
+    if (!timerRef.current) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+  }, []);
+
+  const hide = useCallback(
+    (id: string) => {
+      if (dismissing.get()) return;
+      dismissing.set(true);
+      clearDisplayTimer();
+      cancelAnimation(translateY);
+      cancelAnimation(progress);
+      if (reduceMotion) {
+        translateY.set(IN_APP_NOTIFICATION_HIDDEN_OFFSET);
+        completeDismiss(id);
+        return;
+      }
+
+      translateY.set(
+        withTiming(
+          IN_APP_NOTIFICATION_HIDDEN_OFFSET,
+          { duration: motionDuration.fast },
+          (finished) => {
+            if (finished) runOnJS(completeDismiss)(id);
+          },
+        ),
+      );
+    },
+    [clearDisplayTimer, completeDismiss, dismissing, progress, reduceMotion, translateY],
+  );
 
   useEffect(
     () => () => {
-      translateY.stopAnimation();
-      progress.stopAnimation();
+      clearDisplayTimer();
+      cancelAnimation(translateY);
+      cancelAnimation(progress);
       clearNotices();
     },
-    [clearNotices, progress, translateY],
+    [clearDisplayTimer, clearNotices, progress, translateY],
   );
 
   useEffect(() => {
     if (!notice) return;
-    translateY.stopAnimation();
-    progress.stopAnimation();
-    translateY.setValue(reduceMotion ? 0 : HIDDEN_OFFSET);
-    progress.setValue(1);
+    clearDisplayTimer();
+    cancelAnimation(translateY);
+    cancelAnimation(progress);
+    dismissing.set(false);
+    remainingMsRef.current = DISPLAY_DURATION_MS;
+    translateY.set(reduceMotion ? 0 : IN_APP_NOTIFICATION_HIDDEN_OFFSET);
+    progress.set(1);
 
     if (notice.type === 'match') hapticsService.success();
     else hapticsService.selection();
 
-    if (!reduceMotion) {
-      Animated.spring(translateY, {
-        damping: 20,
-        mass: 0.76,
-        stiffness: 245,
-        toValue: 0,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
-      Animated.timing(progress, {
-        duration: DISPLAY_DURATION_MS,
-        toValue: 0,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
+    if (!reduceMotion) translateY.set(withSpring(0, motionSpring.notification));
+  }, [clearDisplayTimer, dismissing, notice, progress, reduceMotion, translateY]);
+
+  useEffect(() => {
+    if (!notice || !appActive || dismissing.get()) return;
+
+    const remainingMs = remainingMsRef.current;
+    if (remainingMs <= 0) {
+      hide(notice.id);
+      return;
     }
 
-    const timer = setTimeout(hide, DISPLAY_DURATION_MS);
+    timerStartedAtRef.current = Date.now();
+    if (!reduceMotion) {
+      cancelAnimation(progress);
+      progress.set(withTiming(0, { duration: remainingMs }));
+    }
+    timerRef.current = setTimeout(() => hide(notice.id), remainingMs);
+
     return () => {
-      clearTimeout(timer);
-      translateY.stopAnimation();
-      progress.stopAnimation();
+      if (timerRef.current) {
+        remainingMsRef.current = getRemainingNotificationTime(
+          remainingMsRef.current,
+          Date.now() - timerStartedAtRef.current,
+        );
+      }
+      clearDisplayTimer();
+      cancelAnimation(progress);
     };
-  }, [hide, notice, progress, reduceMotion, translateY]);
+  }, [appActive, clearDisplayTimer, dismissing, hide, notice, progress, reduceMotion]);
 
   const openNotice = useCallback(() => {
     if (!notice) return;
     hapticsService.selection();
     router.push(notice.route as Href);
-    hide();
+    hide(notice.id);
   }, [hide, notice, router]);
 
-  const panResponder = useMemo(
+  const dismissCurrent = useCallback(() => {
+    if (notice) hide(notice.id);
+  }, [hide, notice]);
+
+  const noticeId = notice?.id;
+
+  const gesture = useMemo(
     () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          gestureState.dy < -5 && Math.abs(gestureState.dx) < 20,
-        onPanResponderMove: (_, gestureState) => {
-          if (gestureState.dy < 0) translateY.setValue(gestureState.dy);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dy < -34 || gestureState.vy < -0.52) {
-            hide();
+      Gesture.Pan()
+        .activeOffsetY([-6, 6])
+        .failOffsetX([-20, 20])
+        .onBegin(() => {
+          cancelAnimation(translateY);
+          gestureStartY.set(translateY.get());
+        })
+        .onUpdate((event) => {
+          translateY.set(Math.min(0, gestureStartY.get() + event.translationY));
+        })
+        .onEnd((event) => {
+          const position = translateY.get();
+          if (
+            position < IN_APP_NOTIFICATION_DISMISS_DISTANCE ||
+            event.velocityY < IN_APP_NOTIFICATION_DISMISS_VELOCITY
+          ) {
+            if (!noticeId || dismissing.get()) return;
+            dismissing.set(true);
+            cancelAnimation(progress);
+            translateY.set(
+              withTiming(
+                IN_APP_NOTIFICATION_HIDDEN_OFFSET,
+                { duration: motionDuration.fast },
+                (finished) => {
+                  if (finished) runOnJS(completeDismiss)(noticeId);
+                },
+              ),
+            );
             return;
           }
           if (reduceMotion) {
-            translateY.setValue(0);
+            translateY.set(0);
             return;
           }
-          Animated.spring(translateY, {
-            damping: 19,
-            stiffness: 260,
-            toValue: 0,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          translateY.setValue(0);
-        },
-      }),
-    [hide, reduceMotion, translateY],
+          translateY.set(withSpring(0, motionSpring.tab));
+        })
+        .onFinalize((_event, success) => {
+          if (!success) translateY.set(reduceMotion ? 0 : withSpring(0, motionSpring.tab));
+        }),
+    [completeDismiss, dismissing, gestureStartY, noticeId, progress, reduceMotion, translateY],
   );
+
+  const bannerStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.get(),
+      [IN_APP_NOTIFICATION_HIDDEN_OFFSET, -42, 0],
+      [0, 0.7, 1],
+      'clamp',
+    ),
+    transform: [{ translateY: translateY.get() }],
+  }));
+  const progressStyle = useAnimatedStyle(() => ({
+    opacity: reduceMotion ? 0 : 1,
+    transform: [{ scaleX: progress.get() }],
+  }));
 
   if (!notice) return null;
 
   const isMatch = notice.type === 'match';
-  const bannerStyle = {
-    opacity: translateY.interpolate({
-      inputRange: [HIDDEN_OFFSET, -42, 0],
-      outputRange: [0, 0.7, 1],
-    }),
-    transform: [{ translateY }],
-  };
-  const progressStyle = {
-    opacity: reduceMotion ? 0 : 1,
-    transform: [{ scaleX: progress }],
-  };
 
   return (
-    <View pointerEvents="box-none" style={[styles.host, { paddingTop: Math.max(insets.top, 10) }]}>
-      <Animated.View
-        {...panResponder.panHandlers}
-        accessibilityLiveRegion="polite"
-        accessibilityViewIsModal={false}
-        style={[styles.banner, elevation.lg, bannerStyle]}
-      >
-        <Pressable
-          accessibilityHint={t('inAppNotice.openHint')}
-          accessibilityLabel={`${notice.title}. ${notice.body}`}
-          accessibilityRole="button"
-          onPress={openNotice}
-          style={styles.mainAction}
+    <View
+      style={[styles.host, { paddingTop: Math.max(insets.top, 10), pointerEvents: 'box-none' }]}
+    >
+      <GestureDetector gesture={gesture}>
+        <Animated.View
+          accessibilityLiveRegion="polite"
+          accessibilityViewIsModal={false}
+          style={[styles.banner, elevation.lg, bannerStyle]}
         >
-          <View style={styles.visual}>
-            {notice.photo ? (
-              <Image
-                cachePolicy="memory-disk"
-                contentFit="cover"
-                source={{ uri: notice.photo }}
-                style={[styles.photo, isMatch && styles.matchPhoto]}
-                transition={120}
-              />
-            ) : (
-              <MotionIllustratedIcon
-                motion={isMatch ? 'pulse' : 'float'}
-                size={42}
-                source={isMatch ? illustratedIcons.matches : illustratedIcons.chatEmpty}
-              />
-            )}
-            {notice.photo ? (
-              <View style={[styles.kindBadge, isMatch && styles.kindBadgeMatch]}>
-                <Ionicons color={palette.white} name={isMatch ? 'heart' : 'chatbubble'} size={11} />
-              </View>
-            ) : null}
+          <Pressable
+            accessibilityHint={t('inAppNotice.openHint')}
+            accessibilityLabel={`${notice.title}. ${notice.body}`}
+            accessibilityRole="button"
+            onPress={openNotice}
+            style={styles.mainAction}
+          >
+            <View style={styles.visual}>
+              {notice.photo ? (
+                <Image
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  source={{ uri: notice.photo }}
+                  style={[styles.photo, isMatch && styles.matchPhoto]}
+                  transition={imageTransition.icon}
+                />
+              ) : (
+                <MotionIllustratedIcon
+                  motion={isMatch ? 'pulse' : 'float'}
+                  size={42}
+                  source={isMatch ? illustratedIcons.matches : illustratedIcons.chatEmpty}
+                />
+              )}
+              {notice.photo ? (
+                <View style={[styles.kindBadge, isMatch && styles.kindBadgeMatch]}>
+                  <Ionicons
+                    color={palette.white}
+                    name={isMatch ? 'heart' : 'chatbubble'}
+                    size={11}
+                  />
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.copy}>
+              <Text numberOfLines={1} style={styles.title}>
+                {notice.title}
+              </Text>
+              <Text numberOfLines={2} style={styles.body}>
+                {notice.body}
+              </Text>
+            </View>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={t('inAppNotice.dismiss')}
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={dismissCurrent}
+            style={styles.close}
+          >
+            <Ionicons color={palette.inkMuted} name="close" size={18} />
+          </Pressable>
+          <View style={[styles.progressTrack, { pointerEvents: 'none' }]}>
+            <Animated.View style={[styles.progressFill, progressStyle]} />
           </View>
-          <View style={styles.copy}>
-            <Text numberOfLines={1} style={styles.title}>
-              {notice.title}
-            </Text>
-            <Text numberOfLines={2} style={styles.body}>
-              {notice.body}
-            </Text>
-          </View>
-        </Pressable>
-        <Pressable
-          accessibilityLabel={t('inAppNotice.dismiss')}
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={hide}
-          style={styles.close}
-        >
-          <Ionicons color={palette.inkMuted} name="close" size={18} />
-        </Pressable>
-        <View pointerEvents="none" style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, progressStyle]} />
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

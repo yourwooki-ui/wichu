@@ -87,6 +87,27 @@ export const authService = {
       },
     });
   },
+  requestPhoneOtp({
+    birthDate,
+    phone,
+    shouldCreateUser,
+  }: {
+    birthDate?: string;
+    phone: string;
+    shouldCreateUser: boolean;
+  }) {
+    return getSupabaseClient().auth.signInWithOtp({
+      phone,
+      options: {
+        channel: 'sms',
+        shouldCreateUser,
+        ...(birthDate ? { data: { birth_date: birthDate } } : {}),
+      },
+    });
+  },
+  verifyPhoneOtp(phone: string, token: string) {
+    return getSupabaseClient().auth.verifyOtp({ phone, token, type: 'sms' });
+  },
   async signInWithGoogle(birthDate?: string) {
     if (birthDate) {
       await sensitiveStorage.setItem(

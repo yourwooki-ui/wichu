@@ -8,6 +8,7 @@ export type ConnectionProfile = {
   matchedAt: string;
   isOnline: boolean;
   isNew: boolean;
+  lastActiveAt?: string | null;
   isGoldPass?: boolean;
   introMessage?: string | null;
 };

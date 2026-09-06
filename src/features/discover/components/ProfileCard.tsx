@@ -7,7 +7,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CountryFlag } from '@/components/CountryFlag';
 import { GoldBadge } from '@/components/GoldBadge';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { PresenceDot } from '@/components/PresenceDot';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { imageTransition } from '@/constants/motion';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
 import { getProfilePresence } from '@/features/profile/utils/profile-display';
 import { Profile } from '@/types/profile';
@@ -38,6 +40,7 @@ function ProfileCardComponent({
   const presenceLabel = presence
     ? t(`discover.presence.${presence.kind}`, { count: presence.count })
     : null;
+  const online = presence?.kind === 'online';
   const profileSignals = [
     ...(profile.connectionGoals ?? []).map((goal) => t(`profileSetup.profileTags.values.${goal}`)),
     ...profile.interests,
@@ -67,7 +70,7 @@ function ProfileCardComponent({
         recyclingKey={profile.id}
         source={{ uri: primaryPhoto }}
         style={StyleSheet.absoluteFill}
-        transition={180}
+        transition={imageTransition.hero}
       />
       {photoFailed ? (
         <View
@@ -131,16 +134,13 @@ function ProfileCardComponent({
             </View>
           )}
         </View>
-        <View style={styles.metaRow}>
+        <View style={[styles.metaRow, online && styles.onlineMetaRow]}>
           {presenceLabel ? (
             <View style={styles.presence}>
-              <View
-                style={[
-                  styles.presenceDot,
-                  presence?.kind === 'online' ? styles.presenceDotOnline : null,
-                ]}
-              />
-              <Text style={styles.presenceText}>{presenceLabel}</Text>
+              <PresenceDot active={presence?.kind === 'online'} />
+              <Text style={[styles.presenceText, online && styles.onlinePresenceText]}>
+                {presenceLabel}
+              </Text>
             </View>
           ) : null}
           {presenceLabel ? <View style={styles.metaDivider} /> : null}
@@ -266,15 +266,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  presence: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  presenceDot: {
-    backgroundColor: 'rgba(255,255,255,0.64)',
-    borderRadius: 4,
-    height: 7,
-    width: 7,
+  onlineMetaRow: {
+    backgroundColor: 'rgba(196,255,91,0.16)',
+    borderColor: 'rgba(214,255,142,0.42)',
   },
-  presenceDotOnline: { backgroundColor: palette.lime },
+  presence: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   presenceText: { ...typography.label, color: 'rgba(255,255,255,0.9)' },
+  onlinePresenceText: { color: '#E4FFAD', fontWeight: '800' },
   metaDivider: {
     backgroundColor: 'rgba(255,255,255,0.38)',
     borderRadius: 1,

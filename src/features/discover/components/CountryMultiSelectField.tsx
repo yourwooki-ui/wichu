@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
@@ -119,9 +119,11 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
           <Check selected={value.length === 0} />
         </Pressable>
         <FlatList
+          automaticallyAdjustKeyboardInsets={false}
           contentContainerStyle={styles.list}
           data={filtered}
           initialNumToRender={18}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.code}
           nestedScrollEnabled

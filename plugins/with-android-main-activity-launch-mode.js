@@ -11,8 +11,8 @@ module.exports = function withAndroidMainActivityLaunchMode(config) {
   return withAndroidManifest(config, (manifestConfig) => {
     const application = manifestConfig.modResults.manifest.application?.[0];
     const activities = application?.activity ?? [];
-    const mainActivity = activities.find(
-      (activity) => MAIN_ACTIVITY_NAMES.has(activity.$?.['android:name']),
+    const mainActivity = activities.find((activity) =>
+      MAIN_ACTIVITY_NAMES.has(activity.$?.['android:name']),
     );
 
     if (!mainActivity?.$) {

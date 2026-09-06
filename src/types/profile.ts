@@ -21,6 +21,23 @@ export type PublicProfileDetails = {
   pets?: string;
 };
 
+export type ProfilePromptKey =
+  | 'learning_now'
+  | 'ideal_weekend'
+  | 'language_exchange'
+  | 'looking_for'
+  | 'small_joy'
+  | 'first_date';
+
+export type ProfilePrompt = {
+  promptKey: ProfilePromptKey;
+  answer: string;
+  position: number;
+};
+
+export type RecommendationReason =
+  'shared_goals' | 'shared_interests' | 'language_match' | 'recently_active';
+
 export type Profile = {
   id: string;
   name: string;
@@ -41,6 +58,8 @@ export type Profile = {
   isNew?: boolean;
   isGoldPass?: boolean;
   details?: PublicProfileDetails;
+  prompts?: ProfilePrompt[];
+  recommendationReasons?: RecommendationReason[];
 };
 
 export type SwipeAction = 'like' | 'pass';

@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,11 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { ConsentRow } from '@/components/ConsentRow';
 import { FormField } from '@/components/FormField';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { palette, radius, spacing, touchSlop } from '@/constants/theme';
+import { phoneAuthEnabled } from '@/constants/feature-flags';
 import { AuthWelcome } from '@/features/auth/components/AuthWelcome';
 import { GoogleAuthButton } from '@/features/auth/components/GoogleAuthButton';
 import { LanguagePicker } from '@/features/auth/components/LanguagePicker';
+import { PhoneOtpSheet } from '@/features/auth/components/PhoneOtpSheet';
 import { authService } from '@/features/auth/services/auth-service';
 import { reportOperationalError } from '@/services/operational-error-service';
 import { getAge, isAdult } from '@/features/auth/utils/age';
@@ -35,12 +39,14 @@ export default function LoginRoute() {
   const router = useRouter();
   const { t } = useTranslation();
   const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<TextInput>(null);
   const [stage, setStage] = useState<AuthStage>('welcome');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [consented, setConsented] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<LoadingMethod>(null);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   // 실패는 message, 성공 안내는 notice로 나눈다. 같은 붉은 스타일로 섞이지 않게 한다.
   const [notice, setNotice] = useState<string | null>(null);
@@ -81,6 +87,7 @@ export default function LoginRoute() {
   }
 
   async function submit() {
+    if (loading) return;
     const normalizedEmail = email.trim().toLowerCase();
     setMessage(null);
     setNotice(null);
@@ -134,6 +141,21 @@ export default function LoginRoute() {
     }
   }
 
+  function openPhoneAuth() {
+    setMessage(null);
+    setNotice(null);
+
+    if (isSignUp) {
+      const errors: FieldErrors = {};
+      if (!isAdult(birthDate)) errors.birthDate = t('auth.adultOnly');
+      if (!consented) errors.consent = t('auth.consentRequired');
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+    }
+
+    setPhoneOpen(true);
+  }
+
   if (stage === 'welcome') {
     return (
       <AuthWelcome
@@ -150,10 +172,11 @@ export default function LoginRoute() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
         >
-          <ScrollView
+          <KeyboardAwareScrollView
+            automaticallyAdjustKeyboardInsets={false}
             ref={scrollRef}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
+            keyboardFocusOffset={28}
             showsVerticalScrollIndicator={false}
             style={styles.scroll}
           >
@@ -244,6 +267,15 @@ export default function LoginRoute() {
                 loading={loadingMethod === 'google'}
                 onPress={submitGoogle}
               />
+              {phoneAuthEnabled ? (
+                <PrimaryButton
+                  disabled={loading}
+                  icon="phone-portrait-outline"
+                  label={t(isSignUp ? 'phoneAuth.signUpAction' : 'phoneAuth.signInAction')}
+                  onPress={openPhoneAuth}
+                  variant="secondary"
+                />
+              ) : null}
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerLabel}>{t('auth.orContinueWithEmail')}</Text>
@@ -262,8 +294,11 @@ export default function LoginRoute() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
               <FormField
+                ref={passwordRef}
                 label={t('auth.password')}
                 value={password}
                 onChangeText={(value) => {
@@ -276,6 +311,8 @@ export default function LoginRoute() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                returnKeyType="done"
+                onSubmitEditing={() => void submit()}
                 showPasswordLabel={t('auth.showPassword')}
                 hidePasswordLabel={t('auth.hidePassword')}
               />
@@ -327,9 +364,18 @@ export default function LoginRoute() {
                 </Pressable>
               </View>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
       </View>
+      {phoneAuthEnabled && phoneOpen ? (
+        <PhoneOtpSheet
+          birthDate={isSignUp ? birthDate : undefined}
+          mode={isSignUp ? 'sign-up' : 'sign-in'}
+          onClose={() => setPhoneOpen(false)}
+          onVerified={() => setPhoneOpen(false)}
+          visible
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

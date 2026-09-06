@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
   InteractiveBottomSheet,
 } from '@/components/InteractiveBottomSheet';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 
 export const REPORT_REASONS = [
@@ -72,9 +73,10 @@ function VisibleReportReasonSheet({
       sheetStyle={styles.sheet}
       visible
     >
-      <ScrollView
+      <KeyboardAwareScrollView
+        automaticallyAdjustKeyboardInsets={false}
         contentContainerStyle={styles.sheetContent}
-        keyboardShouldPersistTaps="handled"
+        keyboardFocusOffset={24}
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
@@ -166,7 +168,7 @@ function VisibleReportReasonSheet({
             {busy ? t('safetySurfaces.report.submitting') : t('safetySurfaces.report.cancel')}
           </Text>
         </BottomSheetCloseButton>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </InteractiveBottomSheet>
   );
 }

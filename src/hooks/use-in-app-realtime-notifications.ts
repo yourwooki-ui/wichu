@@ -11,10 +11,12 @@ import type { Tables } from '@/types/database';
 const CONNECTION_DELAY_MS = 750;
 const connectionKey = (userId: string) => ['matches', 'connections', userId] as const;
 
-export function useInAppRealtimeNotifications(userId: string) {
+export function useInAppRealtimeNotifications(userId: string, enabled = true) {
   const { i18n, t } = useTranslation();
 
   useEffect(() => {
+    if (!enabled) return;
+
     const enqueue = useInAppNotificationCenter.getState().enqueue;
     let active = true;
     let removeRealtimeChannel: (() => void) | undefined;
@@ -129,5 +131,5 @@ export function useInAppRealtimeNotifications(userId: string) {
       clearTimeout(connectTimer);
       removeRealtimeChannel?.();
     };
-  }, [i18n.resolvedLanguage, t, userId]);
+  }, [enabled, i18n.resolvedLanguage, t, userId]);
 }

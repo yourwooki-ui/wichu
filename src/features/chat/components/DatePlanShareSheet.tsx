@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BottomSheetCloseButton,
   InteractiveBottomSheet,
 } from '@/components/InteractiveBottomSheet';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { palette, radius } from '@/constants/theme';
@@ -56,9 +57,10 @@ export function DatePlanShareSheet({ matchName, onClose, visible }: Props) {
       sheetStyle={styles.sheet}
       visible
     >
-      <ScrollView
+      <KeyboardAwareScrollView
+        automaticallyAdjustKeyboardInsets={false}
         contentContainerStyle={styles.sheetContent}
-        keyboardShouldPersistTaps="handled"
+        keyboardFocusOffset={24}
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
@@ -117,7 +119,7 @@ export function DatePlanShareSheet({ matchName, onClose, visible }: Props) {
             <Text style={styles.shareText}>{t('experience.dateShare.share')}</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </InteractiveBottomSheet>
   );
 }

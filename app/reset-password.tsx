@@ -1,20 +1,21 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { FormField } from '@/components/FormField';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { palette } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
@@ -27,6 +28,7 @@ export default function ResetPasswordRoute() {
   const { session } = useAuthSession();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const confirmationRef = useRef<TextInput>(null);
   const [preparing, setPreparing] = useState(Boolean(url) && !session);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export default function ResetPasswordRoute() {
   }, [session, t, url]);
 
   const submit = async () => {
+    if (busy) return;
     if (!session) return setMessage(t('passwordReset.reopenLink'));
     if (password.length < 8) return setMessage(t('passwordReset.shortPassword'));
     if (password !== confirmation) return setMessage(t('passwordReset.mismatch'));
@@ -62,9 +65,10 @@ export default function ResetPasswordRoute() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.page}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
+          automaticallyAdjustKeyboardInsets={false}
           contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+          keyboardFocusOffset={28}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
@@ -84,19 +88,24 @@ export default function ResetPasswordRoute() {
                 hidePasswordLabel={t('passwordReset.hidePassword')}
                 label={t('passwordReset.newPassword')}
                 onChangeText={setPassword}
+                onSubmitEditing={() => confirmationRef.current?.focus()}
                 placeholder={t('passwordReset.passwordPlaceholder')}
+                returnKeyType="next"
                 secureTextEntry
                 showPasswordLabel={t('passwordReset.showPassword')}
                 tone="dark"
                 value={password}
               />
               <FormField
+                ref={confirmationRef}
                 autoCapitalize="none"
                 autoComplete="new-password"
                 hidePasswordLabel={t('passwordReset.hidePassword')}
                 label={t('passwordReset.confirmPassword')}
                 onChangeText={setConfirmation}
+                onSubmitEditing={() => void submit()}
                 placeholder={t('passwordReset.confirmationPlaceholder')}
+                returnKeyType="done"
                 secureTextEntry
                 showPasswordLabel={t('passwordReset.showPassword')}
                 tone="dark"
@@ -119,7 +128,7 @@ export default function ResetPasswordRoute() {
               ) : null}
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

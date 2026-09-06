@@ -75,9 +75,9 @@ export function DiscoverGestureCoach({ active, onComplete, userId }: DiscoverGes
         <View style={[styles.stage, { height, width }]}>
           <SpotlightMask height={height} target={target} width={width} />
           <View
-            pointerEvents="none"
             style={[
               styles.focusRing,
+              { pointerEvents: 'none' },
               {
                 height: target.height,
                 left: target.x,
@@ -148,7 +148,7 @@ function SpotlightMask({
   const targetRight = target.x + target.width;
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       <View style={[styles.dim, { height: target.y, left: 0, top: 0, width }]} />
       <View
         style={[styles.dim, { height: target.height, left: 0, top: target.y, width: target.x }]}

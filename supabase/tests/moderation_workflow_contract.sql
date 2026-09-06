@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(20);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 values
@@ -24,6 +24,13 @@ values
 
 insert into private.admin_users (user_id, role, active)
 values ('32000000-0000-4000-8000-000000000003', 'master', true);
+
+insert into public.matches (id, user_a, user_b)
+values (
+  '32000000-0000-4000-8000-000000000010',
+  '32000000-0000-4000-8000-000000000001',
+  '32000000-0000-4000-8000-000000000002'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '32000000-0000-4000-8000-000000000001', false);
@@ -80,6 +87,28 @@ select throws_ok(
   'Administrator access required',
   'regular members cannot read the moderation queue'
 );
+select lives_ok(
+  $$select public.submit_my_date_feedback(
+    '32000000-0000-4000-8000-000000000010',
+    true,
+    false,
+    true,
+    'The other member ignored my boundaries'
+  )$$,
+  'member can submit a private post-date safety concern'
+);
+select throws_ok(
+  $$select * from public.get_operations_overview()$$,
+  'P0001',
+  'Administrator access required',
+  'regular members cannot read operations metrics'
+);
+select throws_ok(
+  $$select * from public.get_pending_safety_feedback()$$,
+  'P0001',
+  'Administrator access required',
+  'regular members cannot read the safety queue'
+);
 
 select set_config('request.jwt.claim.sub', '32000000-0000-4000-8000-000000000003', false);
 select set_config('request.jwt.claims', '{"sub":"32000000-0000-4000-8000-000000000003","role":"authenticated"}', false);
@@ -94,11 +123,21 @@ select is(
   1::bigint,
   'master can inspect the active operations team'
 );
+select is(
+  (select pending_safety from public.get_operations_overview()),
+  1::bigint,
+  'operations overview includes the pending safety concern'
+);
 
 select set_config('request.jwt.claim.sub', '32000000-0000-4000-8000-000000000004', false);
 select set_config('request.jwt.claims', '{"sub":"32000000-0000-4000-8000-000000000004","role":"authenticated"}', false);
 
 select is((select count(*) from public.get_pending_reports()), 1::bigint, 'operator can read the queue');
+select is(
+  (select count(*) from public.get_pending_safety_feedback()),
+  1::bigint,
+  'operator can read the safety queue'
+);
 select throws_ok(
   $$select public.resolve_report_v2(
     (select id from public.reports where status = 'pending' limit 1),
@@ -119,12 +158,37 @@ select lives_ok(
   )$$,
   'operator can resolve a report without punitive account action'
 );
+select throws_ok(
+  $$select public.resolve_safety_feedback(
+    (select id from public.date_feedback where safety_review_status = 'pending' limit 1),
+    'reviewed',
+    'Escalated by operator',
+    'profile_hidden'
+  )$$,
+  'P0001',
+  'Master administrator access required',
+  'operator cannot hide a profile from the safety queue'
+);
+select lives_ok(
+  $$select public.resolve_safety_feedback(
+    (select id from public.date_feedback where safety_review_status = 'pending' limit 1),
+    'reviewed',
+    'Safety review completed',
+    'none'
+  )$$,
+  'operator can resolve a safety concern without punitive account action'
+);
 
 reset role;
 select is(
   (select count(*) from private.moderation_audit_log where action = 'report_reviewed'),
   1::bigint,
   'report resolution creates an immutable audit entry'
+);
+select is(
+  (select count(*) from private.moderation_audit_log where action = 'safety_reviewed'),
+  1::bigint,
+  'safety resolution creates an immutable audit entry'
 );
 
 select * from finish();

@@ -8,6 +8,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
+import { imageTransition } from '@/constants/motion';
 import { pressFeedback, radius, spacing } from '@/constants/theme';
 import { normalizeProfilePhotoAsset } from '@/features/profile/services/profile-photo-normalizer';
 import {
@@ -307,7 +308,7 @@ export function ProfilePhotoPicker({
               contentFit="cover"
               source={{ cacheKey: photo.storagePath ?? photo.draftId, uri: photo.uri }}
               style={StyleSheet.absoluteFill}
-              transition={140}
+              transition={imageTransition.thumbnail}
             />
             {photo.reviewStatus === 'pending' || photo.reviewStatus === 'rejected' ? (
               <View

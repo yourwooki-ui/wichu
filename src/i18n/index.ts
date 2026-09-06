@@ -9,9 +9,11 @@ import { inAppNotificationResources } from './in-app-notification-resources';
 import { journeyResources } from './journey-resources';
 import { operationalResources } from './operational-resources';
 import { p1Resources } from './p1-resources';
+import { phoneAuthResources } from './phone-auth-resources';
 import { profileSurfaceResources } from './profile-surface-resources';
 import { profileEditorResources } from './profile-editor-resources';
 import { reliabilityResources } from './reliability-resources';
+import { relationshipResources } from './relationship-resources';
 import {
   type AppLanguage,
   DEFAULT_APP_LANGUAGE,
@@ -614,6 +616,8 @@ const resources = {
       ...profileSurfaceResources.en.translation,
       ...profileEditorResources.en.translation,
       ...journeyResources.en.translation,
+      ...relationshipResources.en.translation,
+      ...phoneAuthResources.en.translation,
     },
   },
   ko: {
@@ -628,6 +632,8 @@ const resources = {
       ...profileSurfaceResources.ko.translation,
       ...profileEditorResources.ko.translation,
       ...journeyResources.ko.translation,
+      ...relationshipResources.ko.translation,
+      ...phoneAuthResources.ko.translation,
     },
   },
   vi: {
@@ -641,6 +647,8 @@ const resources = {
       ...profileSurfaceResources.vi.translation,
       ...profileEditorResources.vi.translation,
       ...journeyResources.vi.translation,
+      ...relationshipResources.vi.translation,
+      ...phoneAuthResources.vi.translation,
     },
   },
   ja: {
@@ -654,6 +662,8 @@ const resources = {
       ...profileSurfaceResources.ja.translation,
       ...profileEditorResources.ja.translation,
       ...journeyResources.ja.translation,
+      ...relationshipResources.ja.translation,
+      ...phoneAuthResources.ja.translation,
     },
   },
   fr: {
@@ -667,6 +677,8 @@ const resources = {
       ...profileSurfaceResources.fr.translation,
       ...profileEditorResources.fr.translation,
       ...journeyResources.fr.translation,
+      ...relationshipResources.fr.translation,
+      ...phoneAuthResources.fr.translation,
     },
   },
   es: {
@@ -680,6 +692,8 @@ const resources = {
       ...profileSurfaceResources.es.translation,
       ...profileEditorResources.es.translation,
       ...journeyResources.es.translation,
+      ...relationshipResources.es.translation,
+      ...phoneAuthResources.es.translation,
     },
   },
   'pt-BR': {
@@ -693,6 +707,8 @@ const resources = {
       ...profileSurfaceResources['pt-BR'].translation,
       ...profileEditorResources['pt-BR'].translation,
       ...journeyResources['pt-BR'].translation,
+      ...relationshipResources['pt-BR'].translation,
+      ...phoneAuthResources['pt-BR'].translation,
     },
   },
   'zh-TW': {
@@ -706,6 +722,8 @@ const resources = {
       ...profileSurfaceResources['zh-TW'].translation,
       ...profileEditorResources['zh-TW'].translation,
       ...journeyResources['zh-TW'].translation,
+      ...relationshipResources['zh-TW'].translation,
+      ...phoneAuthResources['zh-TW'].translation,
     },
   },
   id: {
@@ -719,6 +737,8 @@ const resources = {
       ...profileSurfaceResources.id.translation,
       ...profileEditorResources.id.translation,
       ...journeyResources.id.translation,
+      ...relationshipResources.id.translation,
+      ...phoneAuthResources.id.translation,
     },
   },
   fa: {
@@ -732,6 +752,8 @@ const resources = {
       ...profileSurfaceResources.fa.translation,
       ...profileEditorResources.fa.translation,
       ...journeyResources.fa.translation,
+      ...relationshipResources.fa.translation,
+      ...phoneAuthResources.fa.translation,
     },
   },
 } as const;
