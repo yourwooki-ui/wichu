@@ -280,8 +280,13 @@ select is((select count(*) from public.matches), 0::bigint, 'nonparticipant cann
 select is((select role from public.get_my_admin_access()), 'master', 'database role grants admin access');
 
 reset role;
-insert into public.reports (reporter_id, reported_id, reason)
-values ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002', 'other');
+insert into public.reports (reporter_id, reported_id, reason, details)
+values (
+  '30000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000002',
+  'other',
+  'Contract-test report details'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000003', false);

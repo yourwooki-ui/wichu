@@ -23,11 +23,17 @@ values
   ('31000000-0000-4000-8000-000000000003', 'Lifecycle C', '2000-01-01', 'woman', array['man'], 'JP', 'ja', array['ja'], repeat('c', 24), now(), now(), now(), 'approved', true),
   ('31000000-0000-4000-8000-000000000004', 'Lifecycle D', '2000-01-01', 'woman', array['man'], 'FR', 'fr', array['fr'], repeat('d', 24), now(), now(), now() - interval '8 days', 'approved', true);
 
--- Historical interactions prove that expiration derives from the server timestamp.
+-- Historical interactions still pass through the owner-validation trigger, so
+-- seed each row with the JWT identity that originally created it.
+select set_config('request.jwt.claim.sub', '31000000-0000-4000-8000-000000000001', false);
+select set_config('request.jwt.claims', '{"sub":"31000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 insert into public.swipes (swiper_id, target_id, action, created_at)
-values
-  ('31000000-0000-4000-8000-000000000001', '31000000-0000-4000-8000-000000000003', 'pass', now() - interval '4 days'),
-  ('31000000-0000-4000-8000-000000000002', '31000000-0000-4000-8000-000000000001', 'like', now() - interval '2 days');
+values ('31000000-0000-4000-8000-000000000001', '31000000-0000-4000-8000-000000000003', 'pass', now() - interval '4 days');
+
+select set_config('request.jwt.claim.sub', '31000000-0000-4000-8000-000000000002', false);
+select set_config('request.jwt.claims', '{"sub":"31000000-0000-4000-8000-000000000002","role":"authenticated"}', false);
+insert into public.swipes (swiper_id, target_id, action, created_at)
+values ('31000000-0000-4000-8000-000000000002', '31000000-0000-4000-8000-000000000001', 'like', now() - interval '2 days');
 
 select is(
   (

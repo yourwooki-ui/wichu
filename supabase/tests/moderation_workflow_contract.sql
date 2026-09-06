@@ -140,7 +140,7 @@ select is(
 );
 select throws_ok(
   $$select public.resolve_report_v2(
-    (select id from public.reports where status = 'pending' limit 1),
+    (select id from public.get_pending_reports() limit 1),
     'reviewed',
     null,
     'profile_hidden'
@@ -151,7 +151,7 @@ select throws_ok(
 );
 select lives_ok(
   $$select public.resolve_report_v2(
-    (select id from public.reports where status = 'pending' limit 1),
+    (select id from public.get_pending_reports() limit 1),
     'reviewed',
     'Reviewed by operator',
     'none'
@@ -160,7 +160,7 @@ select lives_ok(
 );
 select throws_ok(
   $$select public.resolve_safety_feedback(
-    (select id from public.date_feedback where safety_review_status = 'pending' limit 1),
+    (select id from public.get_pending_safety_feedback() limit 1),
     'reviewed',
     'Escalated by operator',
     'profile_hidden'
@@ -171,7 +171,7 @@ select throws_ok(
 );
 select lives_ok(
   $$select public.resolve_safety_feedback(
-    (select id from public.date_feedback where safety_review_status = 'pending' limit 1),
+    (select id from public.get_pending_safety_feedback() limit 1),
     'reviewed',
     'Safety review completed',
     'none'
