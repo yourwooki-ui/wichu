@@ -309,7 +309,8 @@ export function ProfilePhotoPicker({
             <Image
               cachePolicy="memory-disk"
               contentFit="cover"
-              source={{ cacheKey: photo.storagePath ?? photo.draftId, uri: photo.uri }}
+              recyclingKey={photo.uri}
+              source={photo.uri}
               style={StyleSheet.absoluteFill}
               transition={imageTransition.thumbnail}
             />

@@ -131,10 +131,16 @@ export const profileService = {
     };
   },
   async getMyEditableProfile(userId: string) {
-    const [operational, storedPaths] = await Promise.all([
-      profileService.getMyOperationalProfile(userId),
-      profilePhotoService.listMyStoredPhotos(userId),
-    ]);
+    const operational = await profileService.getMyOperationalProfile(userId);
+    let storedPaths: string[];
+    try {
+      storedPaths = await profilePhotoService.listMyStoredPhotos(userId);
+    } catch {
+      // Storage-folder reconciliation repairs legacy partial saves, but it is
+      // not required to edit the authoritative database photos. A transient
+      // Storage list failure must never blank the entire editor.
+      return operational;
+    }
     const databasePhotos = operational.profile.profile_photos;
     const databasePaths = new Set(databasePhotos.map((photo) => photo.storage_path));
     const missingPaths = storedPaths.filter((path) => !databasePaths.has(path));
@@ -143,16 +149,14 @@ export const profileService = {
 
     const { data: signedResults, error: signedError } =
       await profilePhotoService.createSignedPhotoUrls(missingPaths, 3600);
-    if (signedError) throw signedError;
+    if (signedError) return operational;
 
     const recoveredStoragePhotos = (signedResults ?? []).flatMap((result) =>
       result.path && result.signedUrl
         ? [{ signedUrl: result.signedUrl, storagePath: result.path }]
         : [],
     );
-    if (recoveredStoragePhotos.length !== missingPaths.length) {
-      throw new Error('Unable to load every uploaded profile photo');
-    }
+    if (recoveredStoragePhotos.length === 0) return operational;
 
     return {
       ...operational,

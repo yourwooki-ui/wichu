@@ -229,9 +229,16 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
 
   useEffect(() => {
     const existing = existingProfileQuery.data;
-    // Do not hydrate from a stale cached one-photo snapshot while the mount
-    // refetch is still loading the authoritative photo list.
-    if (!existing || existingProfileQuery.isFetching || profileHydrated) return;
+    // Signed photo URLs expire. Never hydrate the editor from React Query's
+    // previous-mount snapshot, even during the brief gap before its refetch
+    // changes `isFetching`. Wait until this screen's own request has settled.
+    if (
+      !existing ||
+      !existingProfileQuery.isFetchedAfterMount ||
+      existingProfileQuery.isFetching ||
+      profileHydrated
+    )
+      return;
     queueMicrotask(() => {
       const { details, profile, interests, languages, prompts, settings, tags } = existing;
       setDisplayName(profile.display_name);
@@ -280,7 +287,12 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
       setConsented(true);
       setProfileHydrated(true);
     });
-  }, [existingProfileQuery.data, existingProfileQuery.isFetching, profileHydrated]);
+  }, [
+    existingProfileQuery.data,
+    existingProfileQuery.isFetchedAfterMount,
+    existingProfileQuery.isFetching,
+    profileHydrated,
+  ]);
 
   const formFingerprint = JSON.stringify({
     bio,
