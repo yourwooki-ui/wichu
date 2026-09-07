@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 
@@ -205,22 +206,24 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ direction: getAppTextDirection(language), flex: 1 }}>
-      <SafeAreaProvider>
-        <AppErrorBoundary>
-          <I18nextProvider i18n={i18n}>
-            <QueryClientProvider client={queryClient}>
-              <AuthProvider>
-                <ThemeProvider>
-                  <QueryLifecycleManager />
-                  <NativePreviewFrame>
-                    <RootNavigator />
-                  </NativePreviewFrame>
-                </ThemeProvider>
-              </AuthProvider>
-            </QueryClientProvider>
-          </I18nextProvider>
-        </AppErrorBoundary>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <AppErrorBoundary>
+            <I18nextProvider i18n={i18n}>
+              <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                  <ThemeProvider>
+                    <QueryLifecycleManager />
+                    <NativePreviewFrame>
+                      <RootNavigator />
+                    </NativePreviewFrame>
+                  </ThemeProvider>
+                </AuthProvider>
+              </QueryClientProvider>
+            </I18nextProvider>
+          </AppErrorBoundary>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

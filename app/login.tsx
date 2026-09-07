@@ -2,16 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandWordmark } from '@/components/BrandWordmark';
@@ -168,10 +159,7 @@ export default function LoginRoute() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.flex}
-        >
+        <View style={styles.flex}>
           <KeyboardAwareScrollView
             automaticallyAdjustKeyboardInsets={false}
             ref={scrollRef}
@@ -365,7 +353,7 @@ export default function LoginRoute() {
               </View>
             </View>
           </KeyboardAwareScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </View>
       {phoneAuthEnabled && phoneOpen ? (
         <PhoneOtpSheet

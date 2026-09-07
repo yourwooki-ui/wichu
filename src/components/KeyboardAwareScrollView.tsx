@@ -1,129 +1,47 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { Platform, type ScrollView, type ScrollViewProps } from 'react-native';
 import {
-  Keyboard,
-  Platform,
-  ScrollView,
-  UIManager,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  type ScrollViewProps,
-  type TargetedEvent,
-} from 'react-native';
+  KeyboardAwareScrollView as NativeKeyboardAwareScrollView,
+  type KeyboardAwareScrollViewRef,
+} from 'react-native-keyboard-controller';
 
 type KeyboardAwareScrollViewProps = ScrollViewProps & {
-  /** 키보드 위에 입력칸과 안내문이 함께 보이도록 확보할 여백입니다. */
+  /** 키보드와 입력 커서 사이에 확보할 보호 여백입니다. */
   keyboardFocusOffset?: number;
 };
 
 /**
- * 긴 폼에서 포커스된 입력칸을 키보드 위로 자동 이동시키는 공통 스크롤입니다.
+ * 긴 폼의 모든 입력칸을 키보드 위에 자동으로 유지하는 공통 스크롤입니다.
  *
- * 네이티브 의존성을 추가하지 않고 React Native ScrollView의 공식 responder API를
- * 사용합니다. 포커스 직후와 키보드 전환이 끝난 뒤 두 번 보정해, 키보드가 이미
- * 열린 상태에서 다음 필드로 이동하는 경우와 처음 열리는 경우를 모두 처리합니다.
+ * 포커스 이벤트와 시간차 타이머를 직접 추적하지 않고 네이티브 키보드 프레임과
+ * 동기화된 Expo 57 호환 컨트롤러를 사용합니다. 따라서 키보드가 열린 상태에서
+ * 다음 입력칸으로 이동하거나 multiline 입력이 커져도 같은 방식으로 보정됩니다.
  */
 export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrollViewProps>(
   function KeyboardAwareScrollView(
     {
-      automaticallyAdjustKeyboardInsets = Platform.OS === 'ios',
+      automaticallyAdjustKeyboardInsets = false,
       keyboardDismissMode = Platform.OS === 'ios' ? 'interactive' : 'on-drag',
       keyboardFocusOffset = 24,
       keyboardShouldPersistTaps = 'handled',
-      onFocus,
-      onScroll,
-      scrollEventThrottle,
       ...props
     },
     forwardedRef,
   ) {
-    const scrollRef = useRef<ScrollView>(null);
-    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-    const focusedTargetRef = useRef<number | null>(null);
-    const scrollYRef = useRef(0);
+    const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
 
     useImperativeHandle(forwardedRef, () => scrollRef.current as ScrollView, []);
 
-    useEffect(
-      () => () => {
-        timersRef.current.forEach(clearTimeout);
-        timersRef.current = [];
-      },
-      [],
-    );
-
-    const revealFocusedInput = useCallback(
-      (target: number) => {
-        if (Platform.OS === 'web') return;
-
-        timersRef.current.forEach(clearTimeout);
-        // Android의 resize가 끝나는 시점과 iOS 키보드 애니메이션이 끝나는 시점이
-        // 기기마다 달라 한 번만 이동하면 긴 multiline 입력이 다시 가려질 수 있다.
-        timersRef.current = [50, 240, 520].map((delay) =>
-          setTimeout(() => {
-            scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(
-              target,
-              keyboardFocusOffset,
-              true,
-            );
-
-            // The responder helper is not sufficient on every Android IME,
-            // especially when a fixed footer sits above the keyboard. Measure
-            // the actual focused input and move it above that protected area.
-            const keyboardTop = Keyboard.metrics()?.screenY;
-            if (keyboardTop == null) return;
-            UIManager.measureInWindow(target, (_x, inputTop, _width, inputHeight) => {
-              const overlap = inputTop + inputHeight - (keyboardTop - keyboardFocusOffset);
-              if (overlap <= 0) return;
-              scrollRef.current?.scrollTo({
-                y: scrollYRef.current + overlap,
-                animated: true,
-              });
-            });
-          }, delay),
-        );
-      },
-      [keyboardFocusOffset],
-    );
-
-    useEffect(() => {
-      if (Platform.OS === 'web') return;
-
-      const eventName = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-      const subscription = Keyboard.addListener(eventName, () => {
-        const target = focusedTargetRef.current;
-        if (target != null) revealFocusedInput(target);
-      });
-
-      return () => subscription.remove();
-    }, [revealFocusedInput]);
-
-    const handleFocus = useCallback(
-      (event: NativeSyntheticEvent<TargetedEvent>) => {
-        onFocus?.(event);
-        focusedTargetRef.current = event.nativeEvent.target;
-        revealFocusedInput(event.nativeEvent.target);
-      },
-      [onFocus, revealFocusedInput],
-    );
-
-    const handleScroll = useCallback(
-      (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        scrollYRef.current = event.nativeEvent.contentOffset.y;
-        onScroll?.(event);
-      },
-      [onScroll],
-    );
-
     return (
-      <ScrollView
+      <NativeKeyboardAwareScrollView
         {...props}
         ref={scrollRef}
         automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}
+        bottomOffset={keyboardFocusOffset}
+        extraKeyboardSpace={12}
         keyboardDismissMode={keyboardDismissMode}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
-        onFocus={handleFocus}
-        onScroll={handleScroll}
-        scrollEventThrottle={scrollEventThrottle ?? 16}
+        mode="insets"
       />
     );
   },

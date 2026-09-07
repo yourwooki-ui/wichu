@@ -109,6 +109,26 @@ if (/function\s+DeckAction/.test(swipeDeckSource)) {
   findings.push('SwipeDeck: actions must keep using the shared startSwipe decision path');
 }
 
+// 프로필 편집은 고정 footer와 긴 multiline 입력을 함께 쓴다. 화면별 타이머나
+// 중첩 KeyboardAvoidingView를 다시 추가하면 기기별 IME 높이에서 가림이 재발한다.
+const profileSetupSource = readFileSync('app/profile-setup.tsx', 'utf8');
+if (!profileSetupSource.includes('<KeyboardAwareScrollView')) {
+  findings.push('profile-setup: editable fields must stay inside KeyboardAwareScrollView');
+}
+if (/KeyboardAvoidingView|revealBioInput|scrollToEnd\(/.test(profileSetupSource)) {
+  findings.push('profile-setup: must not use duplicate or bio-only keyboard workarounds');
+}
+
+const keyboardScrollSource = readFileSync('src/components/KeyboardAwareScrollView.tsx', 'utf8');
+if (!keyboardScrollSource.includes('react-native-keyboard-controller')) {
+  findings.push('KeyboardAwareScrollView: must use the Expo-compatible native controller');
+}
+
+const rootLayoutSource = readFileSync('app/_layout.tsx', 'utf8');
+if (!rootLayoutSource.includes('<KeyboardProvider>')) {
+  findings.push('root layout: KeyboardProvider is required for keyboard-aware forms');
+}
+
 if (findings.length) {
   console.error('UI quality check failed:');
   for (const finding of findings) console.error(`- ${finding}`);

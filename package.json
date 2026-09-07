@@ -1,6 +1,6 @@
 {
   "name": "wichu",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.13",
@@ -43,6 +43,7 @@
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-google-mobile-ads": "16.3.4",
+    "react-native-keyboard-controller": "1.21.9",
     "react-native-purchases": "10.8.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
