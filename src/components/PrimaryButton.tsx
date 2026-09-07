@@ -1,12 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { useAppTheme } from '@/components/ThemeProvider';
 import { motionScale, motionSpring } from '@/constants/motion';
@@ -50,16 +44,9 @@ export function PrimaryButton({
   const { background, border, foreground } = variantColors(variant, tone, theme);
   const reduceMotion = useReduceMotion();
   const pressed = useSharedValue(0);
-  useEffect(() => {
-    if (isDisabled || reduceMotion) {
-      cancelAnimation(pressed);
-      pressed.set(0);
-    }
-    return () => cancelAnimation(pressed);
-  }, [isDisabled, pressed, reduceMotion]);
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: (isDisabled ? 0.48 : 1) * (1 - pressed.get() * 0.08),
-    transform: [{ scale: reduceMotion ? 1 : 1 - pressed.get() * (1 - motionScale.press) }],
+    opacity: 1 - pressed.get() * 0.08,
+    transform: [{ scale: 1 - pressed.get() * (1 - motionScale.press) }],
   }));
 
   return (
@@ -78,9 +65,9 @@ export function PrimaryButton({
       style={[
         styles.button,
         size === 'sm' && styles.buttonSm,
-        variant === 'primary' && styles.primaryButton,
         { backgroundColor: background },
         border ? { borderColor: border, borderWidth: StyleSheet.hairlineWidth } : null,
+        isDisabled && styles.disabled,
         animatedStyle,
       ]}
     >
@@ -92,7 +79,6 @@ export function PrimaryButton({
           <Text
             style={[
               size === 'sm' ? typography.label : typography.subheading,
-              styles.label,
               { color: foreground },
             ]}
           >
@@ -132,25 +118,12 @@ function variantColors(
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: radius.brand,
+    borderRadius: radius.md,
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 54,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  primaryButton: {
-    ...Platform.select({
-      web: { boxShadow: '0 5px 14px rgba(255,45,111,0.16)' },
-      default: {
-        elevation: 3,
-        shadowColor: palette.pink,
-        shadowOffset: { height: 5, width: 0 },
-        shadowOpacity: 0.16,
-        shadowRadius: 9,
-      },
-    }),
   },
   buttonSm: { borderRadius: radius.sm, minHeight: 44 },
-  content: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, maxWidth: '100%' },
-  label: { flexShrink: 1, textAlign: 'center' },
+  content: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  disabled: { opacity: 0.48 },
 });

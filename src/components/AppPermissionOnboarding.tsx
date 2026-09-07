@@ -10,7 +10,7 @@ import { AppModal } from '@/components/AppModal';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { elevation, palette, pressFeedback, radius } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { profileLocationService } from '@/features/profile/services/profile-location-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import {
@@ -213,9 +213,13 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FAFAFC',
     borderRadius: 30,
-    ...elevation.overlay,
+    elevation: 16,
     maxHeight: '100%',
     maxWidth: 400,
+    shadowColor: '#111113',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 26,
     width: '100%',
   },
   cardContent: { padding: 22 },

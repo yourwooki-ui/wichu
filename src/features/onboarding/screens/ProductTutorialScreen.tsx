@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  cancelAnimation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -59,7 +58,7 @@ const STEPS = [
     visual: 'match',
   },
   {
-    accent: palette.ink,
+    accent: '#176E4D',
     eyebrow: 'CHAT & TRANSLATE',
     illustration: illustratedIcons.translation,
     key: 'chat',
@@ -108,7 +107,6 @@ export function ProductTutorialScreen() {
         easing: Easing.out(Easing.cubic),
       }),
     );
-    return () => cancelAnimation(transitionProgress);
   }, [reduceMotion, stepIndex, transitionProgress]);
 
   const finish = async (feedback: 'complete' | 'skip' = 'complete') => {
@@ -335,7 +333,7 @@ function MatchVisual({ height }: { height: number }) {
   const { t } = useTranslation();
 
   return (
-    <LinearGradient colors={['#050505', '#151518', '#090909']} style={[styles.visual, { height }]}>
+    <LinearGradient colors={['#FFF0C4', '#FFE6EF', '#FFF9FB']} style={[styles.visual, { height }]}>
       <Text style={styles.matchOverline}>TWO PEOPLE · ONE PICK</Text>
       <View style={styles.matchPortraits}>
         <View style={[styles.matchPortrait, styles.matchPortraitLeft]}>
@@ -373,7 +371,7 @@ function ChatVisual({ height }: { height: number }) {
   const { t } = useTranslation();
 
   return (
-    <LinearGradient colors={['#050505', '#17171B', '#0B0B0D']} style={[styles.visual, { height }]}>
+    <LinearGradient colors={['#EDF7F3', '#F4F2FF', '#FFFFFF']} style={[styles.visual, { height }]}>
       <View style={styles.chatHeader}>
         <Image
           cachePolicy="memory-disk"
@@ -514,7 +512,7 @@ const styles = StyleSheet.create({
   },
   profileTagText: { color: palette.white, fontSize: 11, fontWeight: '800' },
   matchOverline: {
-    color: 'rgba(255,255,255,0.76)',
+    color: '#6C5400',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.1,
@@ -543,7 +541,7 @@ const styles = StyleSheet.create({
   matchImage: { height: '100%', width: '100%' },
   matchCenter: {
     alignItems: 'center',
-    backgroundColor: palette.pink,
+    backgroundColor: palette.white,
     borderRadius: 36,
     height: 66,
     justifyContent: 'center',
@@ -554,17 +552,17 @@ const styles = StyleSheet.create({
   matchResult: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: palette.lime,
+    backgroundColor: palette.ink,
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 7,
     paddingHorizontal: 13,
     paddingVertical: 8,
   },
-  matchStatusDot: { backgroundColor: palette.pink, borderRadius: 4, height: 7, width: 7 },
-  matchResultText: { color: palette.ink, fontSize: 11, fontWeight: '900' },
+  matchStatusDot: { backgroundColor: '#C9FF2E', borderRadius: 4, height: 7, width: 7 },
+  matchResultText: { color: palette.white, fontSize: 11, fontWeight: '900' },
   matchNames: {
-    color: palette.white,
+    color: palette.ink,
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 16,
@@ -573,7 +571,7 @@ const styles = StyleSheet.create({
   },
   chatHeader: {
     alignItems: 'center',
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomColor: 'rgba(17,17,19,0.06)',
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     marginHorizontal: 15,
@@ -581,33 +579,31 @@ const styles = StyleSheet.create({
   },
   chatAvatar: { borderRadius: 18, height: 36, width: 36 },
   chatHeaderCopy: { flex: 1, marginLeft: 9 },
-  chatName: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  chatPresence: { color: palette.lime, fontSize: 11, fontWeight: '800', marginTop: 2 },
+  chatName: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  chatPresence: { color: '#16845D', fontSize: 11, fontWeight: '800', marginTop: 2 },
   chatThread: { flex: 1, gap: 10, justifyContent: 'center', paddingHorizontal: 16 },
   theirBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: palette.graphite,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: palette.white,
     borderRadius: 18,
     borderTopLeftRadius: 6,
     maxWidth: '82%',
     padding: 12,
   },
-  theirMessage: { color: palette.white, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  theirMessage: { color: palette.ink, fontSize: 12, fontWeight: '700', lineHeight: 17 },
   translationRow: {
     alignItems: 'center',
-    borderTopColor: 'rgba(255,255,255,0.12)',
+    borderTopColor: '#ECECEF',
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 5,
     marginTop: 8,
     paddingTop: 7,
   },
-  translationText: { color: palette.lime, fontSize: 11, fontWeight: '800' },
+  translationText: { color: '#176E4D', fontSize: 11, fontWeight: '800' },
   mineBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: palette.pink,
+    backgroundColor: palette.ink,
     borderRadius: 18,
     borderTopRightRadius: 6,
     maxWidth: '78%',
@@ -617,8 +613,8 @@ const styles = StyleSheet.create({
   sentText: { color: 'rgba(255,255,255,0.62)', fontSize: 11, marginTop: 5, textAlign: 'right' },
   chatComposer: {
     alignItems: 'center',
-    backgroundColor: palette.graphite,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: palette.white,
+    borderColor: '#E5E5E9',
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
@@ -628,7 +624,7 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 5,
   },
-  composerPlaceholder: { color: palette.darkMuted, flex: 1, fontSize: 11 },
+  composerPlaceholder: { color: palette.inkMuted, flex: 1, fontSize: 11 },
   sendButton: {
     alignItems: 'center',
     backgroundColor: palette.pink,

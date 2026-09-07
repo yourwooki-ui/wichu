@@ -260,7 +260,7 @@ export function MatchesScreen() {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
-        actionGlyph="heart-outline"
+        actionIcon={illustratedIcons.matches}
         actionMotion={pickedProfiles.length ? 'pulse' : undefined}
         eyebrow={t('matches.eyebrow')}
       />
@@ -348,7 +348,6 @@ export function MatchesScreen() {
               body={emptyCopy.body}
               icon={category === 'matched' ? 'chatbubbles-outline' : 'heart-outline'}
               illustration={illustratedIcons.connections}
-              artwork={category === 'matched' ? 'connection' : 'pick'}
               onAction={() =>
                 router.push(category === 'visitors' ? '/(tabs)/me' : '/(tabs)/discover')
               }
@@ -428,13 +427,13 @@ function MatchCategoryTab({
     transform: [{ scale: 0.94 + active.get() * 0.06 }],
   }));
   const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.white]),
+    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.ink]),
   }));
   const countStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(active.get(), [0, 1], [palette.line, palette.pink]),
+    backgroundColor: interpolateColor(active.get(), [0, 1], ['#DEDEE2', '#FFE1EB']),
   }));
   const countTextStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.white]),
+    color: interpolateColor(active.get(), [0, 1], [palette.inkMuted, palette.pink]),
   }));
 
   return (
@@ -456,9 +455,7 @@ function MatchCategoryTab({
           {label}
         </Animated.Text>
         <Animated.View style={[styles.categoryCount, countStyle]}>
-          <Animated.Text style={[styles.categoryCountText, countTextStyle]}>
-            {count > 99 ? '99+' : count}
-          </Animated.Text>
+          <Animated.Text style={[styles.categoryCountText, countTextStyle]}>{count}</Animated.Text>
         </Animated.View>
       </View>
     </Pressable>
@@ -636,10 +633,8 @@ function formatSampleVisitTime(profileId: string, t: TFunction) {
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
   categories: {
-    backgroundColor: palette.white,
-    borderColor: palette.line,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.brand,
+    backgroundColor: '#E8E8EC',
+    borderRadius: 18,
     flexDirection: 'row',
     gap: 3,
     marginHorizontal: 20,
@@ -655,7 +650,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   categorySelection: {
-    backgroundColor: palette.ink,
+    backgroundColor: palette.white,
     borderRadius: 14,
     bottom: 0,
     left: 0,
@@ -672,6 +667,7 @@ const styles = StyleSheet.create({
   },
   categoryPressed: pressFeedback.control,
   categoryLabel: { ...typography.label, color: palette.inkMuted, flexShrink: 1 },
+  categoryLabelSelected: { color: palette.ink },
   categoryCount: {
     alignItems: 'center',
     backgroundColor: '#DEDEE2',
@@ -681,7 +677,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 3,
   },
+  categoryCountSelected: { backgroundColor: '#FFE1EB' },
   categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
+  categoryCountTextSelected: { color: palette.pink },
   scroll: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 26, paddingHorizontal: 20 },
   subtitle: {
@@ -814,11 +812,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 5,
-    bottom: 10,
-    left: 10,
-    right: 10,
-    minHeight: 44,
-    justifyContent: 'center',
+    bottom: 14,
+    left: 14,
     paddingHorizontal: 11,
     paddingVertical: 7,
     position: 'absolute',

@@ -218,7 +218,7 @@ export function MeScreen() {
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
         actionAccessibilityLabel={t('me.settings')}
-        actionGlyph="settings-outline"
+        actionIcon={illustratedIcons.settings}
         eyebrow={t('me.eyebrow')}
         onAction={() => router.push('/settings')}
       />
@@ -682,7 +682,7 @@ function MeSkeleton() {
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
-      <AppTabHeader actionGlyph="settings-outline" eyebrow={t('me.eyebrow')} />
+      <AppTabHeader actionIcon={illustratedIcons.settings} eyebrow={t('me.eyebrow')} />
       <View
         accessibilityLabel={t('me.loading')}
         accessibilityRole="progressbar"
@@ -720,8 +720,7 @@ const styles = StyleSheet.create({
   profileEditAction: {
     alignItems: 'center',
     backgroundColor: palette.ink,
-    borderRadius: radius.brand,
-    minHeight: 44,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 6,
     paddingHorizontal: 13,
@@ -792,8 +791,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: palette.pink,
-    borderRadius: radius.brand,
-    minHeight: 44,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 7,
     marginTop: 13,
@@ -810,7 +808,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 5,
-    minHeight: 44,
+    minHeight: 36,
     paddingHorizontal: 11,
   },
   missingLabel: { ...typography.caption, color: palette.ink, fontWeight: '800' },

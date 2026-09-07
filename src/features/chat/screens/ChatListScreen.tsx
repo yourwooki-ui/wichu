@@ -34,6 +34,8 @@ import { useActiveClock } from '@/hooks/use-active-clock';
 import { useRefreshControl } from '@/hooks/use-refresh-control';
 import { reportOperationalError } from '@/services/operational-error-service';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function ChatListScreen() {
   const router = useRouter();
   const navigateWithAdGate = useAdGatedNavigation();
@@ -107,7 +109,7 @@ export function ChatListScreen() {
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <AppTabHeader
         actionAccessibilityLabel={t('chatList.headerAction')}
-        actionGlyph="notifications-outline"
+        actionIcon={illustratedIcons.notification}
         actionMotion={unreadCount > 0 ? 'bell' : undefined}
         eyebrow={t('chatList.eyebrow')}
         onAction={() => router.push('/settings')}
@@ -165,7 +167,6 @@ export function ChatListScreen() {
                 accessibilityLabel={t('chatList.clearSearch')}
                 accessibilityRole="button"
                 onPress={() => setQuery('')}
-                style={styles.clearSearch}
               >
                 <Ionicons color={palette.inkMuted} name="close-circle" size={20} />
               </Pressable>
@@ -201,87 +202,81 @@ export function ChatListScreen() {
           ) : null}
           {!matchesQuery.isLoading && !listError
             ? conversations.map((conversation, index) => (
-                <Animated.View
+                <AnimatedPressable
                   entering={listEntering(index)}
                   exiting={listExiting()}
                   layout={listLayout()}
+                  accessibilityLabel={t('chatList.openChat', {
+                    name: conversation.profile.name,
+                  })}
                   key={conversation.matchId}
+                  onPress={() => void navigateWithAdGate(`/chat/${conversation.matchId}`)}
+                  style={({ pressed }: { pressed: boolean }) => [
+                    styles.row,
+                    pressed && styles.rowPressed,
+                  ]}
                 >
-                  <Pressable
-                    accessibilityLabel={t('chatList.openChat', {
-                      name: conversation.profile.name,
-                    })}
-                    accessibilityRole="button"
-                    onPress={() => void navigateWithAdGate(`/chat/${conversation.matchId}`)}
-                    style={({ pressed }: { pressed: boolean }) => [
-                      styles.row,
-                      conversation.unreadCount > 0 && styles.rowUnread,
-                      pressed && styles.rowPressed,
-                    ]}
-                  >
-                    <View style={styles.avatarWrap}>
-                      <Image
-                        cachePolicy="memory-disk"
-                        contentFit="cover"
-                        source={{ uri: conversation.profile.photo }}
-                        style={{ borderRadius: 29, height: 58, width: 58 }}
-                        transition={imageTransition.thumbnail}
-                      />
-                      {conversation.profile.isOnline ? (
-                        <View style={styles.onlineDot}>
-                          <PresenceDot size={8} />
+                  <View style={styles.avatarWrap}>
+                    <Image
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      source={{ uri: conversation.profile.photo }}
+                      style={{ borderRadius: 29, height: 58, width: 58 }}
+                      transition={imageTransition.thumbnail}
+                    />
+                    {conversation.profile.isOnline ? (
+                      <View style={styles.onlineDot}>
+                        <PresenceDot size={8} />
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <View style={styles.rowTop}>
+                      <Text
+                        style={[styles.name, conversation.unreadCount > 0 && styles.nameUnread]}
+                      >
+                        {conversation.profile.name}
+                      </Text>
+                      <Text
+                        style={[styles.time, conversation.unreadCount > 0 && styles.timeUnread]}
+                      >
+                        {conversation.time}
+                      </Text>
+                    </View>
+                    <View style={styles.messageRow}>
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.message,
+                          conversation.unreadCount > 0 && styles.messageUnread,
+                        ]}
+                      >
+                        {conversation.isTyping ? t('chatList.typing') : conversation.message}
+                      </Text>
+                      {conversation.unreadCount > 0 ? (
+                        <View style={styles.unreadCount}>
+                          <Text style={styles.unreadCountText}>{conversation.unreadCount}</Text>
                         </View>
                       ) : null}
                     </View>
-                    <View style={styles.rowCopy}>
-                      <View style={styles.rowTop}>
-                        <Text
-                          numberOfLines={1}
-                          style={[styles.name, conversation.unreadCount > 0 && styles.nameUnread]}
-                        >
-                          {conversation.profile.name}
-                        </Text>
-                        <Text
-                          style={[styles.time, conversation.unreadCount > 0 && styles.timeUnread]}
-                        >
-                          {conversation.time}
+                    {conversation.isTranslated ? (
+                      <View style={styles.translatedRow}>
+                        <IllustratedIcon size={17} source={illustratedIcons.translation} />
+                        <Text style={styles.translatedText}>
+                          {t('chatList.translationAvailable')}
                         </Text>
                       </View>
-                      <View style={styles.messageRow}>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            styles.message,
-                            conversation.unreadCount > 0 && styles.messageUnread,
-                          ]}
-                        >
-                          {conversation.isTyping ? t('chatList.typing') : conversation.message}
+                    ) : null}
+                    {conversation.isYourTurn && conversation.unreadCount === 0 ? (
+                      <View style={styles.yourTurnRow}>
+                        <Ionicons color="#986A00" name="sparkles" size={13} />
+                        <Text style={styles.yourTurnText}>
+                          {t('experience.chatSafety.yourTurn')}
                         </Text>
-                        {conversation.unreadCount > 0 ? (
-                          <View style={styles.unreadCount}>
-                            <Text style={styles.unreadCountText}>{conversation.unreadCount}</Text>
-                          </View>
-                        ) : null}
                       </View>
-                      {conversation.isTranslated ? (
-                        <View style={styles.translatedRow}>
-                          <IllustratedIcon size={17} source={illustratedIcons.translation} />
-                          <Text style={styles.translatedText}>
-                            {t('chatList.translationAvailable')}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {conversation.isYourTurn && conversation.unreadCount === 0 ? (
-                        <View style={styles.yourTurnRow}>
-                          <Ionicons color="#986A00" name="sparkles" size={13} />
-                          <Text style={styles.yourTurnText}>
-                            {t('experience.chatSafety.yourTurn')}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                </Animated.View>
+                    ) : null}
+                  </View>
+                </AnimatedPressable>
               ))
             : null}
           {!matchesQuery.isLoading && !listError && !conversations.length ? (
@@ -298,7 +293,6 @@ export function ChatListScreen() {
                 body={t('chatList.emptyBody')}
                 container="plain"
                 illustration={illustratedIcons.chatEmpty}
-                artwork="chat"
                 onAction={() => router.push('/(tabs)/discover')}
                 title={t('chatList.emptyTitle')}
               />
@@ -329,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     borderColor: '#DEDEE3',
-    borderRadius: radius.brand,
+    borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 9,
@@ -338,7 +332,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   searchInput: { ...typography.body, color: palette.ink, flex: 1, height: 48, outlineWidth: 0 },
-  clearSearch: { alignItems: 'center', justifyContent: 'center', minHeight: 44, minWidth: 44 },
   listHeading: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -355,20 +348,17 @@ const styles = StyleSheet.create({
   },
   unreadPillText: { color: palette.pink, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   scroll: { flex: 1, minHeight: 0 },
-  list: { gap: 8, marginTop: 12, paddingBottom: 25, paddingHorizontal: 20 },
+  list: { marginTop: 7, paddingBottom: 25, paddingHorizontal: 12 },
   row: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.line,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.brand,
+    borderBottomColor: '#DCDCE1',
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 13,
     minHeight: 84,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 11,
   },
-  rowUnread: { borderColor: '#F3BACD', backgroundColor: '#FFF8FA' },
   rowPressed: {
     ...pressFeedback.surface,
     backgroundColor: 'rgba(255,255,255,0.72)',
@@ -386,9 +376,9 @@ const styles = StyleSheet.create({
     right: 0,
     width: 14,
   },
-  rowCopy: { flex: 1, minWidth: 0 },
+  rowCopy: { flex: 1 },
   rowTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  name: { ...typography.bodyStrong, color: palette.ink, flexShrink: 1, marginRight: 8 },
+  name: { ...typography.bodyStrong, color: palette.ink },
   nameUnread: { fontWeight: '900' },
   time: { ...typography.caption, color: palette.inkMuted, fontWeight: '700' },
   timeUnread: { color: palette.pink },

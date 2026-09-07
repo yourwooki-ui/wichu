@@ -7,7 +7,7 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PresenceDot } from '@/components/PresenceDot';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { imageTransition } from '@/constants/motion';
-import { elevation, palette } from '@/constants/theme';
+import { palette } from '@/constants/theme';
 import { ConnectionProfile } from '@/features/matches/data/mock-connections';
 
 type ConnectionAvatarProps = {
@@ -100,7 +100,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: -2,
     position: 'absolute',
-    ...elevation.sm,
+    shadowColor: '#7A5400',
+    shadowOffset: { height: 2, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
     top: -2,
     width: 26,
   },

@@ -104,7 +104,6 @@ function AnimatedTabIcon({
   focused: boolean;
   name: TabName;
 }) {
-  const theme = useAppTheme();
   const reduceMotion = useReduceMotion();
   const active = useSharedValue(focused ? 1 : 0);
 
@@ -131,10 +130,6 @@ function AnimatedTabIcon({
         compact && styles.iconFrameCompact,
         name === 'discover' && styles.discoverFrame,
         compact && name === 'discover' && styles.discoverFrameCompact,
-        focused && {
-          backgroundColor: theme.isDark ? 'rgba(255,45,111,0.16)' : '#FFF0F5',
-          borderColor: theme.isDark ? 'rgba(255,45,111,0.34)' : '#FFD2E0',
-        },
       ]}
     >
       <Animated.View style={animatedStyle}>
@@ -157,9 +152,6 @@ function AnimatedTabIcon({
 const styles = StyleSheet.create({
   iconFrame: {
     alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
     height: 46,
     justifyContent: 'center',
     width: 50,

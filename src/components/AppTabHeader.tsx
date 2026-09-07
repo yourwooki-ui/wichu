@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import type { ImageSource } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -6,12 +5,11 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { AmbientIconMotion, type IconMotion } from '@/components/MotionIllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { palette, pressFeedback, radius, typography } from '@/constants/theme';
+import { pressFeedback, typography } from '@/constants/theme';
 
 type AppTabHeaderProps = {
   actionAccessibilityLabel?: string;
   actionIcon?: ImageSource;
-  actionGlyph?: keyof typeof Ionicons.glyphMap;
   actionMotion?: IconMotion;
   eyebrow: string;
   onAction?: () => void;
@@ -20,65 +18,52 @@ type AppTabHeaderProps = {
 export function AppTabHeader({
   actionAccessibilityLabel,
   actionIcon,
-  actionGlyph,
   actionMotion,
   eyebrow,
   onAction,
 }: AppTabHeaderProps) {
   const theme = useAppTheme();
-  const visual = actionGlyph ? (
-    <Ionicons color={theme.colors.text} name={actionGlyph} size={23} />
-  ) : actionIcon ? (
-    <IllustratedIcon size={42} source={actionIcon} />
-  ) : null;
-  const actionContent = actionMotion ? (
-    <AmbientIconMotion motion={actionMotion}>{visual}</AmbientIconMotion>
-  ) : (
-    visual
-  );
 
   return (
     <View style={styles.header}>
       <View>
         <BrandWordmark color={theme.colors.text} size={23} />
-        <View style={styles.eyebrowRow}>
-          <View style={styles.eyebrowKeyline} />
-          <Text
-            maxFontSizeMultiplier={1.2}
-            numberOfLines={1}
-            style={[typography.overline, styles.eyebrow, { color: theme.colors.textMuted }]}
-          >
-            {eyebrow}
-          </Text>
-        </View>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          numberOfLines={1}
+          style={[typography.overline, styles.eyebrow, { color: theme.colors.textMuted }]}
+        >
+          {eyebrow}
+        </Text>
       </View>
-      {visual && onAction ? (
+      {actionIcon && onAction ? (
         <Pressable
           accessibilityLabel={actionAccessibilityLabel}
           accessibilityRole="button"
           hitSlop={4}
           onPress={onAction}
-          style={({ pressed }) => [
-            styles.action,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            pressed && pressFeedback.icon,
-          ]}
+          style={({ pressed }) => [styles.action, pressed && pressFeedback.icon]}
         >
-          {actionContent}
+          {actionMotion ? (
+            <AmbientIconMotion motion={actionMotion}>
+              <IllustratedIcon size={42} source={actionIcon} />
+            </AmbientIconMotion>
+          ) : (
+            <IllustratedIcon size={42} source={actionIcon} />
+          )}
         </Pressable>
-      ) : visual ? (
-        <View
-          accessibilityElementsHidden
-          aria-hidden
-          style={[
-            styles.action,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
-        >
-          {actionContent}
+      ) : actionIcon ? (
+        <View accessibilityElementsHidden style={styles.action}>
+          {actionMotion ? (
+            <AmbientIconMotion motion={actionMotion}>
+              <IllustratedIcon size={42} source={actionIcon} />
+            </AmbientIconMotion>
+          ) : (
+            <IllustratedIcon size={42} source={actionIcon} />
+          )}
         </View>
       ) : (
-        <View style={styles.placeholder} />
+        <View style={styles.action} />
       )}
     </View>
   );
@@ -92,14 +77,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  eyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 7, marginTop: 3 },
-  eyebrowKeyline: { backgroundColor: palette.pink, borderRadius: 2, height: 3, width: 18 },
-  eyebrow: { letterSpacing: 1.65 },
-  placeholder: { height: 52, width: 52 },
+  eyebrow: {
+    letterSpacing: 1.8,
+    marginTop: 2,
+  },
   action: {
     alignItems: 'center',
-    borderRadius: radius.brand,
-    borderWidth: StyleSheet.hairlineWidth,
     height: 52,
     justifyContent: 'center',
     width: 52,

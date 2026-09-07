@@ -27,7 +27,7 @@ import {
   REWARDED_ADS_ENABLED,
 } from '@/constants/features';
 import { sectionEntering } from '@/constants/motion';
-import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
+import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
 import { LanguagePickerModal } from '@/features/auth/components/LanguagePicker';
 import { settingsService } from '@/features/settings/services/settings-service';
@@ -700,9 +700,13 @@ const styles = StyleSheet.create({
   signOutSheet: {
     backgroundColor: palette.white,
     borderRadius: 26,
-    ...elevation.overlay,
+    elevation: 14,
     maxHeight: '90%',
     maxWidth: 380,
+    shadowColor: '#111113',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
     width: '100%',
   },
   signOutSheetContent: { alignItems: 'center', padding: 22 },

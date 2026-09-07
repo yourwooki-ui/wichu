@@ -25,7 +25,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppModal } from '@/components/AppModal';
 import { resolveBottomSheetSnap, type BottomSheetSnap } from '@/components/bottom-sheet-motion';
 import { motionDuration, motionSpring } from '@/constants/motion';
-import { elevation, palette } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
@@ -60,12 +59,12 @@ export function InteractiveBottomSheet(props: InteractiveBottomSheetProps) {
 
 function VisibleInteractiveBottomSheet({
   accessibilityLabel,
-  backdropOpacity = 0.32,
+  backdropOpacity = 0.08,
   children,
   collapsedOffset: collapsedOffsetProp,
   contentStyle,
   dismissEnabled = true,
-  handleColor = palette.ink,
+  handleColor = '#C5C5CA',
   onClose,
   sheetStyle,
 }: InteractiveBottomSheetProps) {
@@ -234,16 +233,18 @@ const styles = StyleSheet.create({
   nonInteractive: { pointerEvents: 'none' },
   sheet: {
     alignSelf: 'center',
-    backgroundColor: '#FAF9F8',
-    borderColor: 'rgba(17,17,17,0.08)',
-    borderTopWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#F8F8FA',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    ...elevation.overlay,
+    elevation: 12,
     maxHeight: '92%',
     maxWidth: 480,
     minHeight: 0,
     overflow: 'hidden',
+    shadowColor: '#111114',
+    shadowOffset: { height: -5, width: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
     width: '100%',
   },
   safeSheet: { flexGrow: 1, flexShrink: 1, minHeight: 0, width: '100%' },

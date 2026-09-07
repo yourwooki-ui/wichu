@@ -3,16 +3,12 @@ import { Platform, type ViewStyle } from 'react-native';
 export const palette = {
   ink: '#111111',
   inkMuted: '#74747C',
-  /** 브랜드 보드의 차갑지 않은 소프트 그레이 캔버스 */
-  paper: '#F3F2F1',
+  paper: '#F5F5F7',
   white: '#FFFFFF',
   pink: '#FF2D6F',
   pinkPressed: '#E92160',
-  pinkSoft: '#FFF0F5',
   lime: '#C9FF2E',
-  limeSoft: '#F2FFD0',
-  graphite: '#1A1A1E',
-  line: '#DEDDDF',
+  line: '#E0E0E4',
   danger: '#FF5A67',
   black: '#111111',
   trueBlack: '#000000',
@@ -75,8 +71,6 @@ export const radius = {
   sm: 10,
   md: 16,
   lg: 24,
-  /** 핵심 CTA와 브랜드 칩에 쓰는 둥근 직사각형 */
-  brand: 20,
   pill: 999,
 } as const;
 
@@ -129,8 +123,6 @@ export const elevation = {
   md: shadow(5, 14, 0.09, 4),
   /** Discover 스와이프 카드처럼 화면의 주인공 */
   lg: shadow(10, 24, 0.12, 8),
-  /** 모달·바텀시트 */
-  overlay: shadow(-5, 36, 0.1, 12),
 } as const;
 
 /** 화면 공통 레이아웃. 태블릿·웹에서 본문이 과도하게 늘어나지 않게 한다. */

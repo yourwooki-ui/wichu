@@ -115,7 +115,7 @@ function ProfileCardComponent({
       ) : null}
       <View style={styles.content}>
         <View style={styles.nameRow}>
-          <Text numberOfLines={1} style={styles.name}>
+          <Text style={styles.name}>
             {profile.name}, {age}
           </Text>
           <CountryFlag
@@ -143,7 +143,7 @@ function ProfileCardComponent({
               </Text>
             </View>
           ) : null}
-          {presenceLabel && distanceLabel ? <View style={styles.metaDivider} /> : null}
+          {presenceLabel ? <View style={styles.metaDivider} /> : null}
           {distanceLabel ? (
             <View style={styles.locationRow}>
               <IllustratedIcon size={18} source={illustratedIcons.location} />
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.42)',
   },
-  photoProgressActive: { backgroundColor: palette.pink },
+  photoProgressActive: { backgroundColor: '#FFFFFF' },
   badges: { position: 'absolute', top: 22, left: 18, flexDirection: 'row' },
   badge: {
     alignItems: 'center',
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.lime },
   badgeText: { color: palette.white, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   content: { position: 'absolute', left: 22, right: 22, bottom: 24 },
-  nameRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { ...typography.display, color: palette.white, flexShrink: 1, fontWeight: '800' },
   nameFlag: {
     borderColor: 'rgba(255,255,255,0.62)',
@@ -262,8 +262,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    rowGap: 4,
     marginTop: 6,
     paddingHorizontal: 9,
     paddingVertical: 5,
@@ -287,7 +285,6 @@ const styles = StyleSheet.create({
   bio: { ...typography.body, color: palette.white, marginTop: 11 },
   interests: { marginTop: 13, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   interest: {
-    maxWidth: '100%',
     paddingHorizontal: 12,
     paddingVertical: 7.5,
     borderRadius: radius.pill,

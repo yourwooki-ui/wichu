@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,9 +15,8 @@ import {
 
 import { AppModal } from '@/components/AppModal';
 import { CountryFlag } from '@/components/CountryFlag';
-import { PrimaryButton } from '@/components/PrimaryButton';
 import { motionDuration, motionScale, motionSpring } from '@/constants/motion';
-import { palette } from '@/constants/theme';
+import { palette, pressFeedback, radius } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 import type { Profile } from '@/types/profile';
@@ -35,24 +35,6 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
   const [contentEnter] = useState(() => new Animated.Value(0));
   const [markEnter] = useState(() => new Animated.Value(0));
   const reduceMotion = useReduceMotion();
-  const announcedProfile = useRef<string | null>(null);
-  const profileId = profile?.id;
-  const profileName = profile?.name;
-
-  useEffect(() => {
-    if (!profileId) {
-      announcedProfile.current = null;
-      return;
-    }
-    if (announcedProfile.current === profileId) return;
-    announcedProfile.current = profileId;
-    hapticsService.success();
-    try {
-      AccessibilityInfo.announceForAccessibility(`${profileName}님과 매치됐어요`);
-    } catch {
-      // Unsupported accessibility module must not block opening the match.
-    }
-  }, [profileId, profileName]);
 
   useEffect(() => {
     if (!visible) {
@@ -62,6 +44,16 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
       return;
     }
 
+    // 매치 순간은 한 번만 울리고, 카드 → 인증 마크 → 안내 순서로 시선이 흐르게 한다.
+    hapticsService.success();
+    if (profile) {
+      try {
+        AccessibilityInfo.announceForAccessibility(`${profile.name}님과 매치됐어요`);
+      } catch {
+        // 접근성 네이티브 모듈이 준비되지 않아도 매치 화면은 계속 보여준다.
+      }
+    }
+
     if (reduceMotion) {
       enter.setValue(1);
       contentEnter.setValue(1);
@@ -69,7 +61,7 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
       return;
     }
 
-    const animation = Animated.parallel([
+    Animated.parallel([
       Animated.spring(enter, {
         ...motionSpring.celebration,
         toValue: 1,
@@ -91,14 +83,14 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
           useNativeDriver: USE_NATIVE_DRIVER,
         }),
       ]),
-    ]);
-    animation.start();
+    ]).start();
 
     return () => {
-      // Stop the sequence itself, including delays, when closing or reducing motion.
-      animation.stop();
+      enter.stopAnimation();
+      contentEnter.stopAnimation();
+      markEnter.stopAnimation();
     };
-  }, [contentEnter, enter, markEnter, profileId, reduceMotion, visible]);
+  }, [contentEnter, enter, markEnter, profile, reduceMotion, visible]);
 
   const cardStyle = {
     opacity: enter,
@@ -135,7 +127,7 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
 
   return (
     <AppModal
-      animationType={reduceMotion ? 'none' : 'fade'}
+      animationType="fade"
       onRequestClose={handleContinue}
       transparent
       visible={Boolean(profile)}
@@ -152,8 +144,7 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
               showsVerticalScrollIndicator={false}
               style={styles.cardScroll}
             >
-              <LinearGradient colors={[palette.trueBlack, palette.ink]} style={styles.hero}>
-                <Text style={styles.heroTitle}>IT’S A{'\n'}MATCH!</Text>
+              <LinearGradient colors={['#FFF1F6', '#FFFFFF']} style={styles.hero}>
                 <View style={styles.profileCluster}>
                   <View style={styles.haloOuter} />
                   <View style={styles.haloInner} />
@@ -166,32 +157,35 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
                     />
                   </View>
                   <Animated.View style={[styles.matchMark, markStyle]}>
-                    <Ionicons color={palette.ink} name="heart" size={22} />
+                    <Ionicons color={palette.white} name="checkmark" size={22} />
                   </Animated.View>
                 </View>
               </LinearGradient>
               <Animated.View style={[styles.content, contentStyle]}>
-                <Text style={styles.eyebrow}>TWO PEOPLE. ONE PICK.</Text>
+                <Text style={styles.eyebrow}>IT&apos;S A MATCH</Text>
                 <View style={styles.nameRow}>
                   <Text style={styles.title}>{profile.name}님과 매치됐어요</Text>
                   <CountryFlag compact countryCode={profile.countryCode} style={styles.flag} />
                 </View>
                 <Text style={styles.body}>서로의 선택이 닿았어요. 지금 가볍게 인사해보세요.</Text>
-                <View style={styles.actions}>
-                  <PrimaryButton
-                    icon="chatbubble"
-                    label="메시지 보내기"
-                    onPress={handleChat}
-                    tone="dark"
-                  />
-                  <PrimaryButton
-                    label="발견 계속하기"
-                    onPress={handleContinue}
-                    tone="dark"
-                    variant="ghost"
-                    size="sm"
-                  />
-                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleChat}
+                  style={({ pressed }) => [styles.primaryAction, pressed && pressFeedback.control]}
+                >
+                  <Ionicons color={palette.white} name="chatbubble" size={17} />
+                  <Text style={styles.primaryActionText}>메시지 보내기</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleContinue}
+                  style={({ pressed }) => [
+                    styles.secondaryAction,
+                    pressed && pressFeedback.control,
+                  ]}
+                >
+                  <Text style={styles.secondaryActionText}>발견 계속하기</Text>
+                </Pressable>
               </Animated.View>
             </ScrollView>
           </Animated.View>
@@ -204,16 +198,14 @@ export function MatchCelebration({ onChat, onContinue, profile }: MatchCelebrati
 const styles = StyleSheet.create({
   backdrop: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: 'rgba(13,13,17,0.62)',
     flex: 1,
     justifyContent: 'center',
-    padding: 16,
+    padding: 24,
   },
   card: {
     alignItems: 'center',
-    backgroundColor: palette.ink,
-    borderColor: palette.darkLine,
-    borderWidth: 1,
+    backgroundColor: palette.white,
     borderRadius: 30,
     maxHeight: '92%',
     maxWidth: 380,
@@ -222,87 +214,78 @@ const styles = StyleSheet.create({
   },
   cardScroll: { minHeight: 0, width: '100%' },
   cardContent: { paddingBottom: 18 },
-  hero: { alignItems: 'center', alignSelf: 'stretch', paddingBottom: 10, paddingTop: 30 },
-  heroTitle: {
-    color: palette.lime,
-    fontSize: 40,
-    lineHeight: 41,
-    fontWeight: '900',
-    letterSpacing: -1.5,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  profileCluster: { alignItems: 'center', height: 178, justifyContent: 'center', width: 218 },
+  hero: { alignItems: 'center', alignSelf: 'stretch', paddingBottom: 18, paddingTop: 24 },
+  profileCluster: { alignItems: 'center', height: 128, justifyContent: 'center', width: 150 },
   haloOuter: {
-    borderColor: palette.darkLine,
-    borderWidth: 1,
-    borderRadius: 100,
-    height: 154,
+    backgroundColor: 'rgba(255,45,111,0.08)',
+    borderRadius: 69,
+    height: 138,
     position: 'absolute',
-    width: 218,
-    transform: [{ rotate: '-22deg' }],
+    width: 138,
   },
   haloInner: {
-    borderColor: '#484832',
-    borderWidth: 1,
-    borderRadius: 100,
-    height: 160,
+    backgroundColor: 'rgba(255,45,111,0.11)',
+    borderRadius: 57,
+    height: 114,
     position: 'absolute',
-    width: 194,
-    transform: [{ rotate: '24deg' }],
+    width: 114,
   },
   photoRing: {
     borderColor: palette.pink,
-    borderRadius: 28,
-    borderWidth: 2,
+    borderRadius: 55,
+    borderWidth: 3,
     padding: 4,
-    transform: [{ rotate: '-7deg' }],
   },
-  photo: { backgroundColor: palette.graphite, borderRadius: 22, height: 144, width: 114 },
+  photo: { borderRadius: 46, height: 92, width: 92 },
   matchMark: {
     alignItems: 'center',
-    backgroundColor: palette.lime,
-    borderColor: palette.ink,
+    backgroundColor: palette.pink,
+    borderColor: palette.white,
     borderRadius: 22,
     borderWidth: 3,
     bottom: 0,
     height: 44,
     justifyContent: 'center',
     position: 'absolute',
-    right: 34,
+    right: 16,
     width: 44,
   },
   content: { alignItems: 'center', paddingHorizontal: 22, width: '100%' },
   eyebrow: {
-    color: palette.darkMuted,
+    color: palette.pink,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.6,
     marginTop: 18,
   },
-  nameRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 7,
-    marginTop: 12,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  title: {
-    color: palette.white,
-    flexShrink: 1,
-    textAlign: 'center',
-    fontSize: 21,
-    fontWeight: '900',
-    letterSpacing: -0.6,
-  },
+  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 7, marginTop: 5 },
+  title: { color: palette.ink, fontSize: 21, fontWeight: '900', letterSpacing: -0.6 },
   flag: { borderRadius: 4, height: 14, width: 21 },
   body: {
-    color: palette.darkMuted,
+    color: palette.inkMuted,
     fontSize: 13,
     lineHeight: 19,
     marginTop: 7,
     textAlign: 'center',
   },
-  actions: { gap: 8, marginTop: 24, width: '100%' },
+  primaryAction: {
+    alignItems: 'center',
+    backgroundColor: palette.pink,
+    borderRadius: 17,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    marginTop: 20,
+    minHeight: 52,
+    width: '100%',
+  },
+  primaryActionText: { color: palette.white, fontSize: 13, fontWeight: '900' },
+  secondaryAction: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    marginTop: 7,
+    minHeight: 44,
+  },
+  secondaryActionText: { color: palette.inkMuted, fontSize: 12, fontWeight: '800' },
 });
