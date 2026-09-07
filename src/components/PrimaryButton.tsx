@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -125,11 +125,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   primaryButton: {
-    elevation: 3,
-    shadowColor: palette.pink,
-    shadowOffset: { height: 5, width: 0 },
-    shadowOpacity: 0.16,
-    shadowRadius: 9,
+    ...Platform.select({
+      web: { boxShadow: '0 5px 14px rgba(255,45,111,0.16)' },
+      default: {
+        elevation: 3,
+        shadowColor: palette.pink,
+        shadowOffset: { height: 5, width: 0 },
+        shadowOpacity: 0.16,
+        shadowRadius: 9,
+      },
+    }),
   },
   buttonSm: { borderRadius: radius.sm, minHeight: 44 },
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
