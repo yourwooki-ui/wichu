@@ -65,6 +65,7 @@ export function PrimaryButton({
       style={[
         styles.button,
         size === 'sm' && styles.buttonSm,
+        variant === 'primary' && styles.primaryButton,
         { backgroundColor: background },
         border ? { borderColor: border, borderWidth: StyleSheet.hairlineWidth } : null,
         isDisabled && styles.disabled,
@@ -118,10 +119,17 @@ function variantColors(
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.brand,
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 56,
     paddingHorizontal: spacing.md,
+  },
+  primaryButton: {
+    elevation: 3,
+    shadowColor: palette.pink,
+    shadowOffset: { height: 5, width: 0 },
+    shadowOpacity: 0.16,
+    shadowRadius: 9,
   },
   buttonSm: { borderRadius: radius.sm, minHeight: 44 },
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

@@ -3,12 +3,16 @@ import { Platform, type ViewStyle } from 'react-native';
 export const palette = {
   ink: '#111111',
   inkMuted: '#74747C',
-  paper: '#F5F5F7',
+  /** 브랜드 보드의 차갑지 않은 소프트 그레이 캔버스 */
+  paper: '#F3F2F1',
   white: '#FFFFFF',
   pink: '#FF2D6F',
   pinkPressed: '#E92160',
+  pinkSoft: '#FFF0F5',
   lime: '#C9FF2E',
-  line: '#E0E0E4',
+  limeSoft: '#F2FFD0',
+  graphite: '#1A1A1E',
+  line: '#DEDDDF',
   danger: '#FF5A67',
   black: '#111111',
   trueBlack: '#000000',
@@ -71,6 +75,8 @@ export const radius = {
   sm: 10,
   md: 16,
   lg: 24,
+  /** 핵심 CTA와 브랜드 칩에 쓰는 둥근 직사각형 */
+  brand: 20,
   pill: 999,
 } as const;
 

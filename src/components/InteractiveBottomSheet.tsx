@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppModal } from '@/components/AppModal';
 import { resolveBottomSheetSnap, type BottomSheetSnap } from '@/components/bottom-sheet-motion';
 import { motionDuration, motionSpring } from '@/constants/motion';
+import { palette } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { hapticsService } from '@/services/haptics-service';
 
@@ -64,7 +65,7 @@ function VisibleInteractiveBottomSheet({
   collapsedOffset: collapsedOffsetProp,
   contentStyle,
   dismissEnabled = true,
-  handleColor = '#C5C5CA',
+  handleColor = palette.ink,
   onClose,
   sheetStyle,
 }: InteractiveBottomSheetProps) {
@@ -233,7 +234,9 @@ const styles = StyleSheet.create({
   nonInteractive: { pointerEvents: 'none' },
   sheet: {
     alignSelf: 'center',
-    backgroundColor: '#F8F8FA',
+    backgroundColor: '#FAF9F8',
+    borderColor: 'rgba(17,17,17,0.08)',
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     elevation: 12,

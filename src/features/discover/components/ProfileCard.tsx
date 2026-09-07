@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.42)',
   },
-  photoProgressActive: { backgroundColor: '#FFFFFF' },
+  photoProgressActive: { backgroundColor: palette.pink },
   badges: { position: 'absolute', top: 22, left: 18, flexDirection: 'row' },
   badge: {
     alignItems: 'center',
