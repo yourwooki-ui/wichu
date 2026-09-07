@@ -7,6 +7,7 @@ import { Json, TablesInsert } from '@/types/database';
 import type { Profile, ProfilePrompt } from '@/types/profile';
 
 import { profilePhotoService } from './profile-photo-service';
+import { reconcileEditableProfilePhotos } from './profile-photo-reconciliation';
 
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
   return Boolean(
@@ -127,6 +128,43 @@ export const profileService = {
       tags: tagResult.data ?? [],
       prompts: promptResult.data ?? [],
       settings: settingsResult.data,
+    };
+  },
+  async getMyEditableProfile(userId: string) {
+    const [operational, storedPaths] = await Promise.all([
+      profileService.getMyOperationalProfile(userId),
+      profilePhotoService.listMyStoredPhotos(userId),
+    ]);
+    const databasePhotos = operational.profile.profile_photos;
+    const databasePaths = new Set(databasePhotos.map((photo) => photo.storage_path));
+    const missingPaths = storedPaths.filter((path) => !databasePaths.has(path));
+
+    if (missingPaths.length === 0) return operational;
+
+    const { data: signedResults, error: signedError } =
+      await profilePhotoService.createSignedPhotoUrls(missingPaths, 3600);
+    if (signedError) throw signedError;
+
+    const recoveredStoragePhotos = (signedResults ?? []).flatMap((result) =>
+      result.path && result.signedUrl
+        ? [{ signedUrl: result.signedUrl, storagePath: result.path }]
+        : [],
+    );
+    if (recoveredStoragePhotos.length !== missingPaths.length) {
+      throw new Error('Unable to load every uploaded profile photo');
+    }
+
+    return {
+      ...operational,
+      profile: {
+        ...operational.profile,
+        profile_photos: reconcileEditableProfilePhotos(
+          databasePhotos,
+          recoveredStoragePhotos,
+          userId,
+          operational.profile.review_status,
+        ),
+      },
     };
   },
   async getMyPreviewProfile(userId: string, locale: string): Promise<Profile> {

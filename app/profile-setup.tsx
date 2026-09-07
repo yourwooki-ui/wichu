@@ -201,7 +201,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     enabled: Boolean(session),
     refetchOnMount: 'always',
     staleTime: 0,
-    queryFn: () => profileService.getMyOperationalProfile(session!.user.id),
+    queryFn: () => profileService.getMyEditableProfile(session!.user.id),
   });
   const isEditingProfile = requestedEditMode && Boolean(existingProfileQuery.data?.profile);
   const activeEditSection = EDIT_SECTIONS[step];

@@ -300,7 +300,10 @@ export function ProfilePhotoPicker({
         </View>
       ) : null}
 
-      <View style={styles.grid}>
+      <View
+        accessibilityLabel={t('profileSetup.photos.readiness', { count: photos.length })}
+        style={styles.grid}
+      >
         {photos.map((photo, index) => (
           <View key={photo.draftId} style={[styles.photoTile, { backgroundColor: surfaceColor }]}>
             <Image
@@ -341,6 +344,11 @@ export function ProfilePhotoPicker({
                 <Text style={styles.primaryText}>{t('profileSetup.photos.primary')}</Text>
               </View>
             ) : null}
+            <View style={[styles.positionBadge, index === 0 && styles.positionBadgePrimary]}>
+              <Text style={styles.positionText}>
+                {index + 1} / {photos.length}
+              </Text>
+            </View>
             <Pressable
               accessibilityLabel={t('profileSetup.photos.remove', { index: index + 1 })}
               accessibilityRole="button"
@@ -545,7 +553,7 @@ const styles = StyleSheet.create({
   },
   sourceButtonLabel: { fontSize: 12, fontWeight: '900' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  photoTile: { width: '31.6%', aspectRatio: 0.78, overflow: 'hidden', borderRadius: radius.md },
+  photoTile: { width: '48.7%', aspectRatio: 0.78, overflow: 'hidden', borderRadius: radius.md },
   primaryBadge: {
     position: 'absolute',
     top: 8,
@@ -556,6 +564,20 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   primaryText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
+  positionBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    minWidth: 36,
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    zIndex: 2,
+  },
+  positionBadgePrimary: { top: 40 },
+  positionText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   reviewBadge: {
     alignItems: 'center',
     backgroundColor: 'rgba(25,25,29,0.78)',
@@ -636,7 +658,7 @@ const styles = StyleSheet.create({
   },
   disabledOrderButton: { opacity: 0.28 },
   addTile: {
-    width: '31.6%',
+    width: '48.7%',
     aspectRatio: 0.78,
     alignItems: 'center',
     justifyContent: 'center',
