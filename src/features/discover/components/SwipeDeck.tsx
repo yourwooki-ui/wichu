@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  cancelAnimation,
   Extrapolation,
   interpolate,
   runOnJS,
@@ -33,6 +34,7 @@ import {
 } from '@/constants/theme';
 import { ProfileCard } from '@/features/discover/components/ProfileCard';
 import { useProfilePrefetch } from '@/features/discover/hooks/use-profile-prefetch';
+import { createCardTapController } from '@/features/discover/utils/card-tap-controller';
 import {
   DISCOVER_SWIPE_THRESHOLD,
   resolveDiscoverSwipe,
@@ -72,8 +74,7 @@ export function SwipeDeck({
   const { height, width } = useAppViewport();
   const reduceMotion = useReduceMotion();
   const presenceNow = useActiveClock();
-  const lastTapRef = useRef(0);
-  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cardTap] = useState(() => createCardTapController(DOUBLE_TAP_DELAY));
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const pickPulse = useSharedValue(0);
@@ -85,6 +86,7 @@ export function SwipeDeck({
   const deckHeight = Math.min(560, Math.max(320, height - 334));
 
   useProfilePrefetch(profiles);
+  const clearPendingTap = cardTap.cancel;
 
   const commitSwipe = useCallback(
     (action: SwipeAction) => {
@@ -102,15 +104,17 @@ export function SwipeDeck({
   }, []);
 
   const openProfile = useCallback(() => {
-    if (currentProfile) {
+    if (currentProfile && !interactionLocked.get()) {
+      clearPendingTap();
       hapticsService.selection();
       void navigateWithAdGate(`/profile/${currentProfile.id}?context=discover`);
     }
-  }, [currentProfile, navigateWithAdGate]);
+  }, [clearPendingTap, currentProfile, interactionLocked, navigateWithAdGate]);
 
   const startSwipe = useCallback(
     (action: SwipeAction) => {
       if (interactionLocked.get()) return;
+      clearPendingTap();
       interactionLocked.set(true);
       signalSwipeDecision(action);
       const exitDuration = resolveMotionDuration(reduceMotion, motionDuration.exit);
@@ -127,6 +131,7 @@ export function SwipeDeck({
     },
     [
       commitSwipe,
+      clearPendingTap,
       interactionLocked,
       reduceMotion,
       signalSwipeDecision,
@@ -137,14 +142,8 @@ export function SwipeDeck({
   );
 
   const handleCardPress = useCallback(() => {
-    const tappedAt = Date.now();
-    const isDoubleTap = tappedAt - lastTapRef.current <= DOUBLE_TAP_DELAY;
-    lastTapRef.current = tappedAt;
-
-    if (isDoubleTap) {
-      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-      singleTapTimerRef.current = null;
-      lastTapRef.current = 0;
+    if (interactionLocked.get()) return;
+    cardTap.tap(openProfile, () => {
       if (!reduceMotion) {
         pickPulse.set(
           withSequence(
@@ -154,24 +153,21 @@ export function SwipeDeck({
         );
       }
       startSwipe('like');
-      return;
-    }
-
-    singleTapTimerRef.current = setTimeout(() => {
-      singleTapTimerRef.current = null;
-      lastTapRef.current = 0;
-      openProfile();
-    }, DOUBLE_TAP_DELAY);
-  }, [openProfile, pickPulse, reduceMotion, startSwipe]);
+    });
+  }, [cardTap, interactionLocked, openProfile, pickPulse, reduceMotion, startSwipe]);
 
   useEffect(
     () => () => {
-      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+      clearPendingTap();
+      cancelAnimation(translateX);
+      cancelAnimation(translateY);
+      cancelAnimation(pickPulse);
     },
-    [],
+    [clearPendingTap, pickPulse, translateX, translateY],
   );
 
   useEffect(() => {
+    clearPendingTap();
     const isRestoredProfile = restoredSwipe?.profileId === currentProfile?.id;
     const restoredOffset = restoredSwipe?.action === 'like' ? width * 0.72 : -width * 0.72;
 
@@ -187,6 +183,7 @@ export function SwipeDeck({
     if (isRestoredProfile) onRestoreAnimationConsumed?.();
   }, [
     currentProfile?.id,
+    clearPendingTap,
     interactionLocked,
     onRestoreAnimationConsumed,
     pickPulse,
@@ -221,6 +218,9 @@ export function SwipeDeck({
     const pan = Gesture.Pan()
       .activeOffsetX([-6, 6])
       .failOffsetY([-14, 14])
+      .onStart(() => {
+        runOnJS(clearPendingTap)();
+      })
       .onUpdate((event) => {
         if (interactionLocked.get()) return;
         translateX.set(event.translationX);
@@ -253,6 +253,7 @@ export function SwipeDeck({
     return Gesture.Simultaneous(pan, Gesture.Native());
   }, [
     commitSwipe,
+    clearPendingTap,
     interactionLocked,
     reduceMotion,
     signalSwipeDecision,
@@ -272,20 +273,21 @@ export function SwipeDeck({
       { translateX: translateX.get() },
       { translateY: translateY.get() },
       {
-        rotate: `${interpolate(
-          translateX.get(),
-          [-width, 0, width],
-          [-12, 0, 12],
-          Extrapolation.CLAMP,
-        )}deg`,
+        rotate: `${
+          reduceMotion
+            ? 0
+            : interpolate(translateX.get(), [-width, 0, width], [-12, 0, 12], Extrapolation.CLAMP)
+        }deg`,
       },
       {
-        scale: interpolate(
-          Math.abs(translateX.get()),
-          [0, DISCOVER_SWIPE_THRESHOLD, width],
-          [1, 0.992, 0.975],
-          Extrapolation.CLAMP,
-        ),
+        scale: reduceMotion
+          ? 1
+          : interpolate(
+              Math.abs(translateX.get()),
+              [0, DISCOVER_SWIPE_THRESHOLD, width],
+              [1, 0.992, 0.975],
+              Extrapolation.CLAMP,
+            ),
       },
     ],
   }));
@@ -320,6 +322,7 @@ export function SwipeDeck({
       Extrapolation.CLAMP,
     ),
     transform: [
+      { rotate: '-8deg' },
       {
         scale: interpolate(
           translateX.get(),
@@ -338,6 +341,7 @@ export function SwipeDeck({
       Extrapolation.CLAMP,
     ),
     transform: [
+      { rotate: '8deg' },
       {
         scale: interpolate(
           translateX.get(),
@@ -427,6 +431,7 @@ export function SwipeDeck({
           body={error ?? undefined}
           container="plain"
           illustration={error ? illustratedIcons.connectionError : illustratedIcons.searchEmpty}
+          artwork={error ? undefined : 'pick'}
           onAction={onRetry}
           onSecondaryAction={onAdjustFilters}
           secondaryActionLabel={t('experience.discover.adjust')}
@@ -455,6 +460,7 @@ export function SwipeDeck({
       <View style={[styles.deck, { height: deckHeight }]}>
         {nextProfile ? (
           <Animated.View
+            aria-hidden
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             style={[styles.nextCard, nextCardStyle]}
@@ -482,6 +488,7 @@ export function SwipeDeck({
             <Animated.View style={[styles.pickWash, styles.nonInteractive, likeWashStyle]} />
             <Animated.View style={[styles.passWash, styles.nonInteractive, passWashStyle]} />
             <Animated.View
+              aria-hidden
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
               style={[styles.pickPulse, pickPulseStyle]}
@@ -489,6 +496,7 @@ export function SwipeDeck({
               <Ionicons color={palette.white} name="heart" size={44} />
             </Animated.View>
             <Animated.View
+              aria-hidden
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
               style={[styles.decision, styles.likeDecision, likeDecisionStyle]}
@@ -496,6 +504,7 @@ export function SwipeDeck({
               <Text style={styles.likeText}>PICK</Text>
             </Animated.View>
             <Animated.View
+              aria-hidden
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
               style={[styles.decision, styles.passDecision, passDecisionStyle]}
@@ -644,9 +653,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(8,8,12,0.28)',
     pointerEvents: 'none',
   },
-  likeDecision: { left: 22, borderColor: palette.pink, transform: [{ rotate: '-8deg' }] },
-  passDecision: { right: 22, borderColor: palette.white, transform: [{ rotate: '8deg' }] },
-  likeText: { color: palette.pink, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
+  likeDecision: { left: 22, borderColor: palette.pink, backgroundColor: palette.pink },
+  passDecision: { right: 22, borderColor: palette.white },
+  likeText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   passText: { color: palette.white, fontSize: 22, fontWeight: '900', letterSpacing: 1.8 },
   actionDock: {
     alignItems: 'flex-start',

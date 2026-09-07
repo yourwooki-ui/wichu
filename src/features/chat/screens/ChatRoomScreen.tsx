@@ -66,7 +66,7 @@ import {
 } from '@/constants/motion';
 import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
 import { DateFeedbackSheet } from '@/features/chat/components/DateFeedbackSheet';
-import { palette, pressFeedback, radius } from '@/constants/theme';
+import { elevation, palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
 import { isNearChatBottom, shouldAutoScrollChat } from '@/features/chat/utils/chat-scroll';
@@ -1818,10 +1818,7 @@ const styles = StyleSheet.create({
     gap: 6,
     minHeight: 44,
     paddingHorizontal: 14,
-    shadowColor: '#000000',
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.16,
-    shadowRadius: 9,
+    ...elevation.md,
   },
   jumpToLatestAnchor: { alignSelf: 'center', position: 'absolute', zIndex: 4 },
   jumpToLatestText: { color: palette.white, fontSize: 11, fontWeight: '900' },

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import Animated from 'react-native-reanimated';
 
 import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
+import { BrandArtwork, type BrandArtworkKind } from '@/components/BrandArtwork';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { stateEntering } from '@/constants/motion';
 import { elevation, palette, pressFeedback, radius, spacing, typography } from '@/constants/theme';
@@ -18,6 +19,7 @@ type StateViewProps = {
   container?: 'card' | 'plain';
   icon?: keyof typeof Ionicons.glyphMap;
   illustration?: ImageSource;
+  artwork?: BrandArtworkKind;
   onAction?: () => void;
   onSecondaryAction?: () => void;
   secondaryActionLabel?: string;
@@ -38,6 +40,7 @@ export function StateView({
   container = 'card',
   icon,
   illustration,
+  artwork,
   onAction,
   onSecondaryAction,
   secondaryActionLabel,
@@ -61,7 +64,9 @@ export function StateView({
         style,
       ]}
     >
-      {illustration ? (
+      {artwork ? (
+        <BrandArtwork kind={artwork} />
+      ) : illustration ? (
         <View style={styles.illustration}>
           <MotionIllustratedIcon
             active={tone !== 'error'}
@@ -152,14 +157,23 @@ const styles = StyleSheet.create({
   illustration: { alignItems: 'center', height: 68, justifyContent: 'center', width: 68 },
   title: { marginTop: spacing.sm, textAlign: 'center' },
   body: { marginTop: spacing.xxs, maxWidth: 280, textAlign: 'center' },
-  actions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },
+  actions: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
   action: {
     alignItems: 'center',
-    borderRadius: radius.pill,
+    borderRadius: radius.brand,
+    maxWidth: '100%',
     justifyContent: 'center',
     // 접근성 최소 터치 크기
     minHeight: 44,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   secondaryAction: { backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth },
 });

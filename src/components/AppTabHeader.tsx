@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { ImageSource } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +11,7 @@ import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 type AppTabHeaderProps = {
   actionAccessibilityLabel?: string;
   actionIcon?: ImageSource;
+  actionGlyph?: keyof typeof Ionicons.glyphMap;
   actionMotion?: IconMotion;
   eyebrow: string;
   onAction?: () => void;
@@ -18,11 +20,22 @@ type AppTabHeaderProps = {
 export function AppTabHeader({
   actionAccessibilityLabel,
   actionIcon,
+  actionGlyph,
   actionMotion,
   eyebrow,
   onAction,
 }: AppTabHeaderProps) {
   const theme = useAppTheme();
+  const visual = actionGlyph ? (
+    <Ionicons color={theme.colors.text} name={actionGlyph} size={23} />
+  ) : actionIcon ? (
+    <IllustratedIcon size={42} source={actionIcon} />
+  ) : null;
+  const actionContent = actionMotion ? (
+    <AmbientIconMotion motion={actionMotion}>{visual}</AmbientIconMotion>
+  ) : (
+    visual
+  );
 
   return (
     <View style={styles.header}>
@@ -39,7 +52,7 @@ export function AppTabHeader({
           </Text>
         </View>
       </View>
-      {actionIcon && onAction ? (
+      {visual && onAction ? (
         <Pressable
           accessibilityLabel={actionAccessibilityLabel}
           accessibilityRole="button"
@@ -51,32 +64,21 @@ export function AppTabHeader({
             pressed && pressFeedback.icon,
           ]}
         >
-          {actionMotion ? (
-            <AmbientIconMotion motion={actionMotion}>
-              <IllustratedIcon size={42} source={actionIcon} />
-            </AmbientIconMotion>
-          ) : (
-            <IllustratedIcon size={42} source={actionIcon} />
-          )}
+          {actionContent}
         </Pressable>
-      ) : actionIcon ? (
+      ) : visual ? (
         <View
           accessibilityElementsHidden
+          aria-hidden
           style={[
             styles.action,
             { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
           ]}
         >
-          {actionMotion ? (
-            <AmbientIconMotion motion={actionMotion}>
-              <IllustratedIcon size={42} source={actionIcon} />
-            </AmbientIconMotion>
-          ) : (
-            <IllustratedIcon size={42} source={actionIcon} />
-          )}
+          {actionContent}
         </View>
       ) : (
-        <View style={styles.action} />
+        <View style={styles.placeholder} />
       )}
     </View>
   );
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   eyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 7, marginTop: 3 },
   eyebrowKeyline: { backgroundColor: palette.pink, borderRadius: 2, height: 3, width: 18 },
   eyebrow: { letterSpacing: 1.65 },
+  placeholder: { height: 52, width: 52 },
   action: {
     alignItems: 'center',
     borderRadius: radius.brand,

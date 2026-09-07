@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +7,7 @@ import {
   InteractiveBottomSheet,
 } from '@/components/InteractiveBottomSheet';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
+import { BrandArtwork } from '@/components/BrandArtwork';
 import { PresenceDot } from '@/components/PresenceDot';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
@@ -39,6 +40,7 @@ import { useInAppNotificationCenter } from '@/services/in-app-notification-cente
  * 제품 화면이 아니며 프로덕션 빌드에서는 접근되지 않는다.
  */
 export default function DesignQaScreen() {
+  const { scene } = useLocalSearchParams<{ scene?: string }>();
   const theme = useAppTheme();
   const [qaProfiles, setQaProfiles] = useState(mockProfiles);
   const [matchPreviewOpen, setMatchPreviewOpen] = useState(false);
@@ -47,6 +49,50 @@ export default function DesignQaScreen() {
 
   if (!__DEV__) return <Redirect href="/" />;
 
+  if (scene === 'chat') return <ChatListScreen />;
+  if (scene === 'matches') return <MatchesScreen />;
+  if (scene === 'tutorial') return <ProductTutorialScreen />;
+  if (scene === 'discover')
+    return (
+      <Screen>
+        <SwipeDeck
+          profiles={qaProfiles}
+          error={null}
+          isLoading={false}
+          onAdjustFilters={() => {}}
+          onRetry={() => setQaProfiles(mockProfiles)}
+          onSwipe={() => setQaProfiles((current) => [...current.slice(1), current[0]])}
+        />
+        <PrimaryButton
+          label="매치 이펙트 보기"
+          onPress={() => setMatchPreviewOpen(true)}
+          variant="ghost"
+        />
+        <MatchCelebration
+          profile={matchPreviewOpen ? qaProfiles[0] : null}
+          onChat={() => setMatchPreviewOpen(false)}
+          onContinue={() => setMatchPreviewOpen(false)}
+        />
+      </Screen>
+    );
+  if (scene === 'artwork')
+    return (
+      <Screen>
+        <ScrollView contentContainerStyle={styles.sectionBody}>
+          <StateView
+            artwork="pick"
+            title="Pick your vibe."
+            body="새로운 취향을 발견해보세요."
+            actionLabel="발견하기"
+            onAction={() => {}}
+          />
+          <StateView artwork="connection" title="서로의 선택이 닿는 순간" />
+          <StateView artwork="chat" title="가볍게 인사를 건네보세요" />
+          <PrimaryButton disabled label="비활성 버튼" onPress={() => {}} />
+        </ScrollView>
+      </Screen>
+    );
+
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']} padded={false} style={styles.screen}>
       <ScrollView
@@ -54,6 +100,13 @@ export default function DesignQaScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
+        <Section title="Brand artwork · code-native assets">
+          <View style={styles.artworkRow}>
+            <BrandArtwork />
+            <BrandArtwork kind="connection" />
+            <BrandArtwork kind="chat" />
+          </View>
+        </Section>
         <Section title="Typography">
           {(Object.keys(typography) as (keyof typeof typography)[]).map((token) => (
             <Text key={token} style={[typography[token], { color: theme.colors.text }]}>
@@ -285,6 +338,7 @@ const styles = StyleSheet.create({
   sectionTitle: { marginBottom: spacing.xs },
   sectionBody: { gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },
+  artworkRow: { alignItems: 'center', gap: spacing.sm },
   iconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   iconTile: {
     alignItems: 'center',

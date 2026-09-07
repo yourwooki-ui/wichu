@@ -1,4 +1,4 @@
-import { Image, type ImageSource } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -11,7 +11,6 @@ import { AmbientIconMotion } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { layout, palette } from '@/constants/theme';
-import { illustratedIcons } from '@/constants/illustrated-icons';
 import { SwipeDeck } from '@/features/discover/components/SwipeDeck';
 import { DiscoverGestureCoach } from '@/features/discover/components/DiscoverGestureCoach';
 import { DiscoverUndoCoach } from '@/features/discover/components/DiscoverUndoCoach';
@@ -27,10 +26,10 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import type { Profile, SwipeAction } from '@/types/profile';
 
 const headerIcons = {
-  undo: illustratedIcons.rewind,
-  filter: illustratedIcons.discoverySettings,
-  notification: illustratedIcons.notification,
-} satisfies Record<string, ImageSource>;
+  undo: 'arrow-undo-outline',
+  filter: 'options-outline',
+  notification: 'notifications-outline',
+} satisfies Record<string, keyof typeof Ionicons.glyphMap>;
 
 export function DiscoverScreen() {
   const router = useRouter();
@@ -193,7 +192,7 @@ export function DiscoverScreen() {
 type HeaderActionProps = {
   badge?: boolean;
   disabled?: boolean;
-  icon: ImageSource;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
 };
@@ -211,6 +210,7 @@ function HeaderAction({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       hitSlop={10}
       onPress={onPress}
@@ -221,10 +221,10 @@ function HeaderAction({
     >
       {badge ? (
         <AmbientIconMotion motion="bell">
-          <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
+          <Ionicons color={theme.colors.text} name={icon} size={23} />
         </AmbientIconMotion>
       ) : (
-        <Image contentFit="contain" source={icon} style={styles.headerActionIcon} />
+        <Ionicons color={theme.colors.text} name={icon} size={23} />
       )}
       {badge ? (
         <View style={[styles.headerActionBadge, { borderColor: theme.colors.background }]} />
@@ -264,10 +264,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     width: 48,
-  },
-  headerActionIcon: {
-    height: 40,
-    width: 40,
   },
   headerActionBadge: {
     // 테두리는 화면 배경과 같은 색이어야 '파낸' 것처럼 보인다. 색은 호출부에서 넣는다.

@@ -83,3 +83,10 @@
 | `assets/brand/wichu-splash.png`                  | Expo 네이티브 스플래시 이미지 |
 
 브랜드 보드와 참고 이미지는 디자인 기준 자료이며 화면 배경으로 직접 배포하지 않는다.
+
+## 코드 에셋과 검수
+
+- `BrandArtwork`의 Pick/Connection/Chat 그래픽은 기존 Ionicons와 네이티브 도형으로 구성한다.
+- 일반 헤더는 선형 아이콘, 빈 상태는 카드 모티프, 매치 성공은 검정 무대·라임 제목으로 구별한다.
+- 공통 버튼·시트·그림자 토큰과 모션 줄이기 정책을 사용한다.
+- 외부 소스·도입 여부·라이선스 확인 기록은 [DESIGN-SOURCES.md](DESIGN-SOURCES.md)를 참고한다.

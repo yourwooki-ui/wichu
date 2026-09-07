@@ -129,6 +129,8 @@ export const elevation = {
   md: shadow(5, 14, 0.09, 4),
   /** Discover 스와이프 카드처럼 화면의 주인공 */
   lg: shadow(10, 24, 0.12, 8),
+  /** 모달·바텀시트 */
+  overlay: shadow(-5, 36, 0.1, 12),
 } as const;
 
 /** 화면 공통 레이아웃. 태블릿·웹에서 본문이 과도하게 늘어나지 않게 한다. */

@@ -20,8 +20,6 @@ import { palette, pressFeedback } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export function NotificationsSheet({
   visible,
   onClose,
@@ -87,44 +85,47 @@ export function NotificationsSheet({
           style={styles.scroll}
         >
           {items.map((item, index) => (
-            <AnimatedPressable
-              accessibilityLabel={`${item.title}. ${item.body}`}
-              accessibilityRole="button"
+            <Animated.View
               entering={listEntering(index)}
               exiting={listExiting()}
               key={item.id}
               layout={listLayout()}
-              onPress={() => {
-                onClose();
-                router.push(`/chat/${item.matchId}`);
-              }}
-              style={({ pressed }: { pressed: boolean }) => [
-                styles.row,
-                pressed && styles.rowPressed,
-              ]}
             >
-              {item.photo ? (
-                <Image
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                  recyclingKey={item.id}
-                  source={{ uri: item.photo }}
-                  style={styles.avatar}
-                  transition={imageTransition.thumbnail}
-                />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <IllustratedIcon size={30} source={illustratedIcons.connections} />
+              <Pressable
+                accessibilityLabel={`${item.title}. ${item.body}`}
+                accessibilityRole="button"
+                onPress={() => {
+                  onClose();
+                  router.push(`/chat/${item.matchId}`);
+                }}
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.row,
+                  pressed && styles.rowPressed,
+                ]}
+              >
+                {item.photo ? (
+                  <Image
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    recyclingKey={item.id}
+                    source={{ uri: item.photo }}
+                    style={styles.avatar}
+                    transition={imageTransition.thumbnail}
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <IllustratedIcon size={30} source={illustratedIcons.connections} />
+                  </View>
+                )}
+                <View style={styles.rowCopy}>
+                  <Text style={styles.rowTitle}>{item.title}</Text>
+                  <Text numberOfLines={1} style={styles.rowBody}>
+                    {item.body}
+                  </Text>
                 </View>
-              )}
-              <View style={styles.rowCopy}>
-                <Text style={styles.rowTitle}>{item.title}</Text>
-                <Text numberOfLines={1} style={styles.rowBody}>
-                  {item.body}
-                </Text>
-              </View>
-              <Text style={styles.rowTime}>{formatActivityTime(item.time, t)}</Text>
-            </AnimatedPressable>
+                <Text style={styles.rowTime}>{formatActivityTime(item.time, t)}</Text>
+              </Pressable>
+            </Animated.View>
           ))}
         </ScrollView>
       ) : (
@@ -153,7 +154,7 @@ function formatActivityTime(value: string, t: ReturnType<typeof useTranslation>[
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F8F8FA',
+    backgroundColor: palette.paper,
     maxWidth: 460,
   },
   scroll: { flex: 1, minHeight: 0 },
@@ -168,9 +169,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.white,
     borderRadius: 18,
-    height: 36,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
   },
   empty: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 32 },
   list: { paddingBottom: 18, paddingHorizontal: 12, paddingTop: 12 },

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -58,7 +59,7 @@ const STEPS = [
     visual: 'match',
   },
   {
-    accent: '#176E4D',
+    accent: palette.ink,
     eyebrow: 'CHAT & TRANSLATE',
     illustration: illustratedIcons.translation,
     key: 'chat',
@@ -107,6 +108,7 @@ export function ProductTutorialScreen() {
         easing: Easing.out(Easing.cubic),
       }),
     );
+    return () => cancelAnimation(transitionProgress);
   }, [reduceMotion, stepIndex, transitionProgress]);
 
   const finish = async (feedback: 'complete' | 'skip' = 'complete') => {
