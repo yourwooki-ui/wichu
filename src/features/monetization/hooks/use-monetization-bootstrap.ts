@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import {
   INTERSTITIAL_ADS_ENABLED,
   MONETIZATION_ENABLED,
+  PROFILE_NATIVE_ADS_ENABLED,
   REWARDED_ADS_ENABLED,
 } from '@/constants/features';
 import { queryClient } from '@/lib/query-client';
@@ -46,7 +47,7 @@ export function useMonetizationBootstrap(userId: string | undefined) {
         });
     }
 
-    if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED) {
+    if (REWARDED_ADS_ENABLED || INTERSTITIAL_ADS_ENABLED || PROFILE_NATIVE_ADS_ENABLED) {
       void import('@/features/monetization/services/ads-service')
         .then(({ adsService }) => adsService.initialize())
         .catch((error) => reportOperationalError('ad_bootstrap', error, '/monetization'));

@@ -21,7 +21,11 @@ import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { INTERSTITIAL_ADS_ENABLED, REWARDED_ADS_ENABLED } from '@/constants/features';
+import {
+  INTERSTITIAL_ADS_ENABLED,
+  PROFILE_NATIVE_ADS_ENABLED,
+  REWARDED_ADS_ENABLED,
+} from '@/constants/features';
 import { sectionEntering } from '@/constants/motion';
 import { palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { authService } from '@/features/auth/services/auth-service';
@@ -54,7 +58,7 @@ export function SettingsScreen() {
     queryFn: () => settingsService.getMySettings(userId!),
   });
   const adPrivacyQuery = useQuery({
-    enabled: INTERSTITIAL_ADS_ENABLED || REWARDED_ADS_ENABLED,
+    enabled: INTERSTITIAL_ADS_ENABLED || PROFILE_NATIVE_ADS_ENABLED || REWARDED_ADS_ENABLED,
     queryFn: async () => {
       const { adsService } = await import('@/features/monetization/services/ads-service');
       return adsService.getPrivacyOptionsStatus();

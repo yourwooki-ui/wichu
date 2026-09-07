@@ -37,6 +37,7 @@ import { ProfileReviewState } from '@/features/profile/components/ProfileReviewS
 import { ProfileTagPicker } from '@/features/profile/components/ProfileTagPicker';
 import { EMPTY_PROFILE_TAG_SELECTIONS } from '@/features/profile/constants/profile-tags';
 import { persistProfilePhotoChanges } from '@/features/profile/services/profile-photo-persistence';
+import { hydrateStoredProfilePhotos } from '@/features/profile/services/profile-photo-hydration';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
@@ -198,7 +199,8 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const existingProfileQuery = useQuery({
     queryKey: ['profile-setup', 'existing', session?.user.id],
     enabled: Boolean(session),
-    staleTime: 15_000,
+    refetchOnMount: 'always',
+    staleTime: 0,
     queryFn: () => profileService.getMyOperationalProfile(session!.user.id),
   });
   const isEditingProfile = requestedEditMode && Boolean(existingProfileQuery.data?.profile);
@@ -209,7 +211,9 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
 
   useEffect(() => {
     const existing = existingProfileQuery.data;
-    if (!existing || profileHydrated) return;
+    // Do not hydrate from a stale cached one-photo snapshot while the mount
+    // refetch is still loading the authoritative photo list.
+    if (!existing || existingProfileQuery.isFetching || profileHydrated) return;
     queueMicrotask(() => {
       const { details, profile, interests, languages, prompts, settings, tags } = existing;
       setDisplayName(profile.display_name);
@@ -254,25 +258,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
         })),
       );
       setBio(profile.bio);
-      setPhotos(
-        profile.profile_photos.map((photo) => ({
-          assetId: photo.id,
-          draftId: `stored:${photo.id}`,
-          fileName: photo.storage_path.split('/').pop() ?? photo.id,
-          fileSize: 0,
-          height: 1200,
-          mimeType: 'image/jpeg',
-          storagePath: photo.storage_path,
-          reviewStatus: photo.review_status ?? profile.review_status,
-          type: 'image',
-          uri: photo.signed_url,
-          width: 960,
-        })),
-      );
+      setPhotos(hydrateStoredProfilePhotos(profile.profile_photos, profile.review_status));
       setConsented(true);
       setProfileHydrated(true);
     });
-  }, [existingProfileQuery.data, profileHydrated]);
+  }, [existingProfileQuery.data, existingProfileQuery.isFetching, profileHydrated]);
 
   const formFingerprint = JSON.stringify({
     bio,
@@ -634,7 +624,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.flex}
         >
           <View style={styles.header}>
@@ -738,8 +728,11 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
           <KeyboardAwareScrollView
             automaticallyAdjustKeyboardInsets={false}
             ref={scrollRef}
-            contentContainerStyle={styles.content}
-            keyboardFocusOffset={32}
+            contentContainerStyle={[
+              styles.content,
+              activeSection === 'about' && styles.contentWithKeyboardForm,
+            ]}
+            keyboardFocusOffset={Platform.OS === 'android' ? 116 : 92}
             showsVerticalScrollIndicator={false}
             style={styles.scroll}
           >
@@ -1165,6 +1158,9 @@ const styles = StyleSheet.create({
   },
   subtitle: { marginTop: 4, color: palette.inkMuted, fontSize: 12, lineHeight: 17 },
   content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 2 },
+  // 하단 저장 버튼이 고정되어 있으므로 긴 자기소개 입력의 마지막 줄이 버튼과
+  // 키보드 사이에 갇히지 않게 실제 스크롤 가능한 여백을 확보한다.
+  contentWithKeyboardForm: { paddingBottom: 156 },
   form: { gap: 22 },
   formCard: {
     backgroundColor: palette.white,

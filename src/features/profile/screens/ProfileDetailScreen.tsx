@@ -34,6 +34,9 @@ import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { discoveryService } from '@/features/discover/services/discovery-service';
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
+import { InlineProfileNativeAd } from '@/features/monetization/components/InlineProfileNativeAd';
+import { shouldShowProfileNativeAd } from '@/features/monetization/utils/profile-native-ad-policy';
+import { PROFILE_NATIVE_ADS_ENABLED } from '@/constants/features';
 import { StandardProfileDetail } from '@/features/profile/components/StandardProfileDetail';
 import { profileService } from '@/features/profile/services/profile-service';
 import { profileVisitService } from '@/features/profile/services/profile-visit-service';
@@ -418,6 +421,13 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
       </Pressable>
     </View>
   ) : null;
+  const showInlinePhotoAd = shouldShowProfileNativeAd({
+    enabled: PROFILE_NATIVE_ADS_ENABLED,
+    entitlementReady: entitlement.isSuccess,
+    isPreview,
+    photoCount: profile.photos.length,
+    tier: entitlement.data?.tier,
+  });
 
   return (
     <Screen edges={['left', 'right']} padded={false} style={styles.screen}>
@@ -442,6 +452,9 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
             icon: isPreview ? 'pencil' : 'ellipsis-horizontal',
             onPress: isPreview ? () => router.push('/profile-edit') : () => setSafetyOpen(true),
           }}
+          inlinePhotoAd={
+            showInlinePhotoAd ? <InlineProfileNativeAd profileId={profile.id} /> : undefined
+          }
           onSafety={isPreview ? undefined : () => setSafetyOpen(true)}
           onPromptPick={
             isPreview || detailAction !== 'decision'

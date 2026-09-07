@@ -6,6 +6,8 @@ import { toMyPreviewProfile } from '@/features/profile/utils/my-profile-preview'
 import { Json, TablesInsert } from '@/types/database';
 import type { Profile, ProfilePrompt } from '@/types/profile';
 
+import { profilePhotoService } from './profile-photo-service';
+
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
   return Boolean(
     error &&
@@ -89,16 +91,33 @@ export const profileService = {
       .order('position');
     if (profilePhotosError) throw profilePhotosError;
 
-    const signedPhotos = await Promise.all(
-      [...(profilePhotos ?? [])]
-        .sort((a, b) => a.position - b.position)
-        .map(async (photo) => {
-          const { data } = await supabase.storage
-            .from('profile-photos')
-            .createSignedUrl(photo.storage_path, 3600);
-          return { ...photo, signed_url: data?.signedUrl ?? '' };
-        }),
+    const orderedPhotos = [...(profilePhotos ?? [])].sort(
+      (left, right) => left.position - right.position,
     );
+    const { data: signedPhotoResults, error: signedPhotosError } =
+      await profilePhotoService.createSignedPhotoUrls(
+        orderedPhotos.map((photo) => photo.storage_path),
+        3600,
+      );
+    if (signedPhotosError) throw signedPhotosError;
+
+    const signedUrlsByPath = new Map(
+      (signedPhotoResults ?? []).flatMap((result) =>
+        result.path && result.signedUrl ? [[result.path, result.signedUrl] as const] : [],
+      ),
+    );
+    const unsignedPhotoResult = (signedPhotoResults ?? []).find(
+      (result) => result.path && !result.signedUrl,
+    );
+    if (unsignedPhotoResult) {
+      throw new Error(unsignedPhotoResult.error ?? 'Unable to load every profile photo');
+    }
+
+    const signedPhotos = orderedPhotos.map((photo) => {
+      const signedUrl = signedUrlsByPath.get(photo.storage_path);
+      if (!signedUrl) throw new Error('Unable to load every profile photo');
+      return { ...photo, signed_url: signedUrl };
+    });
 
     return {
       profile: { ...profileResult.data, profile_photos: signedPhotos },

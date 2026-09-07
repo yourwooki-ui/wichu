@@ -334,6 +334,94 @@ export function MeScreen() {
           </Pressable>
         </Animated.View>
 
+        {photos.length ? (
+          <Animated.View entering={sectionEntering(2)} style={styles.photoAlbum}>
+            <View style={styles.photoAlbumHeader}>
+              <View style={styles.photoAlbumHeading}>
+                <Text style={styles.photoAlbumTitle}>
+                  {t('profileDetail.photos', { count: photos.length })}
+                </Text>
+                <Text style={styles.photoAlbumHint}>{t('me.viewPublicProfileHint')}</Text>
+              </View>
+              <Pressable
+                accessibilityLabel={t('me.editProfile')}
+                accessibilityRole="button"
+                onPress={() => router.push('/profile-edit?section=photos')}
+                style={({ pressed }) => [styles.photoAlbumEdit, pressed && styles.pressed]}
+              >
+                <Ionicons color={palette.ink} name="pencil" size={14} />
+                <Text style={styles.photoAlbumEditText}>{t('me.edit')}</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              contentContainerStyle={styles.photoAlbumList}
+              horizontal
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+            >
+              {photos.map((photo, index) => {
+                const underReview = photo.reviewStatus === 'pending';
+                const rejected = photo.reviewStatus === 'rejected';
+                return (
+                  <Pressable
+                    accessibilityLabel={`${t('profileDetail.photo', { index: index + 1 })}, ${index + 1}/${photos.length}`}
+                    accessibilityRole="button"
+                    key={`${photo.storagePath}-${index}`}
+                    onPress={() => router.push('/profile-preview')}
+                    style={({ pressed }) => [
+                      styles.photoAlbumItem,
+                      pressed && styles.previewPressed,
+                    ]}
+                  >
+                    <Image
+                      blurRadius={underReview ? 10 : 0}
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      source={{ cacheKey: photo.storagePath, uri: photo.uri }}
+                      style={StyleSheet.absoluteFill}
+                      transition={imageTransition.thumbnail}
+                    />
+                    <LinearGradient
+                      colors={['rgba(8,8,12,0)', 'rgba(8,8,12,0.72)']}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    {index === 0 ? (
+                      <View style={styles.photoPrimaryBadge}>
+                        <Ionicons color={palette.ink} name="star" size={10} />
+                        <Text style={styles.photoPrimaryText}>
+                          {t('profileSetup.photos.primary')}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {underReview || rejected ? (
+                      <View
+                        style={[
+                          styles.photoAlbumStatus,
+                          rejected && styles.photoAlbumStatusRejected,
+                        ]}
+                      >
+                        <Ionicons
+                          color={palette.white}
+                          name={rejected ? 'alert-circle' : 'time'}
+                          size={11}
+                        />
+                        <Text style={styles.photoAlbumStatusText}>
+                          {rejected
+                            ? t('profileReview.rejected.title')
+                            : t('profileReview.steps.reviewing')}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.photoAlbumIndex}>
+                      {index + 1} / {photos.length}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+        ) : null}
+
         {photosUnderReview > 0 ? (
           <Animated.View entering={sectionEntering(2)} style={styles.pendingNotice}>
             <View style={styles.pendingNoticeIcon}>
@@ -848,6 +936,79 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 9,
     paddingVertical: 6,
+  },
+  photoAlbum: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    overflow: 'hidden',
+    paddingVertical: 15,
+  },
+  photoAlbumHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+  },
+  photoAlbumHeading: { flex: 1, minWidth: 0 },
+  photoAlbumTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', letterSpacing: -0.2 },
+  photoAlbumHint: { color: palette.inkMuted, fontSize: 10, lineHeight: 15, marginTop: 3 },
+  photoAlbumEdit: {
+    alignItems: 'center',
+    backgroundColor: '#F0F0F3',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 5,
+    marginLeft: 10,
+    minHeight: 36,
+    paddingHorizontal: 11,
+  },
+  photoAlbumEditText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
+  photoAlbumList: { gap: 9, paddingHorizontal: 15, paddingTop: 13 },
+  photoAlbumItem: {
+    backgroundColor: '#D8D8DE',
+    borderRadius: 16,
+    height: 150,
+    overflow: 'hidden',
+    position: 'relative',
+    width: 112,
+  },
+  photoPrimaryBadge: {
+    alignItems: 'center',
+    backgroundColor: palette.lime,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 3,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    position: 'absolute',
+    top: 8,
+  },
+  photoPrimaryText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
+  photoAlbumStatus: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,17,20,0.78)',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 3,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    position: 'absolute',
+    top: 38,
+  },
+  photoAlbumStatusRejected: { backgroundColor: 'rgba(179,38,63,0.9)' },
+  photoAlbumStatusText: { color: palette.white, fontSize: 10, fontWeight: '900' },
+  photoAlbumIndex: {
+    bottom: 9,
+    color: palette.white,
+    fontSize: 10,
+    fontWeight: '900',
+    position: 'absolute',
+    right: 9,
   },
   detailsToggle: {
     alignItems: 'center',

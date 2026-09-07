@@ -215,6 +215,10 @@ module.exports = () => {
         'EXPO_PUBLIC_ADMOB_BROWSE_INTERSTITIAL_ANDROID_UNIT_ID',
         validAdMobUnitId(process.env.EXPO_PUBLIC_ADMOB_BROWSE_INTERSTITIAL_ANDROID_UNIT_ID),
       ],
+      [
+        'EXPO_PUBLIC_ADMOB_PROFILE_NATIVE_ANDROID_UNIT_ID',
+        validAdMobUnitId(process.env.EXPO_PUBLIC_ADMOB_PROFILE_NATIVE_ANDROID_UNIT_ID),
+      ],
     ];
     const missing = requiredProductionValues
       .filter(([, configured]) => !configured)

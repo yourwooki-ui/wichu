@@ -21,3 +21,6 @@ export const REWARDED_ADS_ENABLED = monetizationConfig.rewardedAdsEnabled;
 
 /** 자동 전면 광고는 보상형과 별도로 운영에서 켜고 끈다. */
 export const INTERSTITIAL_ADS_ENABLED = monetizationConfig.interstitialAdsEnabled;
+
+/** 사진형 프로필 상세에 자연스럽게 삽입되는 네이티브 광고. */
+export const PROFILE_NATIVE_ADS_ENABLED = monetizationConfig.profileNativeAdsEnabled;

@@ -40,7 +40,15 @@ const browseInterstitialAdUnitId =
       ? process.env.EXPO_PUBLIC_ADMOB_BROWSE_INTERSTITIAL_IOS_UNIT_ID?.trim()
       : undefined;
 
+const profileNativeAdUnitId =
+  Platform.OS === 'android'
+    ? process.env.EXPO_PUBLIC_ADMOB_PROFILE_NATIVE_ANDROID_UNIT_ID?.trim()
+    : Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_ADMOB_PROFILE_NATIVE_IOS_UNIT_ID?.trim()
+      : undefined;
+
 const testMode = enabled(process.env.EXPO_PUBLIC_MONETIZATION_TEST_MODE);
+const usesTestAdUnits = __DEV__ || testMode;
 
 export const monetizationConfig = Object.freeze({
   testMode,
@@ -48,6 +56,7 @@ export const monetizationConfig = Object.freeze({
   rewardedUndoAdUnitId,
   discoverInterstitialAdUnitId,
   browseInterstitialAdUnitId,
+  profileNativeAdUnitId,
   purchasesEnabled:
     enabled(process.env.EXPO_PUBLIC_MONETIZATION_ENABLED) && validRevenueCatKey(revenueCatApiKey),
   rewardedAdsEnabled:
@@ -58,6 +67,9 @@ export const monetizationConfig = Object.freeze({
     (testMode ||
       validAdUnitId(discoverInterstitialAdUnitId) ||
       validAdUnitId(browseInterstitialAdUnitId)),
+  profileNativeAdsEnabled:
+    enabled(process.env.EXPO_PUBLIC_INTERSTITIAL_ADS_ENABLED) &&
+    (usesTestAdUnits || validAdUnitId(profileNativeAdUnitId)),
 });
 
 export type MonetizationConfiguration = typeof monetizationConfig;

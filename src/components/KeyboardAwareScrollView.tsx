@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import {
+  Keyboard,
   Platform,
   ScrollView,
   type NativeSyntheticEvent,
@@ -33,6 +34,7 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
   ) {
     const scrollRef = useRef<ScrollView>(null);
     const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const focusedTargetRef = useRef<number | null>(null);
 
     useImperativeHandle(forwardedRef, () => scrollRef.current as ScrollView, []);
 
@@ -49,7 +51,9 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
         if (Platform.OS === 'web') return;
 
         timersRef.current.forEach(clearTimeout);
-        timersRef.current = [70, 320].map((delay) =>
+        // Android의 resize가 끝나는 시점과 iOS 키보드 애니메이션이 끝나는 시점이
+        // 기기마다 달라 한 번만 이동하면 긴 multiline 입력이 다시 가려질 수 있다.
+        timersRef.current = [50, 240, 520].map((delay) =>
           setTimeout(() => {
             scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(
               target,
@@ -62,9 +66,22 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
       [keyboardFocusOffset],
     );
 
+    useEffect(() => {
+      if (Platform.OS === 'web') return;
+
+      const eventName = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+      const subscription = Keyboard.addListener(eventName, () => {
+        const target = focusedTargetRef.current;
+        if (target != null) revealFocusedInput(target);
+      });
+
+      return () => subscription.remove();
+    }, [revealFocusedInput]);
+
     const handleFocus = useCallback(
       (event: NativeSyntheticEvent<TargetedEvent>) => {
         onFocus?.(event);
+        focusedTargetRef.current = event.nativeEvent.target;
         revealFocusedInput(event.nativeEvent.target);
       },
       [onFocus, revealFocusedInput],

@@ -197,6 +197,12 @@ export function OperationsScreen() {
     (overviewQuery.data?.pending_profiles ?? profileQuery.data?.length ?? 0) +
     (overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0) +
     (overviewQuery.data?.pending_safety ?? safetyQuery.data?.length ?? 0);
+  const sectionCounts: Partial<Record<Section, number>> = {
+    overview: queueCount,
+    profiles: overviewQuery.data?.pending_profiles ?? profileQuery.data?.length ?? 0,
+    reports: overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0,
+    safety: overviewQuery.data?.pending_safety ?? safetyQuery.data?.length ?? 0,
+  };
   const activeQuery =
     section === 'overview'
       ? overviewQuery
@@ -251,29 +257,36 @@ export function OperationsScreen() {
           <Ionicons color={palette.ink} name="chevron-back" size={25} />
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>WICHU OPS · {isMaster ? 'MASTER' : 'OPERATOR'}</Text>
+          <Text style={styles.eyebrow}>WICHU CONTROL</Text>
           <Text style={styles.title}>운영 센터</Text>
         </View>
-        <View style={[styles.countPill, queueCount > 0 && styles.countPillActive]}>
-          <Text style={styles.countText}>{queueCount}</Text>
+        <View style={styles.headerMeta}>
+          <Text style={styles.roleLabel}>{isMaster ? 'MASTER' : 'OPERATOR'}</Text>
+          <View style={[styles.countPill, queueCount > 0 && styles.countPillActive]}>
+            <Text style={styles.countText}>{queueCount}</Text>
+            <Text style={styles.countLabel}>대기</Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.tabs}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      >
-        {SECTIONS.filter((item) => !item.masterOnly || isMaster).map((item) => (
-          <Tab
-            key={item.key}
-            active={section === item.key}
-            icon={item.icon}
-            label={item.label}
-            onPress={() => changeSection(item.key)}
-          />
-        ))}
-      </ScrollView>
+      <View style={styles.tabRail}>
+        <ScrollView
+          contentContainerStyle={styles.tabs}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          {SECTIONS.filter((item) => !item.masterOnly || isMaster).map((item) => (
+            <Tab
+              key={item.key}
+              active={section === item.key}
+              count={sectionCounts[item.key]}
+              icon={item.icon}
+              label={item.label}
+              onPress={() => changeSection(item.key)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {activeQuery.isLoading ? (
         <View style={styles.loadingContent}>
@@ -394,18 +407,20 @@ export function OperationsScreen() {
 
 function Tab({
   active,
+  count,
   icon,
   label,
   onPress,
 }: {
   active: boolean;
+  count?: number;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      accessibilityLabel={label}
+      accessibilityLabel={`${label}${count ? `, 대기 ${count}건` : ''}`}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       onPress={onPress}
@@ -415,8 +430,15 @@ function Tab({
         pressed && pressFeedback.control,
       ]}
     >
-      <Ionicons color={active ? palette.white : palette.inkMuted} name={icon} size={15} />
+      <View style={[styles.tabIcon, active && styles.tabIconActive]}>
+        <Ionicons color={active ? palette.ink : palette.inkMuted} name={icon} size={15} />
+      </View>
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+      {count ? (
+        <View style={[styles.tabCount, active && styles.tabCountActive]}>
+          <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>{count}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -442,15 +464,26 @@ function OverviewPanel({
   return (
     <>
       <View style={styles.heroCard}>
-        <View style={styles.heroIcon}>
-          <Ionicons color={palette.ink} name={total ? 'pulse' : 'checkmark'} size={22} />
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroStatus}>
+            <View style={[styles.heroStatusDot, total === 0 && styles.heroStatusDotClear]} />
+            <Text style={styles.heroEyebrow}>LIVE QUEUE</Text>
+          </View>
+          <View style={styles.heroTotal}>
+            <Text style={styles.heroTotalValue}>{total}</Text>
+            <Text style={styles.heroTotalLabel}>대기</Text>
+          </View>
         </View>
-        <View style={styles.heroCopy}>
-          <Text style={styles.heroEyebrow}>QUEUE HEALTH</Text>
-          <Text style={styles.heroTitle}>
-            {total ? `지금 ${total}건을 확인해야 해요` : '모든 큐가 비어 있어요'}
-          </Text>
-          <Text style={styles.heroBody}>긴급 신고와 24시간 초과 건이 먼저 보입니다.</Text>
+        <View style={styles.heroBottomRow}>
+          <View style={styles.heroIcon}>
+            <Ionicons color={palette.ink} name={total ? 'pulse' : 'checkmark'} size={22} />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroTitle}>
+              {total ? `지금 ${total}건을 확인해야 해요` : '모든 큐가 비어 있어요'}
+            </Text>
+            <Text style={styles.heroBody}>긴급 신고와 24시간 초과 건이 먼저 보입니다.</Text>
+          </View>
         </View>
       </View>
       <View style={styles.metricsGrid}>
@@ -572,46 +605,61 @@ function QueuePanel({
 }) {
   return (
     <>
-      <View style={styles.queueHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.queueCount}>조건에 맞는 항목 {count}건</Text>
+      <View style={styles.queueToolbar}>
+        <View style={styles.queueHeader}>
+          <View>
+            <Text style={styles.queueEyebrow}>WORK QUEUE</Text>
+            <Text style={styles.sectionTitle}>{title}</Text>
+          </View>
+          <View style={styles.queueTotalBadge}>
+            <Text style={styles.queueTotalValue}>{count}</Text>
+            <Text style={styles.queueTotalLabel}>건</Text>
+          </View>
         </View>
+        <Text style={styles.queueCount}>검색과 우선순위 필터로 처리 대상을 좁혀보세요.</Text>
+        <View style={styles.searchBox}>
+          <Ionicons color={palette.inkMuted} name="search" size={18} />
+          <TextInput
+            autoCapitalize="none"
+            onChangeText={onSearch}
+            placeholder="이름, 국가, 사유 검색"
+            placeholderTextColor="#96969E"
+            style={styles.searchInput}
+            value={search}
+          />
+          {search ? (
+            <Pressable
+              accessibilityLabel="검색어 지우기"
+              accessibilityRole="button"
+              onPress={() => onSearch('')}
+            >
+              <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
+            </Pressable>
+          ) : null}
+        </View>
+        <ScrollView
+          contentContainerStyle={styles.filters}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          <FilterChip active={filter === 'all'} label="전체" onPress={() => onFilter('all')} />
+          <FilterChip
+            active={filter === 'urgent'}
+            label="긴급"
+            onPress={() => onFilter('urgent')}
+          />
+          <FilterChip
+            active={filter === 'overdue'}
+            label="24시간 초과"
+            onPress={() => onFilter('overdue')}
+          />
+          <FilterChip
+            active={filter === 'normal'}
+            label="일반"
+            onPress={() => onFilter('normal')}
+          />
+        </ScrollView>
       </View>
-      <View style={styles.searchBox}>
-        <Ionicons color={palette.inkMuted} name="search" size={18} />
-        <TextInput
-          autoCapitalize="none"
-          onChangeText={onSearch}
-          placeholder="이름, 국가, 사유 검색"
-          placeholderTextColor="#96969E"
-          style={styles.searchInput}
-          value={search}
-        />
-        {search ? (
-          <Pressable
-            accessibilityLabel="검색어 지우기"
-            accessibilityRole="button"
-            onPress={() => onSearch('')}
-          >
-            <Ionicons color={palette.inkMuted} name="close-circle" size={18} />
-          </Pressable>
-        ) : null}
-      </View>
-      <ScrollView
-        contentContainerStyle={styles.filters}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      >
-        <FilterChip active={filter === 'all'} label="전체" onPress={() => onFilter('all')} />
-        <FilterChip active={filter === 'urgent'} label="긴급" onPress={() => onFilter('urgent')} />
-        <FilterChip
-          active={filter === 'overdue'}
-          label="24시간 초과"
-          onPress={() => onFilter('overdue')}
-        />
-        <FilterChip active={filter === 'normal'} label="일반" onPress={() => onFilter('normal')} />
-      </ScrollView>
       {count ? children : <InlineEmpty />}
     </>
   );
@@ -1221,46 +1269,84 @@ function getActivityLabel(action: string) {
 
 const styles = StyleSheet.create({
   screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: { alignItems: 'center', flexDirection: 'row', minHeight: 78, paddingHorizontal: 15 },
+  header: { alignItems: 'center', flexDirection: 'row', minHeight: 86, paddingHorizontal: 15 },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   headerCopy: { flex: 1, marginLeft: 4 },
   eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
   title: { color: palette.ink, fontSize: 23, fontWeight: '900', letterSpacing: -0.7, marginTop: 3 },
+  headerMeta: { alignItems: 'flex-end', gap: 5 },
+  roleLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
   countPill: {
     alignItems: 'center',
     backgroundColor: palette.ink,
     borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 4,
     justifyContent: 'center',
     minWidth: 37,
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
   countPillActive: { backgroundColor: palette.pink },
-  countText: { color: palette.white, fontSize: 11, fontWeight: '900' },
-  tabs: { gap: 7, paddingHorizontal: 18, paddingBottom: 10 },
+  countText: { color: palette.white, fontSize: 12, fontWeight: '900' },
+  countLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '800' },
+  tabRail: {
+    borderBottomColor: palette.line,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  tabs: { gap: 7, paddingHorizontal: 18, paddingVertical: 10 },
   tab: {
     alignItems: 'center',
-    backgroundColor: '#E6E6EA',
+    backgroundColor: '#F0F0F3',
     borderRadius: radius.pill,
     flexDirection: 'row',
-    gap: 5,
-    minHeight: 38,
-    paddingHorizontal: 13,
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 10,
   },
   tabActive: { backgroundColor: palette.ink },
+  tabIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 13,
+    height: 26,
+    justifyContent: 'center',
+    width: 26,
+  },
+  tabIconActive: { backgroundColor: palette.lime },
   tabText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
   tabTextActive: { color: palette.white },
+  tabCount: {
+    alignItems: 'center',
+    backgroundColor: '#DCDCE2',
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    minWidth: 21,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+  },
+  tabCountActive: { backgroundColor: palette.pink },
+  tabCountText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
+  tabCountTextActive: { color: palette.white },
   scroll: { flex: 1, minHeight: 0 },
   content: { gap: 12, padding: 18, paddingBottom: 44 },
   loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 8 },
   heroCard: {
     ...elevation.md,
-    alignItems: 'center',
     backgroundColor: palette.ink,
     borderRadius: 24,
-    flexDirection: 'row',
     padding: 18,
   },
+  heroTopRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  heroStatus: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  heroStatusDot: { backgroundColor: palette.pink, borderRadius: 4, height: 8, width: 8 },
+  heroStatusDotClear: { backgroundColor: palette.lime },
+  heroTotal: { alignItems: 'baseline', flexDirection: 'row', gap: 4 },
+  heroTotalValue: { color: palette.white, fontSize: 24, fontWeight: '900', letterSpacing: -0.8 },
+  heroTotalLabel: { color: '#9999A2', fontSize: 10, fontWeight: '800' },
+  heroBottomRow: { alignItems: 'center', flexDirection: 'row', marginTop: 18 },
   heroIcon: {
     alignItems: 'center',
     backgroundColor: palette.lime,
@@ -1312,7 +1398,33 @@ const styles = StyleSheet.create({
   sectionTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
   sectionBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
   linkText: { color: palette.pink, fontSize: 11, fontWeight: '900' },
+  queueToolbar: {
+    backgroundColor: palette.white,
+    borderColor: palette.line,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+    padding: 15,
+  },
   queueHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  queueEyebrow: {
+    color: palette.pink,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  queueTotalBadge: {
+    alignItems: 'baseline',
+    backgroundColor: palette.ink,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  queueTotalValue: { color: palette.white, fontSize: 14, fontWeight: '900' },
+  queueTotalLabel: { color: '#AFAFB7', fontSize: 10, fontWeight: '800' },
   queueCount: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
   searchBox: {
     alignItems: 'center',

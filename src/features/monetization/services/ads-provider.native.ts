@@ -124,7 +124,11 @@ function ensureBrowseInterstitialPreloaded(sdk: MobileAdsModule) {
 }
 
 async function initializeMobileAds() {
-  if (!monetizationConfig.rewardedAdsEnabled && !monetizationConfig.interstitialAdsEnabled) {
+  if (
+    !monetizationConfig.rewardedAdsEnabled &&
+    !monetizationConfig.interstitialAdsEnabled &&
+    !monetizationConfig.profileNativeAdsEnabled
+  ) {
     return false;
   }
 
