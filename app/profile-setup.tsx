@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -148,6 +148,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const { section: requestedSection } = useLocalSearchParams<{ section?: string }>();
   const { session, refreshProfile, profileReviewStatus, profileReviewNote } = useAuthSession();
   const scrollRef = useRef<ScrollView>(null);
+  const bioRevealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const suggestedBirthDate = session?.user.user_metadata.birth_date;
   const [step, setStep] = useState<SetupStep>(() =>
     requestedEditMode ? (EDIT_SECTION_BY_NAME[String(requestedSection)] ?? 0) : 0,
@@ -208,6 +209,23 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
   const activeSection = getFormSection(step, requestedEditMode);
   const activeOnboardingSection =
     ONBOARDING_SECTIONS[Math.min(step, ONBOARDING_SECTIONS.length - 1)]!;
+
+  const revealBioInput = useCallback(() => {
+    bioRevealTimersRef.current.forEach(clearTimeout);
+    // The bio is the last control in this section. Scrolling to the real end
+    // after each keyboard layout phase keeps every line above the fixed footer.
+    bioRevealTimersRef.current = [80, 280, 560].map((delay) =>
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), delay),
+    );
+  }, []);
+
+  useEffect(
+    () => () => {
+      bioRevealTimersRef.current.forEach(clearTimeout);
+      bioRevealTimersRef.current = [];
+    },
+    [],
+  );
 
   useEffect(() => {
     const existing = existingProfileQuery.data;
@@ -838,6 +856,7 @@ function ProfileFormScreen({ mode }: { mode: ProfileFormMode }) {
                   label={t('profileSetup.bio')}
                   value={bio}
                   onChangeText={setBio}
+                  onFocus={revealBioInput}
                   placeholder={t('profileSetup.bioPlaceholder')}
                   multiline
                   maxLength={500}

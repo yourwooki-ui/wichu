@@ -3,7 +3,9 @@ import {
   Keyboard,
   Platform,
   ScrollView,
+  UIManager,
   type NativeSyntheticEvent,
+  type NativeScrollEvent,
   type ScrollViewProps,
   type TargetedEvent,
 } from 'react-native';
@@ -28,6 +30,8 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
       keyboardFocusOffset = 24,
       keyboardShouldPersistTaps = 'handled',
       onFocus,
+      onScroll,
+      scrollEventThrottle,
       ...props
     },
     forwardedRef,
@@ -35,6 +39,7 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
     const scrollRef = useRef<ScrollView>(null);
     const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const focusedTargetRef = useRef<number | null>(null);
+    const scrollYRef = useRef(0);
 
     useImperativeHandle(forwardedRef, () => scrollRef.current as ScrollView, []);
 
@@ -60,6 +65,20 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
               keyboardFocusOffset,
               true,
             );
+
+            // The responder helper is not sufficient on every Android IME,
+            // especially when a fixed footer sits above the keyboard. Measure
+            // the actual focused input and move it above that protected area.
+            const keyboardTop = Keyboard.metrics()?.screenY;
+            if (keyboardTop == null) return;
+            UIManager.measureInWindow(target, (_x, inputTop, _width, inputHeight) => {
+              const overlap = inputTop + inputHeight - (keyboardTop - keyboardFocusOffset);
+              if (overlap <= 0) return;
+              scrollRef.current?.scrollTo({
+                y: scrollYRef.current + overlap,
+                animated: true,
+              });
+            });
           }, delay),
         );
       },
@@ -87,6 +106,14 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
       [onFocus, revealFocusedInput],
     );
 
+    const handleScroll = useCallback(
+      (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        scrollYRef.current = event.nativeEvent.contentOffset.y;
+        onScroll?.(event);
+      },
+      [onScroll],
+    );
+
     return (
       <ScrollView
         {...props}
@@ -95,6 +122,8 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, KeyboardAwareScrol
         keyboardDismissMode={keyboardDismissMode}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         onFocus={handleFocus}
+        onScroll={handleScroll}
+        scrollEventThrottle={scrollEventThrottle ?? 16}
       />
     );
   },

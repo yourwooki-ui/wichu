@@ -13,8 +13,10 @@ type CountryFlagProps = {
 };
 
 export function CountryFlag({ countryCode, compact = false, label, style }: CountryFlagProps) {
-  const [failed, setFailed] = useState(false);
+  const [failedCode, setFailedCode] = useState<string | null>(null);
   const normalizedCode = countryCode.toLowerCase();
+  // A recycled row only falls back for the code whose request actually failed.
+  const failed = failedCode === normalizedCode;
 
   return (
     <View style={[styles.badge, compact && styles.compact, style]}>
@@ -25,7 +27,7 @@ export function CountryFlag({ countryCode, compact = false, label, style }: Coun
           accessibilityLabel={label}
           cachePolicy="memory-disk"
           contentFit="cover"
-          onError={() => setFailed(true)}
+          onError={() => setFailedCode(normalizedCode)}
           recyclingKey={normalizedCode}
           source={{ uri: `https://flagcdn.com/w80/${normalizedCode}.png` }}
           style={styles.image}
