@@ -11,6 +11,12 @@ describe('language flag mapping', () => {
     expect(options.some(({ countryCode }) => countryCode === 'UN')).toBe(false);
   });
 
+  it('keeps the spoken-language picker separate from countries and legacy ISO entries', () => {
+    expect(LANGUAGE_CODES).toEqual(expect.arrayContaining(['ko', 'en', 'zh', 'yue', 'es']));
+    expect(LANGUAGE_CODES).not.toEqual(expect.arrayContaining(['ae', 'cu', 'la', 'pi', 'vo']));
+    expect(new Set(LANGUAGE_CODES).size).toBe(LANGUAGE_CODES.length);
+  });
+
   it('normalizes regional language codes without depending on Intl.Locale', () => {
     expect(getRepresentativeCountryCode('ko-KR')).toBe('KR');
     expect(getRepresentativeCountryCode('en-US')).toBe('US');
