@@ -26,12 +26,11 @@ import { profilePhotoService } from '@/features/profile/services/profile-photo-s
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { formatDateTime } from '@/lib/intl-format';
 
-type Section = 'overview' | 'profiles' | 'reports' | 'safety' | 'activity' | 'team';
+type Section = 'overview' | 'profiles' | 'reports' | 'activity' | 'team';
 type QueueFilter = 'all' | QueuePriority;
 type PendingAction =
   | { kind: 'profile-reject'; id: string; name: string }
-  | { kind: 'report-close' | 'report-review' | 'report-hide'; id: string; name: string }
-  | { kind: 'safety-close' | 'safety-review' | 'safety-hide'; id: string; name: string };
+  | { kind: 'report-close' | 'report-review' | 'report-hide'; id: string; name: string };
 
 const SECTIONS: {
   key: Section;
@@ -42,7 +41,6 @@ const SECTIONS: {
   { key: 'overview', label: '현황', icon: 'grid-outline' },
   { key: 'profiles', label: '프로필', icon: 'images-outline' },
   { key: 'reports', label: '신고', icon: 'flag-outline' },
-  { key: 'safety', label: '안전 신호', icon: 'warning-outline' },
   { key: 'activity', label: '감사 로그', icon: 'receipt-outline', masterOnly: true },
   { key: 'team', label: '권한', icon: 'people-outline', masterOnly: true },
 ];
@@ -81,10 +79,6 @@ export function OperationsScreen() {
   const reportQuery = useQuery({
     queryKey: ['operations', 'reports'],
     queryFn: operationsService.getPendingReports,
-  });
-  const safetyQuery = useQuery({
-    queryKey: ['operations', 'safety'],
-    queryFn: operationsService.getPendingSafetyFeedback,
   });
   const teamQuery = useQuery({
     queryKey: ['operations', 'team'],
@@ -132,22 +126,6 @@ export function OperationsScreen() {
     onSuccess: () => refreshWorkspace('reports', 'activity'),
     onError: () => Alert.alert('처리하지 못했어요', '신고 상태를 확인하고 다시 시도해 주세요.'),
   });
-  const safetyMutation = useMutation({
-    mutationFn: ({
-      action = 'none',
-      id,
-      note,
-      resolution,
-    }: {
-      action?: 'none' | 'profile_hidden';
-      id: string;
-      note?: string;
-      resolution: 'reviewed' | 'closed';
-    }) => operationsService.resolveSafetyFeedback(id, resolution, { action, note }),
-    onSuccess: () => refreshWorkspace('safety', 'activity'),
-    onError: () =>
-      Alert.alert('처리하지 못했어요', '안전 신호 상태를 확인하고 다시 시도해 주세요.'),
-  });
   const operatorMutation = useMutation({
     mutationFn: ({ active, email }: { active: boolean; email: string }) =>
       operationsService.setOperatorAccess(email, active),
@@ -179,29 +157,13 @@ export function OperationsScreen() {
       }),
     [filter, reportQuery.data, search],
   );
-  const safetyItems = useMemo(
-    () =>
-      (safetyQuery.data ?? []).filter((item) => {
-        const matchesSearch = includesNormalizedSearch(
-          [item.subject_display_name, item.notes],
-          search,
-        );
-        const agePriority = getQueuePriority(item.updated_at);
-        const priority = agePriority === 'overdue' ? 'overdue' : 'urgent';
-        return matchesSearch && matchesQueueFilter(filter, priority, item.updated_at);
-      }),
-    [filter, safetyQuery.data, search],
-  );
-
   const queueCount =
     (overviewQuery.data?.pending_profiles ?? profileQuery.data?.length ?? 0) +
-    (overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0) +
-    (overviewQuery.data?.pending_safety ?? safetyQuery.data?.length ?? 0);
+    (overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0);
   const sectionCounts: Partial<Record<Section, number>> = {
     overview: queueCount,
     profiles: overviewQuery.data?.pending_profiles ?? profileQuery.data?.length ?? 0,
     reports: overviewQuery.data?.pending_reports ?? reportQuery.data?.length ?? 0,
-    safety: overviewQuery.data?.pending_safety ?? safetyQuery.data?.length ?? 0,
   };
   const activeQuery =
     section === 'overview'
@@ -210,12 +172,10 @@ export function OperationsScreen() {
         ? profileQuery
         : section === 'reports'
           ? reportQuery
-          : section === 'safety'
-            ? safetyQuery
-            : section === 'activity'
-              ? activityQuery
-              : teamQuery;
-  const isBusy = reviewMutation.isPending || reportMutation.isPending || safetyMutation.isPending;
+          : section === 'activity'
+            ? activityQuery
+            : teamQuery;
+  const isBusy = reviewMutation.isPending || reportMutation.isPending;
 
   const changeSection = (next: Section) => {
     setSection(next);
@@ -227,19 +187,12 @@ export function OperationsScreen() {
     const { id, kind } = pendingAction;
     if (kind === 'profile-reject') {
       reviewMutation.mutate({ decision: 'rejected', id, note });
-    } else if (kind.startsWith('report-')) {
+    } else {
       reportMutation.mutate({
         action: kind === 'report-hide' ? 'profile_hidden' : 'none',
         id,
         note,
         resolution: kind === 'report-close' ? 'closed' : 'reviewed',
-      });
-    } else {
-      safetyMutation.mutate({
-        action: kind === 'safety-hide' ? 'profile_hidden' : 'none',
-        id,
-        note,
-        resolution: kind === 'safety-close' ? 'closed' : 'reviewed',
       });
     }
     setPendingAction(null);
@@ -361,27 +314,6 @@ export function OperationsScreen() {
                 />
               ))}
             </QueuePanel>
-          ) : section === 'safety' ? (
-            <QueuePanel
-              count={safetyItems.length}
-              filter={filter}
-              onFilter={setFilter}
-              onSearch={setSearch}
-              search={search}
-              title="데이트 후 안전 신호"
-            >
-              {safetyItems.map((item) => (
-                <SafetyCard
-                  key={item.id}
-                  busy={safetyMutation.isPending}
-                  item={item}
-                  onAction={(kind) =>
-                    setPendingAction({ id: item.id, kind, name: item.subject_display_name })
-                  }
-                  showHide={isMaster}
-                />
-              ))}
-            </QueuePanel>
           ) : section === 'activity' ? (
             <ActivityPanel activity={activityQuery.data ?? []} />
           ) : (
@@ -459,8 +391,7 @@ function OverviewPanel({
   recentActivity: ModerationActivity[];
   showActivity: boolean;
 }) {
-  const total =
-    (data?.pending_profiles ?? 0) + (data?.pending_reports ?? 0) + (data?.pending_safety ?? 0);
+  const total = (data?.pending_profiles ?? 0) + (data?.pending_reports ?? 0);
   return (
     <>
       <View style={styles.heroCard}>
@@ -500,13 +431,6 @@ function OverviewPanel({
           label="신고"
           onPress={() => onOpen('reports')}
           value={data?.pending_reports ?? 0}
-        />
-        <MetricCard
-          color="#FFF0ED"
-          icon="warning-outline"
-          label="안전 신호"
-          onPress={() => onOpen('safety')}
-          value={data?.pending_safety ?? 0}
         />
         <MetricCard
           color="#F1F2F5"
@@ -824,73 +748,6 @@ function ReportCard({
           disabled={busy}
           label="프로필 노출 중지"
           onPress={() => onAction('report-hide')}
-        />
-      ) : null}
-    </View>
-  );
-}
-
-type SafetyFeedback = Awaited<
-  ReturnType<typeof operationsService.getPendingSafetyFeedback>
->[number];
-
-function SafetyCard({
-  busy,
-  item,
-  onAction,
-  showHide,
-}: {
-  busy: boolean;
-  item: SafetyFeedback;
-  onAction: (kind: 'safety-close' | 'safety-review' | 'safety-hide') => void;
-  showHide: boolean;
-}) {
-  const photo = useSignedPhoto(item.subject_photo_path);
-  const agePriority = getQueuePriority(item.updated_at);
-  const priority = agePriority === 'overdue' ? 'overdue' : 'urgent';
-  return (
-    <View style={[styles.card, styles.safetyCard]}>
-      <QueueBadge priority={priority} timestamp={item.updated_at} urgentLabel="안전 확인 필요" />
-      <View style={styles.subjectRow}>
-        {photo.data ? (
-          <Image
-            cachePolicy="memory-disk"
-            contentFit="cover"
-            source={{ uri: photo.data }}
-            style={styles.avatar}
-            transition={imageTransition.thumbnail}
-          />
-        ) : (
-          <PhotoPlaceholder avatar icon="shield" />
-        )}
-        <View style={styles.subjectCopy}>
-          <Text style={styles.cardTitle}>{item.subject_display_name}</Text>
-          <Text style={styles.contextBadge}>데이트 후 피드백 · 제보자 비공개</Text>
-        </View>
-      </View>
-      <View style={styles.safetyFacts}>
-        <Text style={styles.safetyFact}>실제 만남 {item.met ? '확인' : '미확인'}</Text>
-        <Text style={styles.safetyFact}>
-          다시 만날 의향 {item.meet_again == null ? '미응답' : item.meet_again ? '있음' : '없음'}
-        </Text>
-      </View>
-      <Text numberOfLines={6} style={styles.safetyNote}>
-        {item.notes || '메모 없이 안전 우려만 접수됐어요.'}
-      </Text>
-      <View style={styles.actions}>
-        <Action disabled={busy} label="우려 없음" onPress={() => onAction('safety-close')} />
-        <Action
-          primary
-          disabled={busy}
-          label="확인 완료"
-          onPress={() => onAction('safety-review')}
-        />
-      </View>
-      {showHide ? (
-        <DangerAction
-          disabled={busy}
-          label="프로필 노출 중지"
-          onPress={() => onAction('safety-hide')}
         />
       ) : null}
     </View>
@@ -1239,9 +1096,6 @@ function getActionPresets(kind: PendingAction['kind']) {
   if (kind.endsWith('-hide')) {
     return ['반복 신고와 증거를 확인했어요', '안전 정책 위반이 확인됐어요'];
   }
-  if (kind.startsWith('safety-')) {
-    return ['추가 안전 확인을 마쳤어요', '현재 위험 정황을 확인하지 못했어요'];
-  }
   return ['신고 내용을 확인했어요', '현재 정책 위반을 확인하지 못했어요'];
 }
 
@@ -1475,7 +1329,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 13,
   },
-  safetyCard: { borderColor: '#FFD3C9', borderWidth: 1 },
   queueBadgeRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1535,26 +1388,6 @@ const styles = StyleSheet.create({
   body: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 8 },
   time: { color: '#A0A0A7', fontSize: 10, marginTop: 5 },
   photoCount: { color: palette.pink, fontSize: 10, fontWeight: '900', marginTop: 6 },
-  safetyFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 11 },
-  safetyFact: {
-    backgroundColor: '#F1F1F4',
-    borderRadius: radius.pill,
-    color: palette.inkMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  safetyNote: {
-    backgroundColor: '#FFF8F5',
-    borderRadius: 14,
-    color: palette.ink,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 9,
-    padding: 11,
-  },
   actions: { flexDirection: 'row', gap: 7, marginTop: 11 },
   action: {
     alignItems: 'center',

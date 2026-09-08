@@ -20,8 +20,6 @@ export type ProductEventName =
   | 'message_safety_warning'
   | 'profile_reported'
   | 'profile_blocked'
-  | 'date_plan_shared'
-  | 'date_feedback_submitted'
   | 'report_status_viewed'
   | 'purchase_viewed'
   | 'purchase_started'

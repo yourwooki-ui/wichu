@@ -64,8 +64,6 @@ import {
   stateEntering,
   stateExiting,
 } from '@/constants/motion';
-import { DatePlanShareSheet } from '@/features/chat/components/DatePlanShareSheet';
-import { DateFeedbackSheet } from '@/features/chat/components/DateFeedbackSheet';
 import { palette, pressFeedback, radius } from '@/constants/theme';
 import { chatMediaService, type ChatImageDraft } from '@/features/chat/services/chat-media-service';
 import { CHAT_IMAGE_LIMIT, type ChatImageAttachment } from '@/features/chat/types/chat-attachment';
@@ -142,8 +140,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [viewerIndex, setViewerIndex] = useState(0);
   const [now] = useState(() => Date.now());
   const [safetyOpen, setSafetyOpen] = useState(false);
-  const [dateShareOpen, setDateShareOpen] = useState(false);
-  const [dateFeedbackOpen, setDateFeedbackOpen] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
@@ -1085,24 +1081,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         <Text style={styles.sheetTitle}>{t('chatRoom.sheetTitle', { name: profile.name })}</Text>
         <SafetyAction
           disabled={safetyBusy}
-          icon="share-social-outline"
-          label={t('experience.dateShare.action')}
-          onPress={() => {
-            setSafetyOpen(false);
-            setDateShareOpen(true);
-          }}
-        />
-        <SafetyAction
-          disabled={safetyBusy}
-          icon="checkmark-circle-outline"
-          label={t('relationship.dateFeedback.action')}
-          onPress={() => {
-            setSafetyOpen(false);
-            setDateFeedbackOpen(true);
-          }}
-        />
-        <SafetyAction
-          disabled={safetyBusy}
           icon="person-outline"
           label={t('chatRoom.viewProfile')}
           onPress={() => {
@@ -1153,21 +1131,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         onClose={() => setReportOpen(false)}
         onSubmit={(submission) => void submitReport(submission)}
         visible={reportOpen}
-      />
-
-      <DatePlanShareSheet
-        matchName={profile.name}
-        onClose={() => setDateShareOpen(false)}
-        visible={dateShareOpen}
-      />
-
-      <DateFeedbackSheet
-        matchId={matchId}
-        matchName={profile.name}
-        mock={isMock}
-        onClose={() => setDateFeedbackOpen(false)}
-        onSafetyConcern={() => setReportOpen(true)}
-        visible={dateFeedbackOpen}
       />
 
       <ImageViewer

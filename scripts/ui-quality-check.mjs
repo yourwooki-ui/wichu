@@ -140,14 +140,6 @@ for (const file of [
   }
 }
 
-const dateFeedbackSource = readFileSync(
-  'src/features/chat/components/DateFeedbackSheet.tsx',
-  'utf8',
-);
-if (!dateFeedbackSource.includes('<KeyboardAwareScrollView')) {
-  findings.push('DateFeedbackSheet: long feedback form must scroll above the keyboard');
-}
-
 const operationsSource = readFileSync(
   'src/features/operations/screens/OperationsScreen.tsx',
   'utf8',
@@ -158,6 +150,38 @@ const actionDialogSource = operationsSource.slice(
 );
 if (!actionDialogSource.includes('<KeyboardAwareScrollView')) {
   findings.push('Operations ActionDialog: moderation note must scroll above the keyboard');
+}
+
+const chatRoomSource = readFileSync('src/features/chat/screens/ChatRoomScreen.tsx', 'utf8');
+for (const removedFeature of [
+  'DatePlanShareSheet',
+  'DateFeedbackSheet',
+  'dateShare',
+  'dateFeedback',
+]) {
+  if (chatRoomSource.includes(removedFeature)) {
+    findings.push(`ChatRoomScreen: removed meeting feature returned: ${removedFeature}`);
+  }
+}
+if (
+  /getDateFeedback|submitDateFeedback/.test(
+    readFileSync('src/features/matches/services/matches-service.ts', 'utf8'),
+  )
+) {
+  findings.push('matchesService: removed date feedback API returned');
+}
+if (/dateShare\s*:/.test(readFileSync('src/i18n/experience-resources.ts', 'utf8'))) {
+  findings.push('experience translations: removed plan-sharing copy returned');
+}
+if (/dateFeedback\s*:/.test(readFileSync('src/i18n/relationship-resources.ts', 'utf8'))) {
+  findings.push('relationship translations: removed feedback copy returned');
+}
+if (
+  /getPendingSafetyFeedback|resolveSafetyFeedback/.test(
+    readFileSync('src/features/operations/services/operations-service.ts', 'utf8'),
+  )
+) {
+  findings.push('operationsService: removed post-meeting feedback queue returned');
 }
 
 const rootLayoutSource = readFileSync('app/_layout.tsx', 'utf8');
