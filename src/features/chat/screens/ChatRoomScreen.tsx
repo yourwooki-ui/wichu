@@ -12,12 +12,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import {
   AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -648,7 +648,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        automaticOffset
+        behavior="padding"
         keyboardVerticalOffset={0}
         style={styles.keyboard}
       >

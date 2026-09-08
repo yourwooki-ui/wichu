@@ -107,17 +107,9 @@ export const profileService = {
         result.path && result.signedUrl ? [[result.path, result.signedUrl] as const] : [],
       ),
     );
-    const unsignedPhotoResult = (signedPhotoResults ?? []).find(
-      (result) => result.path && !result.signedUrl,
-    );
-    if (unsignedPhotoResult) {
-      throw new Error(unsignedPhotoResult.error ?? 'Unable to load every profile photo');
-    }
-
-    const signedPhotos = orderedPhotos.map((photo) => {
+    const signedPhotos = orderedPhotos.flatMap((photo) => {
       const signedUrl = signedUrlsByPath.get(photo.storage_path);
-      if (!signedUrl) throw new Error('Unable to load every profile photo');
-      return { ...photo, signed_url: signedUrl };
+      return signedUrl ? [{ ...photo, signed_url: signedUrl }] : [];
     });
 
     return {

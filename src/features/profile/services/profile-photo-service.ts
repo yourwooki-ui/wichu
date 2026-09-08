@@ -40,7 +40,51 @@ export const profilePhotoService = {
   },
   async createSignedPhotoUrls(storagePaths: string[], expiresIn = 3600) {
     if (storagePaths.length === 0) return { data: [], error: null };
-    return getSupabaseClient().storage.from(PHOTO_BUCKET).createSignedUrls(storagePaths, expiresIn);
+    const bucket = getSupabaseClient().storage.from(PHOTO_BUCKET);
+    const cacheNonce = `${Date.now()}`;
+    const batchResult = await bucket.createSignedUrls(storagePaths, expiresIn, { cacheNonce });
+    const batchByPath = new Map(
+      (batchResult.data ?? []).flatMap((result) =>
+        result.path && result.signedUrl ? [[result.path, result] as const] : [],
+      ),
+    );
+    const missingPaths = storagePaths.filter((path) => !batchByPath.has(path));
+
+    if (missingPaths.length === 0) {
+      return { data: batchResult.data ?? [], error: batchResult.error };
+    }
+
+    // A batch response may contain a per-object failure even when the request
+    // itself succeeded. Retry only those paths so one stale or temporarily
+    // unavailable object never removes every valid photo from the editor.
+    const retriedResults = await Promise.all(
+      missingPaths.map(async (path) => {
+        const { data, error } = await bucket.createSignedUrl(path, expiresIn, { cacheNonce });
+        return {
+          error: error?.message ?? null,
+          path,
+          signedURL: data?.signedUrl ?? null,
+          signedUrl: data?.signedUrl ?? null,
+        };
+      }),
+    );
+    const retriedByPath = new Map(retriedResults.map((result) => [result.path, result] as const));
+    const data = storagePaths.map(
+      (path) =>
+        batchByPath.get(path) ??
+        retriedByPath.get(path) ?? {
+          error: 'Unable to sign profile photo',
+          path,
+          signedURL: null,
+          signedUrl: null,
+        },
+    );
+
+    return {
+      data,
+      // Preserve a top-level failure only when no photo could be recovered.
+      error: data.some((result) => result.signedUrl) ? null : batchResult.error,
+    };
   },
   async listMyStoredPhotos(profileId: string) {
     const { data, error } = await getSupabaseClient()

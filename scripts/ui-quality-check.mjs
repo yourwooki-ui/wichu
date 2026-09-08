@@ -153,6 +153,16 @@ if (!actionDialogSource.includes('<KeyboardAwareScrollView')) {
 }
 
 const chatRoomSource = readFileSync('src/features/chat/screens/ChatRoomScreen.tsx', 'utf8');
+if (!chatRoomSource.includes("from 'react-native-keyboard-controller'")) {
+  findings.push('ChatRoomScreen: composer must use the cross-platform keyboard controller');
+}
+if (
+  !/<KeyboardAvoidingView[\s\S]*?behavior="padding"[\s\S]*?styles\.composerShell/.test(
+    chatRoomSource,
+  )
+) {
+  findings.push('ChatRoomScreen: composer controls must remain inside keyboard avoidance');
+}
 for (const removedFeature of [
   'DatePlanShareSheet',
   'DateFeedbackSheet',
