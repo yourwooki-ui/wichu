@@ -66,6 +66,7 @@ export function CountryMultiSelectField({ value, onChange }: Props) {
 
       <InteractiveBottomSheet
         accessibilityLabel="국가 선택"
+        keyboardAvoiding
         onClose={close}
         sheetStyle={styles.sheet}
         visible={visible}

@@ -1097,59 +1097,66 @@ function ActionDialog({
           onPress={onClose}
           style={StyleSheet.absoluteFill}
         />
-        <View style={styles.dialog}>
-          <View style={styles.dialogHeader}>
-            <View style={[styles.dialogIcon, isHide && styles.dialogIconDanger]}>
-              <Ionicons
-                color={isHide ? '#B3263F' : palette.ink}
-                name={isHide ? 'eye-off-outline' : 'create-outline'}
-                size={21}
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.dialogScrollContent}
+          keyboardFocusOffset={20}
+          showsVerticalScrollIndicator={false}
+          style={styles.dialogScroll}
+        >
+          <View style={styles.dialog}>
+            <View style={styles.dialogHeader}>
+              <View style={[styles.dialogIcon, isHide && styles.dialogIconDanger]}>
+                <Ionicons
+                  color={isHide ? '#B3263F' : palette.ink}
+                  name={isHide ? 'eye-off-outline' : 'create-outline'}
+                  size={21}
+                />
+              </View>
+              <Pressable accessibilityLabel="닫기" accessibilityRole="button" onPress={onClose}>
+                <Ionicons color={palette.inkMuted} name="close" size={23} />
+              </Pressable>
+            </View>
+            <Text style={styles.dialogTitle}>{getActionTitle(action)}</Text>
+            <Text style={styles.dialogBody}>
+              {isHide
+                ? `${action.name}의 프로필이 즉시 비활성화되고 감사 로그에 남습니다.`
+                : '판단 근거를 남기면 이후 이의 제기와 운영 품질 검토에 도움이 됩니다.'}
+            </Text>
+            <View style={styles.presetWrap}>
+              {presets.map((preset) => (
+                <Pressable
+                  key={preset}
+                  accessibilityRole="button"
+                  onPress={() => setNote(preset)}
+                  style={styles.preset}
+                >
+                  <Text style={styles.presetText}>{preset}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              maxLength={1000}
+              multiline
+              onChangeText={setNote}
+              placeholder={requiresNote ? '조치 사유를 입력해 주세요 (필수)' : '운영 메모 (선택)'}
+              placeholderTextColor="#96969E"
+              style={styles.noteInput}
+              textAlignVertical="top"
+              value={note}
+            />
+            <Text style={styles.noteCount}>{note.length}/1000</Text>
+            <View style={styles.dialogActions}>
+              <Action disabled={busy} label="취소" onPress={onClose} />
+              <Action
+                danger={isHide}
+                disabled={!canSubmit}
+                label={isHide ? '노출 중지' : '처리 확정'}
+                onPress={() => onSubmit(note.trim())}
+                primary
               />
             </View>
-            <Pressable accessibilityLabel="닫기" accessibilityRole="button" onPress={onClose}>
-              <Ionicons color={palette.inkMuted} name="close" size={23} />
-            </Pressable>
           </View>
-          <Text style={styles.dialogTitle}>{getActionTitle(action)}</Text>
-          <Text style={styles.dialogBody}>
-            {isHide
-              ? `${action.name}의 프로필이 즉시 비활성화되고 감사 로그에 남습니다.`
-              : '판단 근거를 남기면 이후 이의 제기와 운영 품질 검토에 도움이 됩니다.'}
-          </Text>
-          <View style={styles.presetWrap}>
-            {presets.map((preset) => (
-              <Pressable
-                key={preset}
-                accessibilityRole="button"
-                onPress={() => setNote(preset)}
-                style={styles.preset}
-              >
-                <Text style={styles.presetText}>{preset}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <TextInput
-            maxLength={1000}
-            multiline
-            onChangeText={setNote}
-            placeholder={requiresNote ? '조치 사유를 입력해 주세요 (필수)' : '운영 메모 (선택)'}
-            placeholderTextColor="#96969E"
-            style={styles.noteInput}
-            textAlignVertical="top"
-            value={note}
-          />
-          <Text style={styles.noteCount}>{note.length}/1000</Text>
-          <View style={styles.dialogActions}>
-            <Action disabled={busy} label="취소" onPress={onClose} />
-            <Action
-              danger={isHide}
-              disabled={!canSubmit}
-              label={isHide ? '노출 중지' : '처리 확정'}
-              onPress={() => onSubmit(note.trim())}
-              primary
-            />
-          </View>
-        </View>
+        </KeyboardAwareScrollView>
       </View>
     </AppModal>
   );
@@ -1650,9 +1657,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalLayer: {
-    alignItems: 'center',
     backgroundColor: 'rgba(12,12,16,0.52)',
     flex: 1,
+  },
+  dialogScroll: { flex: 1 },
+  dialogScrollContent: {
+    alignItems: 'center',
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },

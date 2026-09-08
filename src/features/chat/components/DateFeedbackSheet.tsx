@@ -6,6 +6,7 @@ import {
   BottomSheetCloseButton,
   InteractiveBottomSheet,
 } from '@/components/InteractiveBottomSheet';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { palette, radius } from '@/constants/theme';
 import {
   matchesService,
@@ -87,68 +88,77 @@ export function DateFeedbackSheet({
   return (
     <InteractiveBottomSheet
       accessibilityLabel={t('relationship.dateFeedback.title')}
+      contentStyle={styles.sheetFrame}
       dismissEnabled={!busy}
       onClose={onClose}
       sheetStyle={styles.sheet}
       visible
     >
-      <Text style={styles.title}>{t('relationship.dateFeedback.title')}</Text>
-      <Text style={styles.body}>{t('relationship.dateFeedback.body', { name: matchName })}</Text>
-
-      <Question label={t('relationship.dateFeedback.met')}>
-        <BooleanChoice value={met} onChange={setMet} />
-      </Question>
-      {met ? (
-        <Question label={t('relationship.dateFeedback.meetAgain')}>
-          <BooleanChoice value={meetAgain} onChange={setMeetAgain} />
-        </Question>
-      ) : null}
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: safetyConcern }}
-        onPress={() => setSafetyConcern((current) => !current)}
-        style={[styles.safetyChoice, safetyConcern && styles.safetyChoiceSelected]}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.content}
+        keyboardFocusOffset={24}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
       >
-        <Text style={[styles.safetyChoiceText, safetyConcern && styles.safetyChoiceTextSelected]}>
-          {t('relationship.dateFeedback.safetyConcern')}
-        </Text>
-      </Pressable>
-      <TextInput
-        maxLength={500}
-        multiline
-        onChangeText={setNotes}
-        placeholder={t('relationship.dateFeedback.notesPlaceholder')}
-        placeholderTextColor={palette.inkMuted}
-        style={styles.input}
-        textAlignVertical="top"
-        value={notes}
-      />
-      <Text style={styles.privacy}>{t('relationship.dateFeedback.privacy')}</Text>
-      {error ? (
-        <Text accessibilityLiveRegion="polite" style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
-      <View style={styles.actions}>
-        <BottomSheetCloseButton
-          accessibilityLabel={t('relationship.common.cancel')}
-          disabled={busy}
-          style={styles.cancel}
-        >
-          <Text style={styles.cancelText}>{t('relationship.common.cancel')}</Text>
-        </BottomSheetCloseButton>
+        <Text style={styles.title}>{t('relationship.dateFeedback.title')}</Text>
+        <Text style={styles.body}>{t('relationship.dateFeedback.body', { name: matchName })}</Text>
+
+        <Question label={t('relationship.dateFeedback.met')}>
+          <BooleanChoice value={met} onChange={setMet} />
+        </Question>
+        {met ? (
+          <Question label={t('relationship.dateFeedback.meetAgain')}>
+            <BooleanChoice value={meetAgain} onChange={setMeetAgain} />
+          </Question>
+        ) : null}
         <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ busy, disabled: !canSubmit || busy }}
-          disabled={!canSubmit || busy}
-          onPress={() => void submit()}
-          style={[styles.submit, (!canSubmit || busy) && styles.disabled]}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: safetyConcern }}
+          onPress={() => setSafetyConcern((current) => !current)}
+          style={[styles.safetyChoice, safetyConcern && styles.safetyChoiceSelected]}
         >
-          <Text style={styles.submitText}>
-            {busy ? t('relationship.common.saving') : t('relationship.common.save')}
+          <Text style={[styles.safetyChoiceText, safetyConcern && styles.safetyChoiceTextSelected]}>
+            {t('relationship.dateFeedback.safetyConcern')}
           </Text>
         </Pressable>
-      </View>
+        <TextInput
+          maxLength={500}
+          multiline
+          onChangeText={setNotes}
+          placeholder={t('relationship.dateFeedback.notesPlaceholder')}
+          placeholderTextColor={palette.inkMuted}
+          style={styles.input}
+          textAlignVertical="top"
+          value={notes}
+        />
+        <Text style={styles.privacy}>{t('relationship.dateFeedback.privacy')}</Text>
+        {error ? (
+          <Text accessibilityLiveRegion="polite" style={styles.error}>
+            {error}
+          </Text>
+        ) : null}
+        <View style={styles.actions}>
+          <BottomSheetCloseButton
+            accessibilityLabel={t('relationship.common.cancel')}
+            disabled={busy}
+            style={styles.cancel}
+          >
+            <Text style={styles.cancelText}>{t('relationship.common.cancel')}</Text>
+          </BottomSheetCloseButton>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ busy, disabled: !canSubmit || busy }}
+            disabled={!canSubmit || busy}
+            onPress={() => void submit()}
+            style={[styles.submit, (!canSubmit || busy) && styles.disabled]}
+          >
+            <Text style={styles.submitText}>
+              {busy ? t('relationship.common.saving') : t('relationship.common.save')}
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAwareScrollView>
     </InteractiveBottomSheet>
   );
 }
@@ -191,6 +201,9 @@ function BooleanChoice({
 
 const styles = StyleSheet.create({
   sheet: { backgroundColor: '#F8F8FA', maxWidth: 480 },
+  sheetFrame: { minHeight: 0 },
+  scroll: { flexShrink: 1, minHeight: 0 },
+  content: { paddingBottom: 18, paddingHorizontal: 20 },
   title: { color: palette.ink, fontSize: 21, fontWeight: '900' },
   body: { color: palette.inkMuted, fontSize: 13, lineHeight: 19, marginTop: 5, marginBottom: 18 },
   question: { gap: 8, marginBottom: 14 },

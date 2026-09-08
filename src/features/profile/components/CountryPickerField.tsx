@@ -84,6 +84,7 @@ export function CountryPickerField({ value, onSelect }: CountryPickerFieldProps)
 
       <InteractiveBottomSheet
         accessibilityLabel={t('profileSetup.countryPicker.title')}
+        keyboardAvoiding
         onClose={closePicker}
         sheetStyle={styles.sheet}
         visible={visible}

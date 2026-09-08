@@ -159,6 +159,7 @@ export function LanguagePreferencesField({
             ? t('profileSetup.language.chooseNative')
             : t('profileSetup.language.addSpoken')
         }
+        keyboardAvoiding
         onClose={closePicker}
         sheetStyle={styles.sheet}
         visible={pickerTarget !== null}

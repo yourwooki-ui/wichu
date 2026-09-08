@@ -60,14 +60,14 @@ for (const file of [...listSourceFiles('app'), ...listSourceFiles('src')]) {
   }
 
   // 텍스트 입력 화면은 키보드가 올라와도 포커스된 필드와 주요 동작이 보여야 한다.
-  // FormField는 소비 화면의 컨테이너가 처리하고, 검색형 바텀시트는 공통
-  // InteractiveBottomSheet가 키보드 회피를 담당한다.
+  // FormField는 소비 화면의 컨테이너가 처리한다. 검색형 바텀시트는 명시적으로
+  // keyboardAvoiding을 선택하고, 긴 입력 폼은 KeyboardAwareScrollView를 쓴다.
   if (
     source.includes('<TextInput') &&
     !file.endsWith('FormField.tsx') &&
     !source.includes('KeyboardAwareScrollView') &&
     !source.includes('KeyboardAvoidingView') &&
-    !source.includes('InteractiveBottomSheet')
+    !(source.includes('InteractiveBottomSheet') && source.includes('keyboardAvoiding'))
   ) {
     findings.push(`${file}: TextInput surface is missing keyboard avoidance`);
   }
@@ -122,6 +122,42 @@ if (/KeyboardAvoidingView|revealBioInput|scrollToEnd\(/.test(profileSetupSource)
 const keyboardScrollSource = readFileSync('src/components/KeyboardAwareScrollView.tsx', 'utf8');
 if (!keyboardScrollSource.includes('react-native-keyboard-controller')) {
   findings.push('KeyboardAwareScrollView: must use the Expo-compatible native controller');
+}
+
+const bottomSheetSource = readFileSync('src/components/InteractiveBottomSheet.tsx', 'utf8');
+if (!bottomSheetSource.includes('keyboardAvoiding = false')) {
+  findings.push('InteractiveBottomSheet: keyboard avoidance must be opt-in to prevent nesting');
+}
+
+for (const file of [
+  'src/features/profile/components/CountryPickerField.tsx',
+  'src/features/profile/components/LanguagePreferencesField.tsx',
+  'src/features/discover/components/CountryMultiSelectField.tsx',
+]) {
+  const source = readFileSync(file, 'utf8');
+  if (!/<InteractiveBottomSheet[\s\S]*?keyboardAvoiding/.test(source)) {
+    findings.push(`${file}: searchable picker sheet must avoid the keyboard`);
+  }
+}
+
+const dateFeedbackSource = readFileSync(
+  'src/features/chat/components/DateFeedbackSheet.tsx',
+  'utf8',
+);
+if (!dateFeedbackSource.includes('<KeyboardAwareScrollView')) {
+  findings.push('DateFeedbackSheet: long feedback form must scroll above the keyboard');
+}
+
+const operationsSource = readFileSync(
+  'src/features/operations/screens/OperationsScreen.tsx',
+  'utf8',
+);
+const actionDialogSource = operationsSource.slice(
+  operationsSource.indexOf('function ActionDialog'),
+  operationsSource.indexOf('function Action(', operationsSource.indexOf('function ActionDialog')),
+);
+if (!actionDialogSource.includes('<KeyboardAwareScrollView')) {
+  findings.push('Operations ActionDialog: moderation note must scroll above the keyboard');
 }
 
 const rootLayoutSource = readFileSync('app/_layout.tsx', 'utf8');

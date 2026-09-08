@@ -36,6 +36,7 @@ type InteractiveBottomSheetProps = {
   contentStyle?: StyleProp<ViewStyle>;
   dismissEnabled?: boolean;
   handleColor?: string;
+  keyboardAvoiding?: boolean;
   onClose: () => void;
   sheetStyle?: StyleProp<ViewStyle>;
   visible: boolean;
@@ -65,6 +66,7 @@ function VisibleInteractiveBottomSheet({
   contentStyle,
   dismissEnabled = true,
   handleColor = '#C5C5CA',
+  keyboardAvoiding = false,
   onClose,
   sheetStyle,
 }: InteractiveBottomSheetProps) {
@@ -170,10 +172,7 @@ function VisibleInteractiveBottomSheet({
 
   return (
     <AppModal animationType="none" onRequestClose={dismiss} transparent visible>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
+      <KeyboardResponsiveOverlay enabled={keyboardAvoiding}>
         <Animated.View style={[styles.backdrop, styles.nonInteractive, backdropStyle]} />
         <Pressable
           accessibilityLabel={`${accessibilityLabel} 닫기`}
@@ -215,9 +214,30 @@ function VisibleInteractiveBottomSheet({
             </BottomSheetDismissContext.Provider>
           </SafeAreaView>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </KeyboardResponsiveOverlay>
     </AppModal>
   );
+}
+
+function KeyboardResponsiveOverlay({
+  children,
+  enabled,
+}: {
+  children: ReactNode;
+  enabled: boolean;
+}) {
+  if (enabled) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
+        {children}
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return <View style={styles.overlay}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
