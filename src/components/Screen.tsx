@@ -3,6 +3,7 @@ import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/components/ThemeProvider';
+import { layout } from '@/constants/theme';
 
 type ScreenProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
@@ -26,5 +27,5 @@ export function Screen({ children, style, padded = true, edges }: ScreenProps) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, minHeight: 0 },
   content: { flex: 1, minHeight: 0 },
-  padded: { paddingHorizontal: 20 },
+  padded: { paddingHorizontal: layout.screenGutter },
 });

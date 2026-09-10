@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { INTERSTITIAL_ADS_ENABLED } from '@/constants/features';
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
 import { discoveryService } from '@/features/discover/services/discovery-service';
@@ -32,7 +31,7 @@ export function useDiscoverDeck() {
   const userId = session?.user.id;
   const passEntitlement = usePassEntitlement();
   const undoEntitlementQuery = useQuery({
-    enabled: Boolean(userId) && !reviewSamplesEnabled,
+    enabled: Boolean(userId),
     queryFn: discoveryService.getUndoEntitlement,
     queryKey: ['discover', 'undo-entitlement', userId],
     staleTime: 10_000,
@@ -40,13 +39,11 @@ export function useDiscoverDeck() {
   const undoUnlimited =
     (passEntitlement.data?.unlimitedUndo ?? false) ||
     (undoEntitlementQuery.data?.unlimited ?? false);
-  const undoCredits = reviewSamplesEnabled ? 0 : (undoEntitlementQuery.data?.credits ?? 0);
-  const undoEntitlementReady =
-    reviewSamplesEnabled || (!passEntitlement.isPending && !undoEntitlementQuery.isPending);
+  const undoCredits = undoEntitlementQuery.data?.credits ?? 0;
+  const undoEntitlementReady = !passEntitlement.isPending && !undoEntitlementQuery.isPending;
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en';
   const profiles = useDiscoverStore((state) => state.profiles);
   const mergeProfiles = useDiscoverStore((state) => state.mergeProfiles);
-  const recycleProfiles = useDiscoverStore((state) => state.recycleProfiles);
   const recordSwipe = useDiscoverStore((state) => state.recordSwipe);
   const restoreSwipe = useDiscoverStore((state) => state.restoreSwipe);
   const clearDeck = useDiscoverStore((state) => state.clearDeck);
@@ -62,10 +59,7 @@ export function useDiscoverDeck() {
     queryKey: ['discover', 'candidates', userId, preferencesQuery.data, locale],
     enabled: Boolean(userId && preferencesQuery.data),
     staleTime: 15_000,
-    queryFn: () =>
-      reviewSamplesEnabled
-        ? discoveryService.getDevelopmentSampleCandidates(preferencesQuery.data!, locale)
-        : discoveryService.getCandidates(preferencesQuery.data!, locale),
+    queryFn: () => discoveryService.getCandidates(preferencesQuery.data!, locale),
   });
 
   useEffect(() => {
@@ -81,9 +75,8 @@ export function useDiscoverDeck() {
 
   useEffect(() => {
     if (!candidatesQuery.data) return;
-    if (reviewSamplesEnabled) recycleProfiles(candidatesQuery.data);
-    else mergeProfiles(candidatesQuery.data);
-  }, [candidatesQuery.data, mergeProfiles, recycleProfiles]);
+    mergeProfiles(candidatesQuery.data);
+  }, [candidatesQuery.data, mergeProfiles]);
 
   useEffect(() => {
     const visibleProfile = profiles[0];
@@ -150,10 +143,6 @@ export function useDiscoverDeck() {
     },
     onSettled: () => {
       const remainingProfiles = useDiscoverStore.getState().profiles.length;
-      if (reviewSamplesEnabled && candidatesQuery.data) {
-        recycleProfiles(candidatesQuery.data);
-        return;
-      }
       if (remainingProfiles < DISCOVER_PREPARE_COUNT) {
         void candidatesQuery.refetch();
       }
@@ -232,7 +221,7 @@ export function useDiscoverDeck() {
       lastSwipe.userId !== userId ||
       swipeMutation.isPending ||
       undoMutation.isPending ||
-      (!undoUnlimited && undoCredits < 1 && !reviewSamplesEnabled)
+      (!undoUnlimited && undoCredits < 1)
     )
       return;
     undoMutation.mutate(lastSwipe);
@@ -243,11 +232,6 @@ export function useDiscoverDeck() {
     if (!lastSwipe || !userId || lastSwipe.userId !== userId) return 'unavailable' as const;
     const result = await adsService.showRewardedUndo('discover_undo', userId);
     if (result !== 'rewarded') return result;
-
-    if (reviewSamplesEnabled) {
-      undoMutation.mutate(lastSwipe);
-      return 'undone' as const;
-    }
 
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const refreshed = await undoEntitlementQuery.refetch();

@@ -12,7 +12,7 @@ import { Screen } from '@/components/Screen';
 import { ListRowsSkeleton } from '@/components/Skeleton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { imageTransition } from '@/constants/motion';
-import { elevation, palette, pressFeedback, radius } from '@/constants/theme';
+import { elevation, layout, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { operationsService } from '@/features/operations/services/operations-service';
 import {
   getQueueAgeLabel,
@@ -601,6 +601,7 @@ function FilterChip({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={[styles.filterChip, active && styles.filterChipActive]}
     >
@@ -1129,14 +1130,24 @@ function getActivityLabel(action: string) {
 }
 
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  header: { alignItems: 'center', flexDirection: 'row', minHeight: 86, paddingHorizontal: 15 },
-  iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    minHeight: 82,
+    paddingHorizontal: layout.compactGutter,
+  },
+  iconButton: {
+    alignItems: 'center',
+    height: layout.minTouchTarget,
+    justifyContent: 'center',
+    width: layout.minTouchTarget,
+  },
   headerCopy: { flex: 1, marginLeft: 4 },
-  eyebrow: { color: palette.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
-  title: { color: palette.ink, fontSize: 23, fontWeight: '900', letterSpacing: -0.7, marginTop: 3 },
+  eyebrow: { ...typography.overline, color: palette.pink },
+  title: { ...typography.title, color: palette.ink, marginTop: 2 },
   headerMeta: { alignItems: 'flex-end', gap: 5 },
-  roleLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
+  roleLabel: { ...typography.overline, color: palette.inkMuted, letterSpacing: 1 },
   countPill: {
     alignItems: 'center',
     backgroundColor: palette.ink,
@@ -1150,22 +1161,22 @@ const styles = StyleSheet.create({
   },
   countPillActive: { backgroundColor: palette.pink },
   countText: { color: palette.white, fontSize: 12, fontWeight: '900' },
-  countLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '800' },
+  countLabel: { color: 'rgba(255,255,255,0.78)', fontSize: 11, fontWeight: '800' },
   tabRail: {
     borderBottomColor: palette.line,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderTopColor: palette.line,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  tabs: { gap: 7, paddingHorizontal: 18, paddingVertical: 10 },
+  tabs: { gap: 8, paddingHorizontal: layout.compactGutter, paddingVertical: 10 },
   tab: {
     alignItems: 'center',
     backgroundColor: '#F0F0F3',
     borderRadius: radius.pill,
     flexDirection: 'row',
     gap: 6,
-    minHeight: 42,
-    paddingHorizontal: 10,
+    minHeight: layout.minTouchTarget,
+    paddingHorizontal: 11,
   },
   tabActive: { backgroundColor: palette.ink },
   tabIcon: {
@@ -1177,7 +1188,7 @@ const styles = StyleSheet.create({
     width: 26,
   },
   tabIconActive: { backgroundColor: palette.lime },
-  tabText: { color: palette.inkMuted, fontSize: 11, fontWeight: '800' },
+  tabText: { ...typography.label, color: palette.inkMuted, fontWeight: '800' },
   tabTextActive: { color: palette.white },
   tabCount: {
     alignItems: 'center',
@@ -1192,8 +1203,17 @@ const styles = StyleSheet.create({
   tabCountText: { color: palette.inkMuted, fontSize: 10, fontWeight: '900' },
   tabCountTextActive: { color: palette.white },
   scroll: { flex: 1, minHeight: 0 },
-  content: { gap: 12, padding: 18, paddingBottom: 44 },
-  loadingContent: { gap: 12, paddingHorizontal: 18, paddingTop: 8 },
+  content: {
+    gap: layout.compactGutter,
+    paddingBottom: layout.scrollEndPadding + 12,
+    paddingHorizontal: layout.compactGutter,
+    paddingTop: layout.compactGutter,
+  },
+  loadingContent: {
+    gap: 12,
+    paddingHorizontal: layout.compactGutter,
+    paddingTop: layout.compactGutter,
+  },
   heroCard: {
     ...elevation.md,
     backgroundColor: palette.ink,
@@ -1225,16 +1245,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginTop: 4,
   },
-  heroBody: { color: '#B8B8C0', fontSize: 10, lineHeight: 15, marginTop: 4 },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metricCard: { borderRadius: 20, minHeight: 132, padding: 15, width: '48%' },
+  heroBody: { color: '#C5C5CC', fontSize: 12, lineHeight: 17, marginTop: 4 },
+  metricsGrid: { flexDirection: 'row', gap: 8 },
+  metricCard: { borderRadius: 20, flex: 1, minHeight: 122, minWidth: 0, padding: 13 },
   metricTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   metricValue: {
     color: palette.ink,
-    fontSize: 29,
+    fontSize: 27,
     fontWeight: '900',
     letterSpacing: -1,
-    marginTop: 16,
+    marginTop: 14,
   },
   metricLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '800', marginTop: 1 },
   summaryStrip: {
@@ -1246,7 +1266,7 @@ const styles = StyleSheet.create({
   },
   summaryStat: { alignItems: 'center', flex: 1 },
   summaryValue: { color: palette.ink, fontSize: 20, fontWeight: '900' },
-  summaryLabel: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 3 },
+  summaryLabel: { color: palette.inkMuted, fontSize: 11, fontWeight: '700', marginTop: 3 },
   summaryDivider: { backgroundColor: palette.line, height: 32, width: StyleSheet.hairlineWidth },
   dangerText: { color: '#B3263F' },
   block: { backgroundColor: palette.white, borderRadius: 22, padding: 16 },
@@ -1257,15 +1277,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: { color: palette.ink, fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
-  sectionBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
-  linkText: { color: palette.pink, fontSize: 11, fontWeight: '900' },
+  sectionBody: { ...typography.caption, color: palette.inkMuted, marginTop: 6 },
+  linkText: { ...typography.label, color: palette.pink, fontWeight: '900' },
   queueToolbar: {
     backgroundColor: palette.white,
     borderColor: palette.line,
     borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
-    padding: 15,
+    padding: layout.cardPadding,
   },
   queueHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   queueEyebrow: {
@@ -1286,7 +1306,7 @@ const styles = StyleSheet.create({
   },
   queueTotalValue: { color: palette.white, fontSize: 14, fontWeight: '900' },
   queueTotalLabel: { color: '#AFAFB7', fontSize: 10, fontWeight: '800' },
-  queueCount: { color: palette.inkMuted, fontSize: 10, marginTop: 3 },
+  queueCount: { ...typography.caption, color: palette.inkMuted, marginTop: 3 },
   searchBox: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -1300,19 +1320,21 @@ const styles = StyleSheet.create({
   searchInput: {
     color: palette.ink,
     flex: 1,
-    fontSize: 12,
+    fontSize: 14,
     marginHorizontal: 9,
     paddingVertical: 10,
   },
   filters: { gap: 7 },
   filterChip: {
+    alignItems: 'center',
     backgroundColor: '#E7E7EA',
     borderRadius: radius.pill,
+    justifyContent: 'center',
+    minHeight: layout.minTouchTarget,
     paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   filterChipActive: { backgroundColor: palette.ink },
-  filterText: { color: palette.inkMuted, fontSize: 10, fontWeight: '800' },
+  filterText: { ...typography.label, color: palette.inkMuted, fontWeight: '800' },
   filterTextActive: { color: palette.white },
   inlineEmpty: {
     alignItems: 'center',
@@ -1321,13 +1343,18 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   inlineEmptyTitle: { color: palette.ink, fontSize: 13, fontWeight: '900', marginTop: 9 },
-  inlineEmptyBody: { color: palette.inkMuted, fontSize: 10, marginTop: 4, textAlign: 'center' },
+  inlineEmptyBody: {
+    ...typography.caption,
+    color: palette.inkMuted,
+    marginTop: 4,
+    textAlign: 'center',
+  },
   card: {
     ...elevation.sm,
     backgroundColor: palette.white,
     borderRadius: 22,
     overflow: 'hidden',
-    padding: 13,
+    padding: layout.cardPadding,
   },
   queueBadgeRow: {
     alignItems: 'center',
@@ -1370,8 +1397,13 @@ const styles = StyleSheet.create({
   subjectCopy: { flex: 1, marginLeft: 11 },
   cardCopy: { marginTop: 13, minWidth: 0 },
   cardTitle: { color: palette.ink, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
-  meta: { color: palette.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4 },
-  contextBadge: { color: palette.inkMuted, fontSize: 10, fontWeight: '800', marginTop: 4 },
+  meta: { ...typography.caption, color: palette.inkMuted, fontWeight: '700', marginTop: 4 },
+  contextBadge: {
+    ...typography.caption,
+    color: palette.inkMuted,
+    fontWeight: '800',
+    marginTop: 4,
+  },
   reasonWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 11 },
   reason: {
     alignSelf: 'flex-start',
@@ -1385,9 +1417,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   reasonUrgent: { backgroundColor: '#FFE0D9', color: '#A63628' },
-  body: { color: palette.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 8 },
+  body: { ...typography.bodySm, color: palette.inkMuted, marginTop: 8 },
   time: { color: '#A0A0A7', fontSize: 10, marginTop: 5 },
-  photoCount: { color: palette.pink, fontSize: 10, fontWeight: '900', marginTop: 6 },
+  photoCount: { color: palette.pink, fontSize: 11, fontWeight: '900', marginTop: 6 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 11 },
   action: {
     alignItems: 'center',
@@ -1396,12 +1428,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     justifyContent: 'center',
-    minHeight: 41,
+    minHeight: layout.minTouchTarget,
     paddingHorizontal: 10,
   },
   actionPrimary: { backgroundColor: palette.ink, borderColor: palette.ink },
   actionDanger: { backgroundColor: '#B3263F', borderColor: '#B3263F' },
-  actionText: { color: palette.ink, fontSize: 10, fontWeight: '900' },
+  actionText: { ...typography.label, color: palette.ink, fontWeight: '900' },
   actionTextPrimary: { color: palette.white },
   hideAction: {
     alignItems: 'center',
@@ -1410,7 +1442,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 8,
-    minHeight: 40,
+    minHeight: layout.minTouchTarget,
   },
   hideActionText: { color: '#B3263F', fontSize: 11, fontWeight: '900', marginLeft: 7 },
   operatorForm: { flexDirection: 'row', gap: 7, marginTop: 13 },
@@ -1422,7 +1454,7 @@ const styles = StyleSheet.create({
     color: palette.ink,
     flex: 1,
     fontSize: 12,
-    minHeight: 44,
+    minHeight: layout.minTouchTarget,
     paddingHorizontal: 12,
   },
   operatorSubmit: {
@@ -1430,7 +1462,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.ink,
     borderRadius: 14,
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: layout.minTouchTarget,
     paddingHorizontal: 13,
   },
   operatorSubmitText: { color: palette.white, fontSize: 11, fontWeight: '900' },
@@ -1458,11 +1490,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF8F1',
     borderRadius: radius.pill,
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: layout.minTouchTarget,
     paddingHorizontal: 10,
   },
   teamToggleDanger: { backgroundColor: '#FFF1F3' },
-  teamToggleText: { color: '#197143', fontSize: 10, fontWeight: '900' },
+  teamToggleText: { color: '#197143', fontSize: 11, fontWeight: '900' },
   teamToggleDangerText: { color: '#B3263F' },
   activityList: { backgroundColor: palette.white, borderRadius: 18, overflow: 'hidden' },
   activityRow: {
@@ -1525,15 +1557,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginTop: 14,
   },
-  dialogBody: { color: palette.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
+  dialogBody: { ...typography.caption, color: palette.inkMuted, marginTop: 6 },
   presetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 13 },
   preset: {
+    alignItems: 'center',
     backgroundColor: '#EFEFF2',
     borderRadius: radius.pill,
+    justifyContent: 'center',
+    minHeight: 40,
     paddingHorizontal: 10,
-    paddingVertical: 7,
   },
-  presetText: { color: palette.ink, fontSize: 10, fontWeight: '800' },
+  presetText: { color: palette.ink, fontSize: 11, fontWeight: '800' },
   noteInput: {
     backgroundColor: '#F5F5F7',
     borderColor: palette.line,

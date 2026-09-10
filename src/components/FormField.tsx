@@ -3,7 +3,7 @@ import { ComponentProps, forwardRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { useAppTheme } from '@/components/ThemeProvider';
-import { radius, spacing, touchSlop, typography } from '@/constants/theme';
+import { layout, radius, spacing, touchSlop, typography } from '@/constants/theme';
 
 type FormFieldProps = TextInputProps & {
   /** 이 필드에서 잘못된 값. 지정하면 테두리와 안내문이 오류 상태로 바뀐다. */
@@ -127,6 +127,11 @@ const styles = StyleSheet.create({
   },
   noteRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 5 },
   note: { ...typography.caption, flex: 1, fontSize: 12, lineHeight: 17 },
-  visibilityButton: { padding: 2 },
+  visibilityButton: {
+    alignItems: 'center',
+    height: layout.minTouchTarget,
+    justifyContent: 'center',
+    width: layout.minTouchTarget,
+  },
   pressed: { opacity: 0.55 },
 });

@@ -976,8 +976,6 @@ export const additionalResources = {
         blockBody: 'Vocês não aparecerão mais um para o outro no WICHU.',
         actionFailed: 'Não foi possível concluir',
         tryAgain: 'Verifique sua conexão e tente novamente.',
-        testProfileTitle: 'Perfil de teste',
-        testProfileBody: 'As ações de segurança ficam desativadas em perfis de teste temporários.',
       },
       discover: {
         presence: {

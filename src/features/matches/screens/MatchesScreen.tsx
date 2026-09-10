@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -33,10 +33,9 @@ import {
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
-import { elevation, palette, pressFeedback, radius, typography } from '@/constants/theme';
-import { type ConnectionProfile, mockConnections } from '@/features/matches/data/mock-connections';
+import { elevation, layout, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { matchesService } from '@/features/matches/services/matches-service';
+import type { ConnectionProfile } from '@/features/matches/types/connection';
 import { rankConnectionProfiles } from '@/features/matches/utils/connection-ranking';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
@@ -50,29 +49,9 @@ import { reportOperationalError } from '@/services/operational-error-service';
 
 type MatchCategory = 'picked-me' | 'matched' | 'visitors';
 
-const profilesByCategory: Record<MatchCategory, ConnectionProfile[]> = {
-  'picked-me': [mockConnections[0], mockConnections[1], mockConnections[3], mockConnections[4]],
-  matched: mockConnections,
-  visitors: [mockConnections[2], mockConnections[0], mockConnections[4], mockConnections[3]],
-};
-
-const visitorTimes: Record<string, { count: number; unit: 'minutes' | 'days' }> = {
-  'mock-sofia': { count: 2, unit: 'minutes' },
-  'mock-lina': { count: 18, unit: 'minutes' },
-  'mock-clara': { count: 1, unit: 'days' },
-  'mock-yuna': { count: 3, unit: 'days' },
-};
-
-function includeReviewSamples(
-  liveProfiles: ConnectionProfile[],
-  sampleProfiles: ConnectionProfile[],
-) {
-  if (!reviewSamplesEnabled) return liveProfiles;
-  const sampleIds = new Set(sampleProfiles.map((profile) => profile.id));
-  return [...sampleProfiles, ...liveProfiles.filter((profile) => !sampleIds.has(profile.id))];
-}
-
 export function MatchesScreen() {
+  const { width } = useWindowDimensions();
+  const compactLayout = width < 360;
   const { t } = useTranslation();
   const router = useRouter();
   const navigateWithAdGate = useAdGatedNavigation();
@@ -180,15 +159,9 @@ export function MatchesScreen() {
     isGoldPass: like.isGoldPass,
     introMessage: like.introMessage,
   }));
-  const matchedProfiles = rankConnectionProfiles(
-    includeReviewSamples(realMatches, profilesByCategory.matched),
-  );
-  const pickedProfiles = rankConnectionProfiles(
-    includeReviewSamples(incomingLikes, profilesByCategory['picked-me']),
-  );
-  const visitorProfiles = rankConnectionProfiles(
-    includeReviewSamples(visitors, profilesByCategory.visitors),
-  );
+  const matchedProfiles = rankConnectionProfiles(realMatches);
+  const pickedProfiles = rankConnectionProfiles(incomingLikes);
+  const visitorProfiles = rankConnectionProfiles(visitors);
   const profiles =
     category === 'visitors'
       ? visitorProfiles
@@ -197,22 +170,19 @@ export function MatchesScreen() {
         : pickedProfiles;
   const copy = categoryCopy[category];
   const emptyCopy = emptyCategoryCopy[category];
-  const visitorsLocked =
-    category === 'visitors' && entitlement.data?.tier !== 'gold' && !reviewSamplesEnabled;
+  const visitorsLocked = category === 'visitors' && entitlement.data?.tier !== 'gold';
   const categoryLoading =
-    !reviewSamplesEnabled &&
-    (category === 'picked-me'
+    category === 'picked-me'
       ? incomingLikesQuery.isLoading
       : category === 'matched'
         ? matchesQuery.isLoading
-        : !visitorsLocked && visitorsQuery.isLoading);
+        : !visitorsLocked && visitorsQuery.isLoading;
   const categoryError =
-    !reviewSamplesEnabled &&
-    (category === 'picked-me'
+    category === 'picked-me'
       ? incomingLikesQuery.isError
       : category === 'matched'
         ? matchesQuery.isError
-        : !visitorsLocked && visitorsQuery.isError);
+        : !visitorsLocked && visitorsQuery.isError;
 
   const refreshControl = useRefreshControl(
     useCallback(
@@ -230,19 +200,15 @@ export function MatchesScreen() {
     const realMatch = matchesQuery.data?.find((match) => match.profile.id === profile.id);
     const context =
       category === 'matched' ? 'matched' : category === 'visitors' ? 'visitor' : 'incoming-like';
-    const matchId =
-      category === 'matched'
-        ? (realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`)
-        : undefined;
+    const matchId = category === 'matched' ? realMatch?.matchId : undefined;
     const matchQuery = matchId ? `&matchId=${encodeURIComponent(matchId)}` : '';
     void navigateWithAdGate(`/profile/${profile.id}?context=${context}${matchQuery}`);
   };
 
   const openChat = (profile: ConnectionProfile) => {
     const realMatch = matchesQuery.data?.find((match) => match.profile.id === profile.id);
-    void navigateWithAdGate(
-      `/chat/${realMatch?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
-    );
+    if (!realMatch) return;
+    void navigateWithAdGate(`/chat/${realMatch.matchId}`);
   };
 
   const selectCategory = (nextCategory: MatchCategory) => {
@@ -265,7 +231,10 @@ export function MatchesScreen() {
         eyebrow={t('matches.eyebrow')}
       />
 
-      <View accessibilityRole="tablist" style={styles.categories}>
+      <View
+        accessibilityRole="tablist"
+        style={[styles.categories, compactLayout && styles.categoriesCompact]}
+      >
         {categories.map((item) => {
           const selected = item.key === category;
           const count =
@@ -276,6 +245,7 @@ export function MatchesScreen() {
                 : pickedProfiles.length;
           return (
             <MatchCategoryTab
+              compact={compactLayout}
               count={count}
               key={item.key}
               label={item.label}
@@ -287,7 +257,7 @@ export function MatchesScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, compactLayout && styles.contentCompact]}
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
@@ -354,7 +324,7 @@ export function MatchesScreen() {
               title={emptyCopy.title}
             />
           ) : (
-            <View style={styles.grid}>
+            <View style={[styles.grid, compactLayout && styles.gridCompact]}>
               {profiles.map((profile, index) => (
                 <ProfileTile
                   activityTime={
@@ -372,9 +342,10 @@ export function MatchesScreen() {
                             now,
                             t,
                           )
-                        : formatSampleVisitTime(profile.id, t)
+                        : undefined
                   }
                   category={category}
+                  compact={compactLayout}
                   introMessage={profile.introMessage}
                   index={index}
                   key={`${category}-${profile.id}`}
@@ -399,11 +370,13 @@ export function MatchesScreen() {
 }
 
 function MatchCategoryTab({
+  compact,
   count,
   label,
   onPress,
   selected,
 }: {
+  compact: boolean;
   count: number;
   label: string;
   onPress: () => void;
@@ -438,6 +411,7 @@ function MatchCategoryTab({
 
   return (
     <Pressable
+      accessibilityLabel={`${label}, ${count}`}
       accessibilityRole="tab"
       accessibilityState={{ selected }}
       onPress={onPress}
@@ -454,9 +428,13 @@ function MatchCategoryTab({
         >
           {label}
         </Animated.Text>
-        <Animated.View style={[styles.categoryCount, countStyle]}>
-          <Animated.Text style={[styles.categoryCountText, countTextStyle]}>{count}</Animated.Text>
-        </Animated.View>
+        {compact ? null : (
+          <Animated.View style={[styles.categoryCount, countStyle]}>
+            <Animated.Text style={[styles.categoryCountText, countTextStyle]}>
+              {count}
+            </Animated.Text>
+          </Animated.View>
+        )}
       </View>
     </Pressable>
   );
@@ -465,6 +443,7 @@ function MatchCategoryTab({
 type ProfileTileProps = {
   activityTime?: string;
   category: MatchCategory;
+  compact?: boolean;
   index: number;
   introMessage?: string | null;
   locked?: boolean;
@@ -476,6 +455,7 @@ type ProfileTileProps = {
 function ProfileTile({
   activityTime,
   category,
+  compact = false,
   index,
   introMessage,
   locked = false,
@@ -501,7 +481,7 @@ function ProfileTile({
       entering={listEntering(index)}
       exiting={listExiting()}
       layout={listLayout()}
-      style={styles.card}
+      style={[styles.card, compact && styles.cardCompact]}
     >
       <Pressable
         accessibilityLabel={
@@ -622,32 +602,25 @@ function formatRemainingPickTime(value: string | undefined, now: number, t: TFun
   return t('matches.time.hoursLeft', { count: Math.ceil(remainingMinutes / 60) });
 }
 
-function formatSampleVisitTime(profileId: string, t: TFunction) {
-  const sampleTime = visitorTimes[profileId];
-  if (!sampleTime) return undefined;
-  return t(sampleTime.unit === 'minutes' ? 'matches.time.minutesAgo' : 'matches.time.daysAgo', {
-    count: sampleTime.count,
-  });
-}
-
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
   categories: {
     backgroundColor: '#E8E8EC',
     borderRadius: 18,
     flexDirection: 'row',
     gap: 3,
-    marginHorizontal: 20,
+    marginHorizontal: layout.screenGutter,
     padding: 4,
   },
+  categoriesCompact: { marginHorizontal: layout.compactGutter },
   category: {
     alignItems: 'center',
     borderRadius: 14,
     flex: 1,
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: layout.minTouchTarget,
     overflow: 'hidden',
-    paddingHorizontal: 3,
+    paddingHorizontal: 2,
   },
   categorySelection: {
     backgroundColor: palette.white,
@@ -662,26 +635,36 @@ const styles = StyleSheet.create({
   categoryContent: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 5,
+    gap: 3,
     justifyContent: 'center',
   },
   categoryPressed: pressFeedback.control,
-  categoryLabel: { ...typography.label, color: palette.inkMuted, flexShrink: 1 },
+  categoryLabel: {
+    ...typography.label,
+    color: palette.inkMuted,
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 15,
+  },
   categoryLabelSelected: { color: palette.ink },
   categoryCount: {
     alignItems: 'center',
     backgroundColor: '#DEDEE2',
     borderRadius: radius.pill,
     justifyContent: 'center',
-    minWidth: 19,
-    paddingHorizontal: 5,
+    minWidth: 18,
+    paddingHorizontal: 4,
     paddingVertical: 3,
   },
   categoryCountSelected: { backgroundColor: '#FFE1EB' },
   categoryCountText: { color: palette.inkMuted, fontSize: 11, fontWeight: '900' },
   categoryCountTextSelected: { color: palette.pink },
   scroll: { flex: 1, minHeight: 0 },
-  content: { paddingBottom: 26, paddingHorizontal: 20 },
+  content: {
+    paddingBottom: layout.scrollEndPadding,
+    paddingHorizontal: layout.screenGutter,
+  },
+  contentCompact: { paddingHorizontal: layout.compactGutter },
   subtitle: {
     ...typography.bodySm,
     color: palette.inkMuted,
@@ -694,6 +677,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     rowGap: 10,
   },
+  gridCompact: { flexDirection: 'column' },
   card: {
     aspectRatio: 0.71,
     backgroundColor: '#D8D8DE',
@@ -702,6 +686,7 @@ const styles = StyleSheet.create({
     width: '48.25%',
     ...elevation.md,
   },
+  cardCompact: { aspectRatio: 0.8, width: '100%' },
   cardSurface: { flex: 1 },
   cardPressed: pressFeedback.surface,
   nonInteractive: { pointerEvents: 'none' },

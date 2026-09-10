@@ -3,11 +3,38 @@ import type { Database, Tables } from '@/types/database';
 
 type StoredProfilePhoto = Tables<'profile_photos'> & { signed_url: string };
 
+type SignedPhotoUrlResult = {
+  path: string | null;
+  signedUrl: string | null;
+};
+
 function getMimeType(storagePath: string): ProfilePhotoDraft['mimeType'] {
   const extension = storagePath.split('.').pop()?.toLowerCase();
   if (extension === 'png') return 'image/png';
   if (extension === 'webp') return 'image/webp';
   return 'image/jpeg';
+}
+
+/**
+ * Adds any available signed URLs without discarding authoritative database rows.
+ * Missing URLs are refreshed by the individual editor tile after hydration.
+ */
+export function attachSignedUrlsToProfilePhotos(
+  photos: Tables<'profile_photos'>[],
+  signedResults: SignedPhotoUrlResult[],
+): StoredProfilePhoto[] {
+  const signedUrlsByPath = new Map(
+    signedResults.flatMap((result) =>
+      result.path && result.signedUrl ? [[result.path, result.signedUrl] as const] : [],
+    ),
+  );
+
+  return [...photos]
+    .sort((left, right) => left.position - right.position)
+    .map((photo) => ({
+      ...photo,
+      signed_url: signedUrlsByPath.get(photo.storage_path) ?? '',
+    }));
 }
 
 /**

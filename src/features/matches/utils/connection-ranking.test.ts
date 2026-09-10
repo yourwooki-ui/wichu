@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  ConnectionProfile,
-  ConversationPreview,
-} from '@/features/matches/data/mock-connections';
+import type { ConnectionProfile, ConversationPreview } from '@/features/matches/types/connection';
 import { rankConnectionProfiles, rankConversations } from './connection-ranking';
 
 function profile(overrides: Partial<ConnectionProfile>): ConnectionProfile {

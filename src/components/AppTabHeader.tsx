@@ -5,7 +5,7 @@ import { BrandWordmark } from '@/components/BrandWordmark';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { AmbientIconMotion, type IconMotion } from '@/components/MotionIllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
-import { pressFeedback, typography } from '@/constants/theme';
+import { layout, pressFeedback, typography } from '@/constants/theme';
 
 type AppTabHeaderProps = {
   actionAccessibilityLabel?: string;
@@ -73,9 +73,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    height: 76,
+    minHeight: 76,
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.screenGutter,
+    paddingVertical: 10,
   },
   eyebrow: {
     letterSpacing: 1.8,
@@ -83,8 +84,8 @@ const styles = StyleSheet.create({
   },
   action: {
     alignItems: 'center',
-    height: 52,
+    height: 48,
     justifyContent: 'center',
-    width: 52,
+    width: 48,
   },
 });

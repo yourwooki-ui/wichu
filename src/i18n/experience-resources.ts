@@ -51,9 +51,6 @@ const en = {
     translating: 'Translating…',
     translationRetry: 'Translation failed · Try again',
     showOriginal: 'Show original',
-    sampleTranslation: 'This is a sample translation in your language.',
-    sampleProfileTranslation:
-      'This is a sample profile introduction translated into your language.',
     translationUnavailable: 'Translation for this app language is coming soon.',
   },
 };
@@ -107,8 +104,6 @@ const ko = {
     translating: '번역 중…',
     translationRetry: '번역 실패 · 다시 시도',
     showOriginal: '원문 보기',
-    sampleTranslation: '내 언어로 번역된 샘플 메시지예요.',
-    sampleProfileTranslation: '현재 앱 언어로 번역된 샘플 자기소개예요.',
     translationUnavailable: '이 앱 언어의 번역은 준비 중이에요.',
   },
 };
@@ -163,8 +158,6 @@ const vi = {
     translating: 'Đang dịch…',
     translationRetry: 'Dịch thất bại · Thử lại',
     showOriginal: 'Xem bản gốc',
-    sampleTranslation: 'Đây là bản dịch mẫu sang ngôn ngữ của bạn.',
-    sampleProfileTranslation: 'Đây là phần giới thiệu mẫu được dịch sang ngôn ngữ ứng dụng.',
     translationUnavailable: 'Bản dịch cho ngôn ngữ ứng dụng này sắp ra mắt.',
   },
 };
@@ -217,8 +210,6 @@ const ja = {
     translating: '翻訳中…',
     translationRetry: '翻訳失敗 · 再試行',
     showOriginal: '原文を表示',
-    sampleTranslation: 'あなたの言語に翻訳したサンプルメッセージです。',
-    sampleProfileTranslation: 'アプリの言語に翻訳したサンプル自己紹介です。',
     translationUnavailable: 'このアプリ言語への翻訳は準備中です。',
   },
 };
@@ -277,9 +268,6 @@ const fr = {
     translating: 'Traduction…',
     translationRetry: 'Échec de la traduction · Réessayer',
     showOriginal: "Voir l'original",
-    sampleTranslation: 'Ceci est un exemple de traduction dans votre langue.',
-    sampleProfileTranslation:
-      'Voici un exemple de présentation traduit dans la langue de l’application.',
     translationUnavailable: 'La traduction vers cette langue sera bientôt disponible.',
   },
 };
@@ -336,9 +324,6 @@ const es = {
     translating: 'Traduciendo…',
     translationRetry: 'Error de traducción · Reintentar',
     showOriginal: 'Ver original',
-    sampleTranslation: 'Este es un mensaje de ejemplo traducido a tu idioma.',
-    sampleProfileTranslation:
-      'Esta es una presentación de ejemplo traducida al idioma de la aplicación.',
     translationUnavailable: 'La traducción a este idioma estará disponible pronto.',
   },
 };
@@ -395,8 +380,6 @@ const ptBR = {
     translating: 'Traduzindo…',
     translationRetry: 'Falha na tradução · Tentar novamente',
     showOriginal: 'Ver original',
-    sampleTranslation: 'Esta é uma mensagem de exemplo traduzida para o seu idioma.',
-    sampleProfileTranslation: 'Esta é uma apresentação de exemplo traduzida para o idioma do app.',
     translationUnavailable: 'A tradução para este idioma estará disponível em breve.',
   },
 };
@@ -446,8 +429,6 @@ const zhTW = {
     translating: '翻譯中…',
     translationRetry: '翻譯失敗 · 再試一次',
     showOriginal: '查看原文',
-    sampleTranslation: '這是翻譯成您的語言的範例訊息。',
-    sampleProfileTranslation: '這是翻譯成目前應用程式語言的範例自我介紹。',
     translationUnavailable: '此應用程式語言的翻譯功能即將推出。',
   },
 };
@@ -504,8 +485,6 @@ const id = {
     translating: 'Menerjemahkan…',
     translationRetry: 'Terjemahan gagal · Coba lagi',
     showOriginal: 'Lihat versi asli',
-    sampleTranslation: 'Ini adalah contoh pesan yang diterjemahkan ke bahasa Anda.',
-    sampleProfileTranslation: 'Ini adalah contoh perkenalan yang diterjemahkan ke bahasa aplikasi.',
     translationUnavailable: 'Terjemahan untuk bahasa aplikasi ini akan segera tersedia.',
   },
 };
@@ -562,8 +541,6 @@ const fa = {
     translating: 'در حال ترجمه…',
     translationRetry: 'ترجمه ناموفق · تلاش دوباره',
     showOriginal: 'نمایش متن اصلی',
-    sampleTranslation: 'این یک پیام نمونه ترجمه‌شده به زبان شماست.',
-    sampleProfileTranslation: 'این یک معرفی نمونه ترجمه‌شده به زبان برنامه است.',
     translationUnavailable: 'ترجمه به این زبان برنامه به‌زودی اضافه می‌شود.',
   },
 };

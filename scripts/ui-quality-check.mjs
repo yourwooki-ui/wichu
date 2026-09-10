@@ -6,13 +6,48 @@ const FORBIDDEN_DISCOVERY_COPY = [
   '오늘의 후보를 모두 확인했어요',
   '오늘의 후보를 다 봤어요',
 ];
+const FORBIDDEN_RUNTIME_SAMPLE_MARKERS = [
+  'reviewSamplesEnabled',
+  'EXPO_PUBLIC_ENABLE_REVIEW_SAMPLES',
+  'getDevelopmentSampleCandidates',
+  'mockConnections',
+  'mockConversations',
+  'mock-match-',
+  "startsWith('mock-')",
+];
 const findings = [];
+
+const themeSource = readFileSync('src/constants/theme.ts', 'utf8');
+for (const layoutToken of [
+  'screenGutter',
+  'compactGutter',
+  'cardPadding',
+  'minTouchTarget',
+  'scrollEndPadding',
+]) {
+  if (!themeSource.includes(`${layoutToken}:`)) {
+    findings.push(`theme: missing shared layout token ${layoutToken}`);
+  }
+}
 
 for (const file of [...listSourceFiles('app'), ...listSourceFiles('src')]) {
   const source = readFileSync(file, 'utf8');
 
   for (const copy of FORBIDDEN_DISCOVERY_COPY) {
     if (source.includes(copy)) findings.push(`${file}: final-sounding discovery copy: ${copy}`);
+  }
+
+  // 시각 검수 샘플은 개발 전용 design-qa route와 fixture 파일 안에만 둔다.
+  // 실제 탐색·매치·채팅·프로필 경로에 fallback이 돌아오면 빈 상태 대신
+  // 가짜 사용자가 다시 노출되므로 빌드 전 정적 검사에서 차단한다.
+  const isDesignQaFixture =
+    file.endsWith(join('app', 'design-qa.tsx')) ||
+    file.endsWith(join('src', 'features', 'discover', 'data', 'mock-profiles.ts'));
+  if (!isDesignQaFixture) {
+    for (const marker of FORBIDDEN_RUNTIME_SAMPLE_MARKERS) {
+      if (source.includes(marker))
+        findings.push(`${file}: runtime sample path returned: ${marker}`);
+    }
   }
 
   for (const match of source.matchAll(/fontSize\s*:\s*([0-9]+(?:\.[0-9]+)?)/g)) {
@@ -117,6 +152,33 @@ if (!profileSetupSource.includes('<KeyboardAwareScrollView')) {
 }
 if (/KeyboardAvoidingView|revealBioInput|scrollToEnd\(/.test(profileSetupSource)) {
   findings.push('profile-setup: must not use duplicate or bio-only keyboard workarounds');
+}
+
+const profilePhotoPickerSource = readFileSync(
+  'src/features/profile/components/ProfilePhotoPicker.tsx',
+  'utf8',
+);
+if (
+  !profilePhotoPickerSource.includes('photoTileWidth') ||
+  !profilePhotoPickerSource.includes('onLayout')
+) {
+  findings.push('ProfilePhotoPicker: two-column tiles must be measured from the available width');
+}
+if (/photoTile[^}]*width:\s*'48\./s.test(profilePhotoPickerSource)) {
+  findings.push('ProfilePhotoPicker: approximate percentage widths can leave uneven columns');
+}
+
+for (const [file, requirement] of [
+  ['src/components/PrimaryButton.tsx', 'layout.minTouchTarget'],
+  ['src/components/FormField.tsx', 'layout.minTouchTarget'],
+  ['src/features/matches/screens/MatchesScreen.tsx', 'cardCompact'],
+  ['src/features/monetization/screens/ShopScreen.tsx', 'planRowCompact'],
+  ['src/features/operations/screens/OperationsScreen.tsx', 'layout.minTouchTarget'],
+]) {
+  const source = readFileSync(file, 'utf8');
+  if (!source.includes(requirement)) {
+    findings.push(`${file}: missing responsive UI requirement ${requirement}`);
+  }
 }
 
 const keyboardScrollSource = readFileSync('src/components/KeyboardAwareScrollView.tsx', 'utf8');

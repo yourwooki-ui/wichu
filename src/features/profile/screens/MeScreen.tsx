@@ -18,7 +18,7 @@ import { StateView } from '@/components/StateView';
 import { ListRowsSkeleton, Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
-import { palette, pressFeedback, radius, typography } from '@/constants/theme';
+import { layout, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { imageTransition, sectionEntering } from '@/constants/motion';
 import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import { profileService } from '@/features/profile/services/profile-service';
@@ -699,9 +699,12 @@ function MeSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
   scroll: { flex: 1, minHeight: 0 },
-  content: { paddingBottom: 34, paddingHorizontal: 16 },
+  content: {
+    paddingBottom: layout.scrollEndPadding,
+    paddingHorizontal: layout.compactGutter,
+  },
   skeletonPreview: { borderRadius: 26, height: 294, marginBottom: 18, marginTop: 14 },
   profileHeroHeader: {
     alignItems: 'center',

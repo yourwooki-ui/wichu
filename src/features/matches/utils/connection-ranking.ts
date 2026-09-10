@@ -1,7 +1,4 @@
-import type {
-  ConnectionProfile,
-  ConversationPreview,
-} from '@/features/matches/data/mock-connections';
+import type { ConnectionProfile, ConversationPreview } from '@/features/matches/types/connection';
 
 function activityTime(profile: ConnectionProfile) {
   if (!profile.lastActiveAt) return 0;

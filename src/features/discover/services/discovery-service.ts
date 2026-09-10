@@ -1,5 +1,4 @@
 import { DISCOVER_PREPARE_COUNT } from '@/features/discover/constants';
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getRegionDisplayName } from '@/lib/display-names';
 import { rankDiscoveryProfiles } from '@/features/discover/utils/recommendation';
@@ -80,47 +79,6 @@ function isLanguageLevel(value: string): value is ProfileLanguageLevel {
   return ['native', 'beginner', 'intermediate', 'advanced', 'fluent'].includes(value);
 }
 
-const DEV_DISTANCE_BY_PROFILE_ID: Record<string, number> = {
-  '10000000-0000-4000-8000-000000000001': 1154,
-  '10000000-0000-4000-8000-000000000002': 8971,
-  '10000000-0000-4000-8000-000000000003': 12041,
-  '10000000-0000-4000-8000-000000000004': 8166,
-  '10000000-0000-4000-8000-000000000005': 8138,
-};
-
-const DEVELOPMENT_SAMPLE_PROFILE_IDS = Object.freeze(Object.keys(DEV_DISTANCE_BY_PROFILE_ID));
-const DEVELOPMENT_GOLD_PROFILE_IDS = new Set([
-  '10000000-0000-4000-8000-000000000001',
-  '10000000-0000-4000-8000-000000000003',
-]);
-
-const DEV_KO_PROFILE_COPY: Record<string, { bio: string; interests: string[] }> = {
-  '10000000-0000-4000-8000-000000000001': {
-    bio: '작은 카페와 필름 사진, 라이브 음악을 좋아해요.',
-    interests: ['사진', '카페', '음악'],
-  },
-  '10000000-0000-4000-8000-000000000002': {
-    bio: '전시를 보고 강변을 걷는 시간을 좋아해요.',
-    interests: ['영화', '여행', '패션'],
-  },
-  '10000000-0000-4000-8000-000000000003': {
-    bio: '선셋 러닝과 댄스 플레이리스트, 새로운 만남을 좋아해요.',
-    interests: ['음악', '운동', '맛집'],
-  },
-  '10000000-0000-4000-8000-000000000004': {
-    bio: '물가 산책과 하이킹, 아늑한 카페와 즉흥적인 약속을 좋아해요.',
-    interests: ['여행', '영화', '카페'],
-  },
-  '10000000-0000-4000-8000-000000000005': {
-    bio: '베를린에서 디자인과 작은 공연, 긴 대화를 즐겨요.',
-    interests: ['음악', '사진', '카페'],
-  },
-};
-
-function isDevelopmentSampleProfile(profileId: string) {
-  return reviewSamplesEnabled && DEVELOPMENT_SAMPLE_PROFILE_IDS.includes(profileId);
-}
-
 function isMissingSameCountryPreference(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return (
@@ -137,14 +95,6 @@ function isMissingConnectionGoalsPreference(error: { code?: string; message?: st
   );
 }
 
-const DEV_LANGUAGE_LEVEL_BY_PROFILE_ID: Record<string, Record<string, ProfileLanguageLevel>> = {
-  '10000000-0000-4000-8000-000000000001': { ja: 'native', en: 'advanced' },
-  '10000000-0000-4000-8000-000000000002': { fr: 'native', en: 'fluent' },
-  '10000000-0000-4000-8000-000000000003': { pt: 'native', en: 'advanced' },
-  '10000000-0000-4000-8000-000000000004': { en: 'native', fr: 'intermediate' },
-  '10000000-0000-4000-8000-000000000005': { de: 'native', en: 'fluent' },
-};
-
 function getLanguageDetails(candidate: CandidateRow): ProfileLanguage[] {
   const returnedDetails = candidate.language_details?.flatMap((language) =>
     isLanguageLevel(language.level)
@@ -153,12 +103,9 @@ function getLanguageDetails(candidate: CandidateRow): ProfileLanguage[] {
   );
   if (returnedDetails?.length) return returnedDetails;
 
-  const devLevels = reviewSamplesEnabled
-    ? DEV_LANGUAGE_LEVEL_BY_PROFILE_ID[candidate.id]
-    : undefined;
   return candidate.languages.map((code, index) => ({
     code,
-    level: devLevels?.[code] ?? (index === 0 ? 'native' : 'intermediate'),
+    level: index === 0 ? 'native' : 'intermediate',
     isNative: index === 0,
   }));
 }
@@ -224,10 +171,6 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
       return signedUrl ? [signedUrl] : [];
     });
     if (photos.length === 0 || !isGender(candidate.gender)) return [];
-    const localizedDevCopy =
-      reviewSamplesEnabled && locale.toLowerCase().startsWith('ko')
-        ? DEV_KO_PROFILE_COPY[candidate.id]
-        : undefined;
 
     return [
       {
@@ -239,14 +182,10 @@ async function hydrateCandidates(candidates: CandidateRow[], locale: string): Pr
         countryLabel: getRegionDisplayName(locale, candidate.country_code),
         languages: candidate.languages,
         languageDetails: getLanguageDetails(candidate),
-        distanceKm:
-          candidate.distance_km ??
-          (reviewSamplesEnabled ? DEV_DISTANCE_BY_PROFILE_ID[candidate.id] : undefined),
-        isGoldPass:
-          candidate.is_gold_pass === true ||
-          (reviewSamplesEnabled && DEVELOPMENT_GOLD_PROFILE_IDS.has(candidate.id)),
-        bio: localizedDevCopy?.bio ?? candidate.bio,
-        interests: localizedDevCopy?.interests ?? candidate.interests,
+        distanceKm: candidate.distance_km ?? undefined,
+        isGoldPass: candidate.is_gold_pass === true,
+        bio: candidate.bio,
+        interests: candidate.interests,
         connectionGoals: goalsByProfile.get(candidate.id) ?? [],
         prompts: promptsByProfile.get(candidate.id) ?? [],
         photos,
@@ -481,78 +420,7 @@ export const discoveryService = {
     const refreshed = await discoveryService.getPreferences(userId);
     return { ...refreshed, viewerCountryCode: profileResult.data.country_code };
   },
-  async getDevelopmentSampleCandidates(
-    filters: DiscoveryPreferences,
-    locale: string,
-  ): Promise<Profile[]> {
-    const supabase = getSupabaseClient();
-    const [profilesResult, photosResult, profileInterestsResult, interestsResult] =
-      await Promise.all([
-        supabase.rpc('get_visible_profiles', {
-          p_profile_ids: [...DEVELOPMENT_SAMPLE_PROFILE_IDS],
-        }),
-        supabase
-          .from('profile_photos')
-          .select('profile_id, storage_path, position')
-          .in('profile_id', DEVELOPMENT_SAMPLE_PROFILE_IDS),
-        supabase
-          .from('profile_interests')
-          .select('profile_id, interest_id')
-          .in('profile_id', DEVELOPMENT_SAMPLE_PROFILE_IDS),
-        supabase.from('interests').select('id, label'),
-      ]);
-
-    const error =
-      profilesResult.error ??
-      photosResult.error ??
-      profileInterestsResult.error ??
-      interestsResult.error;
-    if (error) throw error;
-
-    const interestLabelById = new Map(
-      (interestsResult.data ?? []).map((interest) => [interest.id, interest.label]),
-    );
-    const profilesById = new Map(
-      (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
-    );
-    const candidateRows = DEVELOPMENT_SAMPLE_PROFILE_IDS.flatMap((profileId) => {
-      const profile = profilesById.get(profileId);
-      if (!profile) return [];
-
-      const photoPaths = (photosResult.data ?? [])
-        .filter((photo) => photo.profile_id === profileId)
-        .sort((a, b) => a.position - b.position)
-        .map((photo) => photo.storage_path);
-      const interests = (profileInterestsResult.data ?? []).flatMap((interest) => {
-        if (interest.profile_id !== profileId) return [];
-        const label = interestLabelById.get(interest.interest_id);
-        return label ? [label] : [];
-      });
-
-      return [
-        {
-          ...profile,
-          language_details: null,
-          distance_km: DEV_DISTANCE_BY_PROFILE_ID[profileId],
-          photo_paths: photoPaths,
-          interests,
-        } satisfies CandidateRow,
-      ];
-    });
-
-    // Review samples are a deterministic QA deck. They intentionally bypass
-    // live discovery filters so a narrow saved distance/country setting cannot
-    // leave the review build empty.
-    const hydrated = await hydrateCandidates(candidateRows, locale);
-    return rankDiscoveryProfiles(hydrated, {
-      connectionGoals: filters.connectionGoals,
-      interestLabels: filters.viewerInterestLabels ?? [],
-      languageCodes: filters.viewerLanguageCodes ?? [],
-    });
-  },
   async swipe(_userId: string, targetId: string, action: SwipeAction, introMessage?: string) {
-    if (isDevelopmentSampleProfile(targetId)) return { matchId: null };
-
     const supabase = getSupabaseClient();
     const withMessageResult = await supabase
       .rpc('record_my_swipe', {
@@ -573,10 +441,6 @@ export const discoveryService = {
     return { matchId: legacyResult.data.match_id };
   },
   async undoSwipe(_userId: string, targetId: string) {
-    if (isDevelopmentSampleProfile(targetId)) {
-      return { creditsRemaining: 0, unlimited: reviewSamplesEnabled };
-    }
-
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('undo_my_swipe', { p_target_id: targetId }).single();
 

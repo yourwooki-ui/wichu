@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { Tables } from '@/types/database';
 
-import { hydrateStoredProfilePhotos } from './profile-photo-hydration';
+import {
+  attachSignedUrlsToProfilePhotos,
+  hydrateStoredProfilePhotos,
+} from './profile-photo-hydration';
 
 function createStoredPhoto(
   id: string,
@@ -25,6 +28,22 @@ function createStoredPhoto(
 }
 
 describe('profile photo editor hydration', () => {
+  it('preserves every database photo when one signed URL is missing', () => {
+    const first = createStoredPhoto('first', 1);
+    const second = createStoredPhoto('second', 2);
+    const rows = attachSignedUrlsToProfilePhotos(
+      [first, second].map(({ signed_url: _signedUrl, ...photo }) => photo),
+      [{ path: first.storage_path, signedUrl: first.signed_url }],
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows.map((photo) => photo.storage_path)).toEqual([
+      'profile-id/first.jpg',
+      'profile-id/second.jpg',
+    ]);
+    expect(rows.map((photo) => photo.signed_url)).toEqual(['https://photos.test/first.jpg', '']);
+  });
+
   it('restores all persisted photos in their saved order', () => {
     const drafts = hydrateStoredProfilePhotos(
       [

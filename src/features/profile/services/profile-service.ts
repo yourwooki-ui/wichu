@@ -7,6 +7,7 @@ import { Json, TablesInsert } from '@/types/database';
 import type { Profile, ProfilePrompt } from '@/types/profile';
 
 import { profilePhotoService } from './profile-photo-service';
+import { attachSignedUrlsToProfilePhotos } from './profile-photo-hydration';
 import { reconcileEditableProfilePhotos } from './profile-photo-reconciliation';
 
 function isMissingProfileDetails(error: { code?: string; message?: string } | null) {
@@ -95,22 +96,12 @@ export const profileService = {
     const orderedPhotos = [...(profilePhotos ?? [])].sort(
       (left, right) => left.position - right.position,
     );
-    const { data: signedPhotoResults, error: signedPhotosError } =
-      await profilePhotoService.createSignedPhotoUrls(
-        orderedPhotos.map((photo) => photo.storage_path),
-        3600,
-      );
-    if (signedPhotosError) throw signedPhotosError;
-
-    const signedUrlsByPath = new Map(
-      (signedPhotoResults ?? []).flatMap((result) =>
-        result.path && result.signedUrl ? [[result.path, result.signedUrl] as const] : [],
-      ),
+    const { data: signedPhotoResults } = await profilePhotoService.createSignedPhotoUrls(
+      orderedPhotos.map((photo) => photo.storage_path),
+      3600,
     );
-    const signedPhotos = orderedPhotos.flatMap((photo) => {
-      const signedUrl = signedUrlsByPath.get(photo.storage_path);
-      return signedUrl ? [{ ...photo, signed_url: signedUrl }] : [];
-    });
+
+    const signedPhotos = attachSignedUrlsToProfilePhotos(orderedPhotos, signedPhotoResults ?? []);
 
     return {
       profile: { ...profileResult.data, profile_photos: signedPhotos },

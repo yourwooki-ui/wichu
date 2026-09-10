@@ -17,16 +17,11 @@ import { Screen } from '@/components/Screen';
 import { ChatRowsSkeleton } from '@/components/Skeleton';
 import { imageTransition, listEntering, listExiting, listLayout } from '@/constants/motion';
 import { StateView } from '@/components/StateView';
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, pressFeedback, radius, typography } from '@/constants/theme';
+import { layout, palette, pressFeedback, radius, typography } from '@/constants/theme';
 import { ConnectionAvatar } from '@/features/matches/components/ConnectionAvatar';
-import {
-  type ConnectionProfile,
-  type ConversationPreview,
-  mockConversations,
-} from '@/features/matches/data/mock-connections';
 import { matchesService } from '@/features/matches/services/matches-service';
+import type { ConnectionProfile, ConversationPreview } from '@/features/matches/types/connection';
 import { rankConversations } from '@/features/matches/utils/connection-ranking';
 import { useAdGatedNavigation } from '@/features/monetization/hooks/use-ad-gated-navigation';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -83,9 +78,7 @@ export function ChatListScreen() {
       })),
     [currentUserId, matchesQuery.data, now, t],
   );
-  const sourceConversations = rankConversations(
-    realConversations.length || !reviewSamplesEnabled ? realConversations : mockConversations,
-  );
+  const sourceConversations = rankConversations(realConversations);
   const normalizedQuery = query.trim().toLowerCase();
   const conversations = useMemo(
     () =>
@@ -98,7 +91,7 @@ export function ChatListScreen() {
     .map((conversation) => conversation.profile)
     .filter((profile) => profile.isOnline);
   const unreadCount = conversations.reduce((total, item) => total + item.unreadCount, 0);
-  const listError = matchesQuery.isError && !reviewSamplesEnabled;
+  const listError = matchesQuery.isError;
   // 대화가 하나도 없으면 검색·온라인 레일·목록 제목은 의미가 없다.
   const hasConversations = sourceConversations.length > 0;
   const refreshControl = useRefreshControl(
@@ -138,9 +131,7 @@ export function ChatListScreen() {
                   const conversation = sourceConversations.find(
                     (item) => item.profile.id === profile.id,
                   );
-                  void navigateWithAdGate(
-                    `/chat/${conversation?.matchId ?? `mock-match-${profile.name.toLowerCase()}`}`,
-                  );
+                  if (conversation) void navigateWithAdGate(`/chat/${conversation.matchId}`);
                 }}
                 profile={profile}
               />
@@ -313,12 +304,12 @@ function formatRelativeTime(value: string, now: number, t: TFunction) {
 }
 
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
-  heading: { paddingHorizontal: 20, paddingTop: 7 },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
+  heading: { paddingHorizontal: layout.screenGutter, paddingTop: 7 },
   title: { ...typography.display, color: palette.ink },
   subtitle: { ...typography.bodySm, color: palette.inkMuted, marginTop: 3 },
   activeRail: { height: 118, marginTop: 18 },
-  activeContent: { gap: 5, paddingHorizontal: 20 },
+  activeContent: { gap: 5, paddingHorizontal: layout.screenGutter },
   searchWrap: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -327,7 +318,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 9,
-    marginHorizontal: 20,
+    marginHorizontal: layout.screenGutter,
     marginTop: 20,
     paddingHorizontal: 15,
   },
@@ -337,7 +328,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 23,
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.screenGutter,
   },
   listTitle: { ...typography.heading, color: palette.ink },
   unreadPill: {
@@ -348,7 +339,11 @@ const styles = StyleSheet.create({
   },
   unreadPillText: { color: palette.pink, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   scroll: { flex: 1, minHeight: 0 },
-  list: { marginTop: 7, paddingBottom: 25, paddingHorizontal: 12 },
+  list: {
+    marginTop: 7,
+    paddingBottom: layout.scrollEndPadding,
+    paddingHorizontal: layout.compactGutter - 4,
+  },
   row: {
     alignItems: 'center',
     borderBottomColor: '#DCDCE1',

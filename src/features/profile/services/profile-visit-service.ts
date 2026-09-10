@@ -4,7 +4,7 @@ const PHOTO_BUCKET = 'profile-photos';
 
 export const profileVisitService = {
   async recordVisit(profileId: string, visitorId: string) {
-    if (profileId === visitorId || profileId.startsWith('mock-')) return;
+    if (profileId === visitorId) return;
     const { error } = await getSupabaseClient().rpc('record_profile_visit', {
       p_profile_id: profileId,
     });

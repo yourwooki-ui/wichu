@@ -3,7 +3,7 @@ import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { useAppTheme } from '@/components/ThemeProvider';
@@ -11,11 +11,13 @@ import { illustratedIcons } from '@/constants/illustrated-icons';
 import { imageTransition } from '@/constants/motion';
 import { pressFeedback, radius, spacing } from '@/constants/theme';
 import { normalizeProfilePhotoAsset } from '@/features/profile/services/profile-photo-normalizer';
+import { profilePhotoService } from '@/features/profile/services/profile-photo-service';
 import {
   getProfilePhotoIdentity,
   normalizeProfilePhotoSelections,
 } from '@/features/profile/services/profile-photo-selection';
 import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
+import { reportOperationalError } from '@/services/operational-error-service';
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
@@ -44,6 +46,7 @@ export function ProfilePhotoPicker({
   const theme = useAppTheme();
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
+  const [gridWidth, setGridWidth] = useState(0);
   const pickingRef = useRef(false);
   const recoveredPendingResult = useRef(false);
   const latestPhotos = useRef(photos);
@@ -51,6 +54,7 @@ export function ProfilePhotoPicker({
   const mutedColor = dark ? '#8F8F99' : theme.colors.textMuted;
   const surfaceColor = dark ? '#17171B' : theme.colors.surface;
   const borderColor = dark ? '#34343B' : theme.colors.border;
+  const photoTileWidth = gridWidth > 0 ? Math.floor((gridWidth - spacing.xs) / 2) : undefined;
 
   useEffect(() => {
     latestPhotos.current = photos;
@@ -244,7 +248,7 @@ export function ProfilePhotoPicker({
   return (
     <View style={styles.section}>
       <View style={styles.headingRow}>
-        <View>
+        <View style={styles.headingCopy}>
           <Text style={[styles.label, { color: textColor }]}>{t('profileSetup.photos.title')}</Text>
           <Text style={[styles.hint, { color: mutedColor }]}>{t('profileSetup.photos.hint')}</Text>
         </View>
@@ -302,18 +306,26 @@ export function ProfilePhotoPicker({
 
       <View
         accessibilityLabel={t('profileSetup.photos.readiness', { count: photos.length })}
+        onLayout={(event) => {
+          const nextWidth = Math.round(event.nativeEvent.layout.width);
+          setGridWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth));
+        }}
         style={styles.grid}
       >
         {photos.map((photo, index) => (
-          <View key={photo.draftId} style={[styles.photoTile, { backgroundColor: surfaceColor }]}>
-            <Image
-              cachePolicy="memory-disk"
-              contentFit="cover"
-              priority={index === 0 ? 'high' : 'normal'}
-              recyclingKey={photo.draftId}
-              source={{ cacheKey: photo.storagePath ?? photo.draftId, uri: photo.uri }}
-              style={StyleSheet.absoluteFill}
-              transition={imageTransition.thumbnail}
+          <View
+            key={photo.draftId}
+            style={[
+              styles.photoTile,
+              photoTileWidth ? { width: photoTileWidth } : styles.photoTileFallback,
+              { backgroundColor: surfaceColor },
+            ]}
+          >
+            <ProfilePhotoTileImage
+              index={index}
+              mutedColor={mutedColor}
+              photo={photo}
+              surfaceColor={surfaceColor}
             />
             {photo.reviewStatus === 'pending' || photo.reviewStatus === 'rejected' ? (
               <View
@@ -408,6 +420,7 @@ export function ProfilePhotoPicker({
             onPress={pickFromLibrary}
             style={({ pressed }) => [
               styles.addTile,
+              photoTileWidth ? { width: photoTileWidth } : styles.photoTileFallback,
               { borderColor, backgroundColor: surfaceColor },
               (pressed || controlsDisabled) && styles.pressed,
             ]}
@@ -433,6 +446,132 @@ export function ProfilePhotoPicker({
             {t('profileSetup.photos.uploading', uploadProgress)}
           </Text>
         </View>
+      ) : null}
+    </View>
+  );
+}
+
+function ProfilePhotoTileImage({
+  index,
+  mutedColor,
+  photo,
+  surfaceColor,
+}: {
+  index: number;
+  mutedColor: string;
+  photo: ProfilePhotoDraft;
+  surfaceColor: string;
+}) {
+  const { t } = useTranslation();
+  const theme = useAppTheme();
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(Boolean(photo.uri || photo.storagePath));
+  const [revision, setRevision] = useState(0);
+  const [uri, setUri] = useState(photo.uri);
+  const automaticRetryCount = useRef(0);
+  const requestId = useRef(0);
+
+  const refreshSignedUrl = useCallback(async () => {
+    if (!photo.storagePath) {
+      setFailed(true);
+      setLoading(false);
+      return;
+    }
+
+    const activeRequest = ++requestId.current;
+    setFailed(false);
+    setLoading(true);
+    try {
+      const { data, error } = await profilePhotoService.createSignedPhotoUrl(
+        photo.storagePath,
+        3600,
+      );
+      if (error || !data?.signedUrl) throw error ?? new Error('Profile photo URL unavailable');
+      if (activeRequest !== requestId.current) return;
+      setUri(data.signedUrl);
+      setRevision((value) => value + 1);
+    } catch (error) {
+      if (activeRequest !== requestId.current) return;
+      setFailed(true);
+      setLoading(false);
+      reportOperationalError('profile_photo_editor_sign', error, '/profile-edit');
+    }
+  }, [photo.storagePath]);
+
+  useEffect(() => {
+    let active = true;
+    if (!photo.uri && photo.storagePath) {
+      queueMicrotask(() => {
+        if (active) void refreshSignedUrl();
+      });
+    }
+
+    return () => {
+      active = false;
+      requestId.current += 1;
+    };
+  }, [photo.storagePath, photo.uri, refreshSignedUrl]);
+
+  function handleLoadError() {
+    if (photo.storagePath && automaticRetryCount.current === 0) {
+      automaticRetryCount.current = 1;
+      void refreshSignedUrl();
+      return;
+    }
+
+    setFailed(true);
+    setLoading(false);
+    reportOperationalError(
+      'profile_photo_editor_render',
+      new Error('Profile photo failed to render'),
+      '/profile-edit',
+    );
+  }
+
+  function retryManually() {
+    automaticRetryCount.current = 0;
+    if (photo.storagePath) {
+      void refreshSignedUrl();
+      return;
+    }
+    setFailed(false);
+    setLoading(Boolean(photo.uri));
+    setRevision((value) => value + 1);
+  }
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: surfaceColor }]}>
+      {uri ? (
+        <Image
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          onError={handleLoadError}
+          onLoad={() => {
+            setFailed(false);
+            setLoading(false);
+          }}
+          priority={index === 0 ? 'high' : 'normal'}
+          recyclingKey={`${photo.draftId}:${revision}`}
+          source={uri}
+          style={StyleSheet.absoluteFill}
+          transition={imageTransition.thumbnail}
+        />
+      ) : null}
+      {loading && !failed ? (
+        <View pointerEvents="none" style={styles.photoLoadState}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      ) : null}
+      {failed ? (
+        <Pressable
+          accessibilityLabel={t('settings.retry')}
+          accessibilityRole="button"
+          onPress={retryManually}
+          style={({ pressed }) => [styles.photoLoadState, pressed && styles.pressed]}
+        >
+          <Ionicons name="refresh" size={22} color={mutedColor} />
+          <Text style={[styles.photoRetryText, { color: mutedColor }]}>{t('settings.retry')}</Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -516,6 +655,7 @@ function OrderButton({ icon, label, disabled, onPress }: OrderButtonProps) {
 const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   headingRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  headingCopy: { flex: 1, minWidth: 0, paddingRight: spacing.xs },
   label: { fontSize: 13, fontWeight: '800' },
   hint: { marginTop: 3, fontSize: 12 },
   counter: { fontSize: 12, fontWeight: '800' },
@@ -554,8 +694,25 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   sourceButtonLabel: { fontSize: 12, fontWeight: '900' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  photoTile: { width: '48.7%', aspectRatio: 0.78, overflow: 'hidden', borderRadius: radius.md },
+  grid: {
+    columnGap: spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: spacing.xs,
+  },
+  photoTile: { aspectRatio: 0.8, overflow: 'hidden', borderRadius: radius.md },
+  photoTileFallback: { width: '48%' },
+  photoLoadState: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  photoRetryText: { fontSize: 11, fontWeight: '800' },
   primaryBadge: {
     position: 'absolute',
     top: 8,
@@ -660,8 +817,7 @@ const styles = StyleSheet.create({
   },
   disabledOrderButton: { opacity: 0.28 },
   addTile: {
-    width: '48.7%',
-    aspectRatio: 0.78,
+    aspectRatio: 0.8,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,

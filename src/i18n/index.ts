@@ -68,8 +68,6 @@ const baseResources = {
         blockBody: 'You will no longer see each other on WICHU.',
         actionFailed: 'Action failed',
         tryAgain: 'Please check your connection and try again.',
-        testProfileTitle: 'Test profile',
-        testProfileBody: 'Safety actions are disabled for temporary test profiles.',
       },
       tabs: { discover: 'Discover', matches: 'Matches', chat: 'Chat', shop: 'Shop', me: 'Me' },
       discover: {
@@ -352,8 +350,6 @@ const baseResources = {
         blockBody: '차단 후에는 WICHU에서 서로에게 표시되지 않아요.',
         actionFailed: '처리하지 못했어요',
         tryAgain: '연결 상태를 확인하고 다시 시도해 주세요.',
-        testProfileTitle: '테스트 프로필',
-        testProfileBody: '임시 테스트 프로필에는 안전 기능을 실행할 수 없어요.',
       },
       tabs: { discover: '발견', matches: '매치', chat: '채팅', shop: '상점', me: '나' },
       discover: {

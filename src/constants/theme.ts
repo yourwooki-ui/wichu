@@ -128,6 +128,18 @@ export const elevation = {
 /** 화면 공통 레이아웃. 태블릿·웹에서 본문이 과도하게 늘어나지 않게 한다. */
 export const layout = {
   maxContentWidth: 620,
+  /** 주요 화면의 좌우 안전 여백. 모든 탭과 상세 화면이 같은 수직 축을 공유한다. */
+  screenGutter: 20,
+  /** 카드 안쪽과 밀도 높은 편집 화면에서 쓰는 한 단계 좁은 여백. */
+  compactGutter: 16,
+  /** 화면 안의 큰 섹션 사이 간격. */
+  sectionGap: 24,
+  /** 일반 카드의 기본 안쪽 여백. */
+  cardPadding: 16,
+  /** WCAG 및 모바일 HIG에 맞춘 최소 터치 영역. */
+  minTouchTarget: 44,
+  /** 하단 탭 위에서 스크롤 콘텐츠가 답답하게 끝나지 않도록 하는 여백. */
+  scrollEndPadding: 32,
 } as const;
 
 /**

@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppTabHeader } from '@/components/AppTabHeader';
@@ -13,7 +13,7 @@ import { MotionIllustratedIcon } from '@/components/MotionIllustratedIcon';
 import { Screen } from '@/components/Screen';
 import { getPassIllustration, illustratedIcons } from '@/constants/illustrated-icons';
 import { sectionEntering } from '@/constants/motion';
-import { elevation, palette, radius, typography } from '@/constants/theme';
+import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { AD_FREE_PRODUCT, GOLD_PRODUCT } from '@/features/monetization/constants/products';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
 import { purchaseService } from '@/features/monetization/services/purchase-service';
@@ -69,6 +69,8 @@ const planComparison = [
 export function ShopScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const compactLayout = width < 360;
   const { session } = useAuthSession();
   const entitlement = usePassEntitlement();
   const products = useQuery({
@@ -154,7 +156,7 @@ export function ShopScreen() {
                   source={illustratedIcons.goldPass}
                 />
               </View>
-              <View>
+              <View style={styles.goldTopCopy}>
                 <Text style={styles.goldPassLabel}>WICHU GOLD PASS</Text>
                 <Text style={styles.goldMicrocopy}>{t('shop.goldMicrocopy')}</Text>
               </View>
@@ -184,12 +186,16 @@ export function ShopScreen() {
 
         <Animated.View entering={sectionEntering(2)}>
           <Text style={styles.sectionTitle}>{t('shop.choosePlan')}</Text>
-          <View style={styles.planRow}>
+          <View style={[styles.planRow, compactLayout && styles.planRowCompact]}>
             <Pressable
               accessibilityLabel={t('shop.adFreeA11y')}
               accessibilityRole="button"
               onPress={() => router.push('/ad-free?product=ad-free')}
-              style={({ pressed }) => [styles.planCard, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.planCard,
+                compactLayout && styles.planCardCompact,
+                pressed && styles.pressed,
+              ]}
             >
               <View style={styles.planIconPink}>
                 <IllustratedIcon size={42} source={illustratedIcons.adFree} />
@@ -212,6 +218,7 @@ export function ShopScreen() {
               style={({ pressed }) => [
                 styles.planCard,
                 styles.planCardGold,
+                compactLayout && styles.planCardCompact,
                 pressed && styles.pressed,
               ]}
             >
@@ -325,9 +332,12 @@ function CompareMark({ value, gold = false }: { value: string; gold?: boolean })
 }
 
 const styles = StyleSheet.create({
-  screen: { alignSelf: 'center', maxWidth: 620, width: '100%' },
+  screen: { alignSelf: 'center', maxWidth: layout.maxContentWidth, width: '100%' },
   scroll: { flex: 1, minHeight: 0 },
-  content: { paddingBottom: 34, paddingHorizontal: 18 },
+  content: {
+    paddingBottom: layout.scrollEndPadding,
+    paddingHorizontal: layout.screenGutter,
+  },
   currentPlan: {
     alignItems: 'center',
     backgroundColor: palette.white,
@@ -387,6 +397,7 @@ const styles = StyleSheet.create({
     width: 220,
   },
   goldTopRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  goldTopCopy: { flex: 1, minWidth: 0 },
   diamondMark: {
     alignItems: 'center',
     height: 52,
@@ -441,6 +452,7 @@ const styles = StyleSheet.create({
     marginTop: 23,
   },
   planRow: { flexDirection: 'row', gap: 9 },
+  planRowCompact: { flexDirection: 'column' },
   planCard: {
     backgroundColor: palette.white,
     borderColor: 'transparent',
@@ -451,6 +463,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   planCardGold: { borderColor: '#E5C45C' },
+  planCardCompact: { minHeight: 184, width: '100%' },
   planIconPink: {
     alignItems: 'center',
     backgroundColor: '#FFE8F0',

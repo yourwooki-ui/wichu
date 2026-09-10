@@ -22,7 +22,7 @@ import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { palette, radius } from '@/constants/theme';
+import { layout, palette, radius } from '@/constants/theme';
 import { isAdult, isValidBirthDate } from '@/features/auth/utils/age';
 import { formatBirthDateInput } from '@/features/auth/utils/format-birth-date';
 import { tutorialState } from '@/features/onboarding/services/tutorial-state';
@@ -1166,7 +1166,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   subtitle: { marginTop: 4, color: palette.inkMuted, fontSize: 12, lineHeight: 17 },
-  content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 2 },
+  content: {
+    paddingBottom: layout.scrollEndPadding,
+    paddingHorizontal: layout.compactGutter,
+    paddingTop: 2,
+  },
   // 하단 저장 버튼이 고정되어 있으므로 긴 자기소개 입력의 마지막 줄이 버튼과
   // 키보드 사이에 갇히지 않게 실제 스크롤 가능한 여백을 확보한다.
   contentWithKeyboardForm: { paddingBottom: 156 },
@@ -1176,7 +1180,7 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
     borderRadius: 24,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 18,
+    padding: layout.cardPadding,
   },
   label: { color: palette.ink, fontSize: 13, fontWeight: '900' },
   hint: { marginTop: -2, color: palette.inkMuted, fontSize: 12, lineHeight: 17 },
@@ -1208,7 +1212,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: layout.compactGutter,
     paddingTop: 12,
     paddingBottom: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -1225,7 +1229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: layout.compactGutter,
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radius.md,

@@ -9,6 +9,7 @@ import {
 import { IllustratedIcon } from '@/components/IllustratedIcon';
 import { PresenceDot } from '@/components/PresenceDot';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { FormField } from '@/components/FormField';
 import { Screen } from '@/components/Screen';
 import {
   ChatRowsSkeleton,
@@ -26,6 +27,8 @@ import { ChatListScreen } from '@/features/chat/screens/ChatListScreen';
 import { MatchesScreen } from '@/features/matches/screens/MatchesScreen';
 import { ShopScreen } from '@/features/monetization/screens/ShopScreen';
 import { ProductTutorialScreen } from '@/features/onboarding/screens/ProductTutorialScreen';
+import { ProfilePhotoPicker } from '@/features/profile/components/ProfilePhotoPicker';
+import type { ProfilePhotoDraft } from '@/features/profile/types/profile-photo';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { elevation, layout, radius, spacing, typography } from '@/constants/theme';
@@ -43,6 +46,20 @@ export default function DesignQaScreen() {
   const [qaProfiles, setQaProfiles] = useState(mockProfiles);
   const [matchPreviewOpen, setMatchPreviewOpen] = useState(false);
   const [motionSheetOpen, setMotionSheetOpen] = useState(false);
+  const [qaBio, setQaBio] = useState('서로의 취향을 천천히 알아가는 대화를 좋아해요.');
+  const [qaPhotos, setQaPhotos] = useState<ProfilePhotoDraft[]>(() =>
+    mockProfiles
+      .flatMap((profile) => profile.photos)
+      .slice(0, 4)
+      .map((uri, index) => ({
+        draftId: `design-qa:${index}`,
+        height: 1200,
+        reviewStatus: 'approved',
+        type: 'image',
+        uri,
+        width: 960,
+      })),
+  );
   const enqueueNotification = useInAppNotificationCenter((state) => state.enqueue);
 
   if (!__DEV__) return <Redirect href="/" />;
@@ -181,6 +198,23 @@ export default function DesignQaScreen() {
           />
         </Section>
 
+        <Section title="Profile editing">
+          <View style={[styles.formSample, { backgroundColor: theme.colors.surface }]}>
+            <FormField
+              hint={`${qaBio.length}/500`}
+              label="자기소개"
+              maxLength={500}
+              multiline
+              onChangeText={setQaBio}
+              placeholder="나를 소개해 주세요"
+              style={styles.bioSample}
+              textAlignVertical="top"
+              value={qaBio}
+            />
+            <ProfilePhotoPicker onChange={setQaPhotos} onError={() => {}} photos={qaPhotos} ready />
+          </View>
+        </Section>
+
         {/* Discover 덱도 인증 뒤라 열 수 없다. 스와이프 전환과 레이아웃을 여기서 확인한다. */}
         <Section title="Discover deck">
           <View style={styles.deckFrame}>
@@ -310,6 +344,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   presenceCopy: { flex: 1, gap: spacing.xxs },
+  formSample: { borderRadius: radius.lg, gap: spacing.lg, padding: spacing.md },
+  bioSample: { minHeight: 112, paddingTop: spacing.sm },
   motionSheetContent: { gap: spacing.sm, padding: spacing.md, paddingTop: spacing.xs },
   sheetClose: {
     alignItems: 'center',

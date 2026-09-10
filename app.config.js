@@ -1,7 +1,7 @@
 const baseConfig = {
   name: 'WICHU',
   slug: 'wichu',
-  version: '1.0.10',
+  version: '1.0.11',
   backgroundColor: '#FFFFFF',
   orientation: 'portrait',
   icon: './assets/brand/wichu-app-icon.png',
@@ -15,7 +15,7 @@ const baseConfig = {
     },
   },
   android: {
-    versionCode: 39,
+    versionCode: 40,
     softwareKeyboardLayoutMode: 'resize',
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',

@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { useAppTheme } from '@/components/ThemeProvider';
 import { motionScale, motionSpring } from '@/constants/motion';
-import { palette, radius, spacing, typography } from '@/constants/theme';
+import { layout, palette, radius, spacing, typography } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: spacing.md,
   },
-  buttonSm: { borderRadius: radius.sm, minHeight: 44 },
+  buttonSm: { borderRadius: radius.sm, minHeight: layout.minTouchTarget },
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   disabled: { opacity: 0.48 },
 });

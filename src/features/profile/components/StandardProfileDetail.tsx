@@ -277,12 +277,7 @@ export function StandardProfileDetail({
 
     setBioTranslationRequest({ key: bioTranslationKey, status: 'loading' });
     try {
-      const result = profile.id.startsWith('mock-')
-        ? {
-            targetLanguage: bioTargetLanguage,
-            translatedText: t('experience.chat.sampleProfileTranslation'),
-          }
-        : await translationService.translateProfileBio(profile.id, activeAppLanguage);
+      const result = await translationService.translateProfileBio(profile.id, activeAppLanguage);
       setBioTranslation({
         language: result.targetLanguage,
         profileId: profile.id,

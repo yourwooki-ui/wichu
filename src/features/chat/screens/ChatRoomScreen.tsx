@@ -54,7 +54,6 @@ import { ChatRoomSkeleton } from '@/components/Skeleton';
 import { StateView } from '@/components/StateView';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { MONETIZATION_ENABLED } from '@/constants/features';
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import {
   imageTransition,
   listLayout,
@@ -79,7 +78,6 @@ import {
   translationService,
 } from '@/features/chat/services/translation-service';
 import { getTranslationLanguage } from '@/features/translation/translation-language';
-import { getMockConversation, mockConversations } from '@/features/matches/data/mock-connections';
 import {
   matchesService,
   type MatchConnection,
@@ -132,8 +130,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const inputRef = useRef<TextInput>(null);
   const isNearBottomRef = useRef(true);
   const previousMessageCount = useRef(0);
-  const isMock = reviewSamplesEnabled && matchId.startsWith('mock-');
-  const mockConversation = getMockConversation(matchId) ?? mockConversations[0];
   const [draft, setDraft] = useState('');
   const [selectedImages, setSelectedImages] = useState<ChatImageDraft[]>([]);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
@@ -144,17 +140,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   const [reportOpen, setReportOpen] = useState(false);
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [revealedImageMessages, setRevealedImageMessages] = useState<Set<string>>(() => new Set());
-  const [messages, setMessages] = useState<LocalMessage[]>(() =>
-    isMock ? createMockMessages(mockConversation) : [],
-  );
+  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const hasGoldPass = entitlement.data?.tier === 'gold';
 
   useEffect(() => {
-    productAnalyticsService.track('chat_opened', { is_mock: isMock }, `/chat/${matchId}`);
-  }, [isMock, matchId]);
+    productAnalyticsService.track('chat_opened', undefined, `/chat/${matchId}`);
+  }, [matchId]);
 
   const connectionQuery = useQuery({
-    enabled: !isMock && Boolean(userId),
+    enabled: Boolean(userId),
     queryFn: async () => {
       const connection = await matchesService.getConnection(matchId);
       if (!connection) throw new Error('Match not found');
@@ -171,7 +165,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   });
 
   const messagesQuery = useInfiniteQuery({
-    enabled: !isMock && Boolean(userId),
+    enabled: Boolean(userId),
     getNextPageParam: (lastPage: ChatMessagePage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => chatService.listMessages(matchId, { before: pageParam }),
@@ -185,16 +179,16 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   }, [connectionQuery.error, matchId, messagesQuery.error]);
 
   const displayedMessages = useMemo(() => {
-    if (isMock || !userId) return messages;
+    if (!userId) return messages;
     const remoteMessages = [...(messagesQuery.data?.pages ?? [])]
       .reverse()
       .flatMap((page: ChatMessagePage) => page.messages)
       .map((message) => toLocalMessage(message, userId, activeAppLanguage));
     return messages.reduce(mergeMessage, remoteMessages);
-  }, [activeAppLanguage, isMock, messages, messagesQuery.data, userId]);
+  }, [activeAppLanguage, messages, messagesQuery.data, userId]);
 
   useEffect(() => {
-    if (isMock || !userId) return;
+    if (!userId) return;
     const channel = chatService.subscribe(matchId, (message) => {
       setMessages((current) =>
         mergeMessage(current, {
@@ -212,15 +206,15 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     return () => {
       void chatService.unsubscribe(channel).catch(() => undefined);
     };
-  }, [activeAppLanguage, isMock, matchId, queryClient, userId]);
+  }, [activeAppLanguage, matchId, queryClient, userId]);
 
   useEffect(() => {
-    if (isMock || !userId || !messagesQuery.data?.pages.length) return;
+    if (!userId || !messagesQuery.data?.pages.length) return;
     void chatService
       .markRead(matchId)
       .then(() => queryClient.invalidateQueries({ queryKey: ['matches'] }))
       .catch(() => undefined);
-  }, [isMock, matchId, messagesQuery.data, queryClient, userId]);
+  }, [matchId, messagesQuery.data, queryClient, userId]);
 
   useEffect(() => {
     const previous = previousMessageCount.current;
@@ -259,11 +253,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   }, []);
 
   const profile = useMemo(() => {
-    if (isMock) return mockConversation.profile;
     const real = connectionQuery.data?.profile;
     if (!real) return null;
     return {
-      ...mockConversation.profile,
       id: real.id,
       name: real.display_name,
       countryCode: real.country_code,
@@ -271,9 +263,9 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       isOnline:
         Boolean(real.last_active_at) && now - new Date(real.last_active_at!).getTime() < 5 * 60_000,
     };
-  }, [connectionQuery.data?.profile, isMock, mockConversation.profile, now]);
+  }, [connectionQuery.data?.profile, now]);
 
-  if (!isMock && connectionQuery.isLoading) {
+  if (connectionQuery.isLoading) {
     return (
       <Screen edges={['top', 'left', 'right']} style={styles.connectionStateScreen}>
         <ChatRoomSkeleton />
@@ -298,7 +290,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   }
 
   const deliver = async (message: LocalMessage) => {
-    if (isMock || !userId) return;
+    if (!userId) return;
     setMessages((current) =>
       current.map((item) => (item.id === message.id ? { ...item, status: 'sending' } : item)),
     );
@@ -446,14 +438,13 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
       imageDrafts: selectedImages.length ? selectedImages : undefined,
       mine: true,
       originalLanguage: normalizeLanguage(activeAppLanguage),
-      status: isMock ? undefined : 'sending',
+      status: 'sending',
       animateOnMount: true,
     };
     setDraft('');
     setSelectedImages([]);
     setMessages((current) => [...current, optimisticMessage]);
     hapticsService.selection();
-    if (isMock) return;
     void deliver(optimisticMessage);
   };
 
@@ -500,14 +491,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
         translated: message.translated,
         translatedLanguage: targetLanguage,
         translationVisible: !message.translationVisible,
-      });
-      return;
-    }
-    if (isMock) {
-      updateMessage(message, {
-        translated: t('experience.chat.sampleTranslation'),
-        translatedLanguage: targetLanguage,
-        translationVisible: true,
       });
       return;
     }
@@ -564,11 +547,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   };
 
   const submitReport = async (submission: ReportSubmission) => {
-    if (isMock) {
-      setReportOpen(false);
-      Alert.alert(t('chatRoom.sampleProfileTitle'), t('chatRoom.sampleProfileBody'));
-      return;
-    }
     setSafetyBusy(true);
     const { error } = await safetyService.report(profile.id, {
       context: 'chat',
@@ -585,11 +563,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   };
 
   const confirmBlock = () => {
-    if (isMock) {
-      setSafetyOpen(false);
-      Alert.alert(t('chatRoom.sampleProfileTitle'), t('chatRoom.sampleBlockBody'));
-      return;
-    }
     Alert.alert(t('chatRoom.blockTitle', { name: profile.name }), t('chatRoom.blockBody'), [
       { text: t('chatRoom.cancel'), style: 'cancel' },
       {
@@ -612,11 +585,6 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
   };
 
   const confirmEndMatch = () => {
-    if (isMock) {
-      setSafetyOpen(false);
-      Alert.alert(t('chatRoom.sampleMatchTitle'), t('chatRoom.sampleMatchBody'));
-      return;
-    }
     Alert.alert(t('chatRoom.leaveTitle'), t('chatRoom.leaveBody', { name: profile.name }), [
       { text: t('chatRoom.cancel'), style: 'cancel' },
       {
@@ -642,8 +610,8 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
     ]);
   };
 
-  const loading = !isMock && (connectionQuery.isLoading || messagesQuery.isLoading);
-  const failed = !isMock && (connectionQuery.isError || messagesQuery.isError);
+  const loading = connectionQuery.isLoading || messagesQuery.isLoading;
+  const failed = connectionQuery.isError || messagesQuery.isError;
 
   return (
     <Screen edges={['top', 'left', 'right']} padded={false} style={styles.screen}>
@@ -734,7 +702,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
             <Text style={styles.safetyNoticeText}>{t('chatRoom.safetyTip')}</Text>
           </View>
 
-          {!isMock && messagesQuery.hasNextPage ? (
+          {messagesQuery.hasNextPage ? (
             <Pressable
               accessibilityLabel={t('chatRoom.olderA11y')}
               accessibilityRole="button"
@@ -860,7 +828,7 @@ export function ChatRoomScreen({ matchId }: ChatRoomScreenProps) {
                   {!message.mine &&
                   Boolean(message.content) &&
                   Boolean(translationTargetLanguage) &&
-                  (isMock || message.messageId) &&
+                  Boolean(message.messageId) &&
                   normalizeLanguage(message.originalLanguage ?? '') !==
                     normalizeLanguage(activeAppLanguage) ? (
                     <Pressable
@@ -1157,38 +1125,6 @@ function toMatchRoomConnection(connection: MatchConnection): MatchRoomConnection
       photo: connection.profile.photo,
     },
   };
-}
-
-function createMockMessages(conversation: (typeof mockConversations)[number]): LocalMessage[] {
-  return [
-    {
-      id: '1',
-      content: 'Hey! Your profile made me want to travel again.',
-      mine: false,
-      originalLanguage: 'en',
-    },
-    { id: '2', content: 'Then I owe you a proper recommendation list 🙂', mine: true },
-    {
-      id: '3',
-      content: conversation.message.replace(/^You: /, ''),
-      mine: false,
-      originalLanguage: 'en',
-    },
-    {
-      id: '4',
-      content: 'I loved this place. Let’s go together next time!',
-      mine: false,
-      attachments: [
-        {
-          path: 'mock/chat-photo.jpg',
-          mimeType: 'image/jpeg',
-          width: 900,
-          height: 1200,
-          url: conversation.profile.photo,
-        },
-      ],
-    },
-  ];
 }
 
 function toLocalMessage(message: ChatMessage, userId: string, locale: string): LocalMessage {

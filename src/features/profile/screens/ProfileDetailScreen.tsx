@@ -25,12 +25,10 @@ import { StateView } from '@/components/StateView';
 import { Skeleton, SkeletonLine } from '@/components/Skeleton';
 import { useAppTheme } from '@/components/ThemeProvider';
 import { illustratedIcons } from '@/constants/illustrated-icons';
-import { reviewSamplesEnabled } from '@/constants/feature-flags';
 import { motionDuration, motionSpring, resolveMotionDuration } from '@/constants/motion';
 import { elevation, layout, palette, radius, typography } from '@/constants/theme';
 import { MatchCelebration } from '@/features/discover/components/MatchCelebration';
 import { PickMessageSheet } from '@/features/discover/components/PickMessageSheet';
-import { mockProfiles } from '@/features/discover/data/mock-profiles';
 import { discoveryService } from '@/features/discover/services/discovery-service';
 import { useDiscoverStore } from '@/features/discover/stores/discover-store';
 import { usePassEntitlement } from '@/features/monetization/hooks/use-pass-entitlement';
@@ -90,11 +88,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   const removeProfile = useDiscoverStore((state) => state.removeProfile);
   const recordSwipe = useDiscoverStore((state) => state.recordSwipe);
   const restoreSwipe = useDiscoverStore((state) => state.restoreSwipe);
-  const recycleProfiles = useDiscoverStore((state) => state.recycleProfiles);
-  const cachedProfile = isPreview
-    ? undefined
-    : (deckProfile ??
-      (reviewSamplesEnabled ? mockProfiles.find((item) => item.id === id) : undefined));
+  const cachedProfile = isPreview ? undefined : deckProfile;
   const myPreviewQuery = useQuery({
     queryKey: ['my-profile-preview', id, activeLocale],
     enabled: Boolean(isPreview && id && session?.user.id),
@@ -104,7 +98,7 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   });
   const publicProfileQuery = useQuery({
     queryKey: ['profile-detail', id, activeLocale],
-    enabled: Boolean(!isPreview && id && session?.user.id && !id.startsWith('mock-')),
+    enabled: Boolean(!isPreview && id && session?.user.id),
     staleTime: 60_000,
     placeholderData: (previousProfile) => previousProfile,
     queryFn: () => discoveryService.getProfileById(id!, activeLocale),
@@ -228,12 +222,6 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   }
 
   const handleReport = async (submission: ReportSubmission) => {
-    if (profile.id.startsWith('mock-')) {
-      setReportOpen(false);
-      Alert.alert(t('profileDetail.testProfileTitle'), t('profileDetail.testProfileBody'));
-      return;
-    }
-
     setSafetyBusy(true);
     const { error } = await safetyService.report(profile.id, {
       context: 'profile',
@@ -248,12 +236,6 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
   };
 
   const handleBlock = () => {
-    if (profile.id.startsWith('mock-')) {
-      setSafetyOpen(false);
-      Alert.alert(t('profileDetail.testProfileTitle'), t('profileDetail.testProfileBody'));
-      return;
-    }
-
     Alert.alert(t('profileDetail.blockTitle'), t('profileDetail.blockBody'), [
       { text: t('profileDetail.cancel'), style: 'cancel' },
       {
@@ -284,15 +266,17 @@ export function ProfileDetailScreen({ mode = 'public', profileId }: ProfileDetai
     recordSwipe(profile.id, action);
 
     try {
-      const result = profile.id.startsWith('mock-')
-        ? { matchId: null }
-        : await discoveryService.swipe(session.user.id, profile.id, action, introMessage);
+      const result = await discoveryService.swipe(
+        session.user.id,
+        profile.id,
+        action,
+        introMessage,
+      );
       productAnalyticsService.track(
         'swipe_recorded',
         { action, has_intro: Boolean(introMessage) },
         `/profile/${profile.id}`,
       );
-      if (reviewSamplesEnabled) recycleProfiles([profile]);
       if (result.matchId) {
         productAnalyticsService.track('match_created', undefined, `/profile/${profile.id}`);
         decisionFeedback.set(

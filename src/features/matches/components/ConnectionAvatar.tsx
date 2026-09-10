@@ -8,7 +8,7 @@ import { PresenceDot } from '@/components/PresenceDot';
 import { illustratedIcons } from '@/constants/illustrated-icons';
 import { imageTransition } from '@/constants/motion';
 import { palette } from '@/constants/theme';
-import { ConnectionProfile } from '@/features/matches/data/mock-connections';
+import type { ConnectionProfile } from '@/features/matches/types/connection';
 
 type ConnectionAvatarProps = {
   profile: ConnectionProfile;
